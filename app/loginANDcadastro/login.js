@@ -6,9 +6,31 @@ export default function Login() {
 const [email, setEmail] = useState("");
 const [password, setPassword] = useState("");
 
-function handleLogin() {
-  alert(`Email: ${email}\nSenha: ${password}`);
+async function handleLogin() {
+  try {
+    const response = await fetch("http://localhost:3000/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email,
+        password: password
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      alert(`Login bem-sucedido!\nNome: ${data.user.name}\nTelefone: ${data.user.telefone}`);
+      // Aqui você pode navegar para a tela principal do app
+    } else {
+      alert(`Erro: ${data.error}`);
+    }
+  } catch (err) {
+    alert("Não foi possível conectar ao servidor.");
+    console.error(err);
+  }
 }
+
 
 return (
   <ScrollView contentContainerStyle={styles.container}>

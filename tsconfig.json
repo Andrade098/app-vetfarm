@@ -3,11 +3,8 @@
     "strict": true,
     "jsx": "react-native",
     "target": "esnext",
-    "lib": [
-      "dom",
-      "esnext"
-    ],
-    "moduleResolution": "node",
+    "module": "Node16",
+    "moduleResolution": "node16",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
