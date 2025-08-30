@@ -3,19 +3,24 @@
     "strict": true,
     "jsx": "react-native",
     "target": "esnext",
-    "lib": ["dom", "esnext"],
+    "lib": [
+      "dom",
+      "esnext"
+    ],
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "paths": {
-      "@/*": ["./*"]  // ← CORRIGIDO AQUI!
+      "@/*": [
+        "./*"
+      ]
     }
   },
   "include": [
-    "**/*.ts",       // ← CORRIGIDO (** para recursivo)
-    "**/*.tsx",      // ← CORRIGIDO (** para recursivo)
+    "**/*.ts",
+    "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
   ],
