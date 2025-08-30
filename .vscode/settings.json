@@ -4,9 +4,9 @@
     "source.organizeImports": "explicit",
     "source.sortMembers": "explicit"
   },
-  "typescript.validate.enable": true,
+  "typescript.validate.enable": false,
   "javascript.validate.enable": false,
-  "typescript.suggest.autoImports": true,
+  "typescript.suggest.autoImports": false,
   "editor.quickSuggestions": {
     "strings": true
   },
