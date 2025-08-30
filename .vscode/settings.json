@@ -3,5 +3,15 @@
     "source.fixAll": "explicit",
     "source.organizeImports": "explicit",
     "source.sortMembers": "explicit"
+  },
+  "typescript.validate.enable": true,
+  "javascript.validate.enable": false,
+  "typescript.suggest.autoImports": true,
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+  "files.exclude": {
+    "**/.expo": true,
+    "**/node_modules": true
   }
 }
