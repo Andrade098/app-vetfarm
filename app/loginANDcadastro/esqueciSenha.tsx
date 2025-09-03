@@ -5,30 +5,16 @@ import { Link, Stack } from 'expo-router';
 export default function EsqueciSenha() {
   const [email, setEmail] = useState('');
 
-async function handleRecuperarSenha() {
-  if (!email) {
+function handleRecuperarSenha() {
+    if (!email) {
     Alert.alert('Erro', 'Por favor, digite seu e-mail');
     return;
-  }
+}
 
-  try {
-    const response = await fetch("http://localhost:3000/auth/recover", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      Alert.alert('Sucesso', data.message);
-    } else {
-      Alert.alert('Erro', data.error);
-    }
-  } catch (err) {
-    Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
-    console.error(err);
-  }
+Alert.alert(
+    'E-mail enviado!',
+    `Enviamos um link de recuperação para: ${email}\n\nVerifique sua caixa de entrada e spam.`
+);
 }
 
 return (

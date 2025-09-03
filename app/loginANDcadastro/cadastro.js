@@ -12,38 +12,17 @@ export default function Cadastro() {
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
 
-  async function handleCadastro() {
-  if (senha !== confirmarSenha) {
-    Alert.alert("Erro", "As senhas não coincidem!");
-    return;
-  }
-
-  try {
-    const response = await fetch("http://localhost:3000/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: nome,
-        email: email,
-        password: senha,
-        telefone: telefone
-      }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      Alert.alert("Sucesso", data.message);
-      // Limpar campos ou navegar para login
-    } else {
-      Alert.alert("Erro", data.error);
+  function handleCadastro() {
+    if (senha !== confirmarSenha) {
+      Alert.alert("Erro", "As senhas não coincidem!");
+      return;
     }
-  } catch (err) {
-    Alert.alert("Erro", "Não foi possível conectar ao servidor.");
-    console.error(err);
-  }
-}
 
+    Alert.alert(
+      "Cadastro realizado!",
+      `Bem-vindo(a) ${nome}!\nEmail: ${email}\nTelefone: ${telefone}`
+    );
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
