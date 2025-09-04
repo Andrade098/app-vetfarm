@@ -5,23 +5,15 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#126b1aff',
+        tabBarActiveTintColor: '#126b1a',
         tabBarInactiveTintColor: '#666',
         headerStyle: {
-          backgroundColor: '#126b1aff',
+          backgroundColor: '#126b1a',
         },
         headerTintColor: '#fff',
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Início',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
-          ),
-        }}
-      />
+      {/* REMOVA a tela index das tabs */}
       <Tabs.Screen
         name="explore"
         options={{

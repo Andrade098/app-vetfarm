@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, FlatList } from 'react-native';
+import { useRouter } from 'expo-router';
 
 // Dados de exemplo para categorias
 const categories = [
@@ -11,39 +12,45 @@ const categories = [
   { id: '6', name: 'Ferramentas 🔧', icon: '⚒️' },
 ];
 
-// Dados de exemplo para produtos - COM IMAGENS PLACEHOLDER
+// Dados de exemplo para produtos - COM CAMINHO CORRETO
 const featuredProducts = [
   { 
     id: '1', 
     name: 'Vacina Febre Aftosa', 
     price: 'R$ 89,90', 
     category: 'Vacinas',
-    image: require('../../../assets/images/products/vacina.png')
+    image: require('../../assets/images/produtos/vacina.png'), // ← 2 pontos apenas
+    type: 'image'
   },
   { 
     id: '2', 
     name: 'Suplemento Mineral', 
     price: 'R$ 149,90', 
     category: 'Suplementos',
-    image: require('../../../assets/images/products/suplemento.png')
+    emoji: '🌱',
+    type: 'emoji'
   },
   { 
     id: '3', 
     name: 'Vermífugo Bovino', 
     price: 'R$ 45,90', 
     category: 'Medicamentos',
-    image: require('../../../assets/images/products/vermifugo.png')
+    emoji: '💊',
+    type: 'emoji'
   },
   { 
     id: '4', 
     name: 'Cela Equina', 
     price: 'R$ 289,90', 
     category: 'Acessórios',
-    image: require('../../../assets/images/products/cela.png')
+    emoji: '🐎',
+    type: 'emoji'
   },
 ];
 
 export default function HomeScreen() {
+  const router = useRouter();
+
   const renderCategory = ({ item }) => (
     <TouchableOpacity style={styles.categoryCard}>
       <Text style={styles.categoryIcon}>{item.icon}</Text>
@@ -53,11 +60,17 @@ export default function HomeScreen() {
 
   const renderProduct = ({ item }) => (
     <TouchableOpacity style={styles.productCard}>
-      <Image 
-        source={item.image} 
-        style={styles.productImage}
-        resizeMode="cover"
-      />
+      {item.type === 'image' ? (
+        <Image 
+          source={item.image} 
+          style={styles.productImage}
+          resizeMode="cover"
+        />
+      ) : (
+        <View style={styles.productImagePlaceholder}>
+          <Text style={styles.productEmoji}>{item.emoji}</Text>
+        </View>
+      )}
       <View style={styles.productInfo}>
         <Text style={styles.productCategory}>{item.category}</Text>
         <Text style={styles.productName}>{item.name}</Text>
@@ -102,6 +115,16 @@ export default function HomeScreen() {
             columnWrapperStyle={styles.productsGrid}
             contentContainerStyle={styles.productsList}
           />
+        </View>
+
+        {/* Botão para Explorar */}
+        <View style={styles.section}>
+          <TouchableOpacity 
+            style={styles.exploreButton}
+            onPress={() => router.push('/(tabs)/explore')}
+          >
+            <Text style={styles.exploreButtonText}>Ver Todos os Produtos</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -186,7 +209,18 @@ const styles = StyleSheet.create({
     height: 120,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
-    backgroundColor: '#f0f0f0', // Cor de fundo se imagem não carregar
+  },
+  productImagePlaceholder: {
+    width: '100%',
+    height: 120,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  productEmoji: {
+    fontSize: 40,
   },
   productInfo: {
     padding: 10,
@@ -217,6 +251,18 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: 'white',
     fontSize: 12,
+    fontWeight: 'bold',
+  },
+  exploreButton: {
+    backgroundColor: '#126b1a',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  exploreButtonText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });

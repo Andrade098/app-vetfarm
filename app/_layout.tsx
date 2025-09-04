@@ -10,45 +10,24 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#126b1aff', 
+            backgroundColor: '#126b1a',
           },
           headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-            fontSize: 18,
-          },
         }}
       >
-        {/* Tela inicial - sem header */}
+        {/* Tela HOME independente */}
         <Stack.Screen 
-          name="index" 
-          options={{ headerShown: false }}
+          name="home/index" 
+          options={{ 
+            title: 'Início',
+            headerShown: true // ou false se quiser sem header
+          }}
         />
-
-        {/* Telas de autenticação */}
-        <Stack.Screen 
-          name="loginANDcadastro/index" 
-          options={{ title: 'Entrar' }}
-        />
-        <Stack.Screen 
-          name="loginANDcadastro/login" 
-          options={{ title: 'Login' }}
-        />
-        <Stack.Screen 
-          name="loginANDcadastro/cadastro" 
-          options={{ title: 'Cadastro' }}
-        />
-
-        {/* Grupo de tabs - sem header próprio */}
+        
+        {/* Grupo de tabs */}
         <Stack.Screen 
           name="(tabs)" 
           options={{ headerShown: false }}
-        />
-
-        {/* Home independente (se existir) */}
-        <Stack.Screen 
-          name="home/index" 
-          options={{ title: 'Início' }}
         />
       </Stack>
     </SafeAreaView>
