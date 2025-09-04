@@ -1,34 +1,31 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, FlatList } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, FlatList, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
-// Dados de exemplo para categorias
+// Dados de exemplo para categorias (agora com 4 itens para o layout 2x2)
 const categories = [
-  { id: '1', name: 'Vacinas 🐄', icon: '💉' },
-  { id: '2', name: 'Suplementos 🌱', icon: '🥛' },
-  { id: '3', name: 'Medicamentos 💊', icon: '❤️' },
-  { id: '4', name: 'Acessórios 🐎', icon: '🧰' },
-  { id: '5', name: 'Rações 🥕', icon: '🌾' },
-  { id: '6', name: 'Ferramentas 🔧', icon: '⚒️' },
+  { id: '1', name: 'Vacinas', icon: '💉' },
+  { id: '2', name: 'Suplementos', icon: '🌱' },
+  { id: '3', name: 'Medicamentos', icon: '💊' },
+  { id: '4', name: 'Acessórios', icon: '🐎' },
 ];
 
-// Dados de exemplo para produtos - COM CAMINHO CORRETO
+// Dados de exemplo para produtos
 const featuredProducts = [
   { 
     id: '1', 
     name: 'Vacina Febre Aftosa', 
     price: 'R$ 89,90', 
     category: 'Vacinas',
-    image: require('../../assets/images/produtos/vacina.png'), // ← 2 pontos apenas
-    type: 'image'
+    image: require('../../assets/images/produtos/vacina.png'),
   },
   { 
     id: '2', 
-    name: 'Suplemento Mineral', 
+    name: 'Suplemento Animais', 
     price: 'R$ 149,90', 
     category: 'Suplementos',
-    emoji: '🌱',
-    type: 'emoji'
+    image: require('../../assets/images/produtos/suplemento.png'),
   },
   { 
     id: '3', 
@@ -36,7 +33,6 @@ const featuredProducts = [
     price: 'R$ 45,90', 
     category: 'Medicamentos',
     emoji: '💊',
-    type: 'emoji'
   },
   { 
     id: '4', 
@@ -44,33 +40,37 @@ const featuredProducts = [
     price: 'R$ 289,90', 
     category: 'Acessórios',
     emoji: '🐎',
-    type: 'emoji'
   },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
 
-  const renderCategory = ({ item }) => (
-    <TouchableOpacity style={styles.categoryCard}>
-      <Text style={styles.categoryIcon}>{item.icon}</Text>
-      <Text style={styles.categoryName}>{item.name}</Text>
-    </TouchableOpacity>
-  );
+  function handleMenu() {
+    alert("Menu hamburger clicado! 🍔");
+  }
+
+  function handleUser() {
+    alert("Perfil do usuário clicado! 👤");
+  }
+
+  function handleNotifications() {
+    alert("Notificações clicadas! 🔔");
+  }
 
   const renderProduct = ({ item }) => (
     <TouchableOpacity style={styles.productCard}>
-      {item.type === 'image' ? (
-        <Image 
-          source={item.image} 
-          style={styles.productImage}
-          resizeMode="cover"
-        />
-      ) : (
-        <View style={styles.productImagePlaceholder}>
+      <View style={styles.productImagePlaceholder}>
+        {item.image ? (
+          <Image 
+            source={item.image}
+            style={styles.productImage}
+            resizeMode="contain"
+          />
+        ) : (
           <Text style={styles.productEmoji}>{item.emoji}</Text>
-        </View>
-      )}
+        )}
+      </View>
       <View style={styles.productInfo}>
         <Text style={styles.productCategory}>{item.category}</Text>
         <Text style={styles.productName}>{item.name}</Text>
@@ -83,28 +83,48 @@ export default function HomeScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <View style={styles.fullContainer}>
+      {/* HEADER */}
       <View style={styles.header}>
-        <Text style={styles.welcomeText}>Bem-vindo à VetFarm! 🐄</Text>
-        <Text style={styles.subtitle}>Seu agromarketplace delivery</Text>
+        <TouchableOpacity onPress={handleMenu} style={styles.menuButton}>
+          <Ionicons name="menu" size={28} color="#126b1a" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>VetFarm</Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity onPress={handleNotifications} style={styles.iconButton}>
+            <Ionicons name="notifications-outline" size={24} color="#126b1a" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleUser} style={styles.iconButton}>
+            <Ionicons name="person-circle-outline" size={28} color="#126b1a" />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Categorias */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Categorias</Text>
-          <FlatList
-            data={categories}
-            renderItem={renderCategory}
-            keyExtractor={item => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesList}
+      {/* CONTEÚDO */}
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
+        {/* BANNER */}
+        <View style={styles.bannerContainer}>
+          <Image 
+            source={require('../../assets/images/bemvindos.png')}
+            style={styles.bannerImage}
+            resizeMode="contain"
           />
         </View>
 
-        {/* Produtos Recomendados */}
+        {/* CATEGORIAS */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Categorias</Text>
+          <View style={styles.categoriesGrid}>
+            {categories.map((category) => (
+              <TouchableOpacity key={category.id} style={styles.categoryCard}>
+                <Text style={styles.categoryIcon}>{category.icon}</Text>
+                <Text style={styles.categoryName}>{category.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* PRODUTOS */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Produtos Recomendados</Text>
           <FlatList
@@ -114,10 +134,11 @@ export default function HomeScreen() {
             numColumns={2}
             columnWrapperStyle={styles.productsGrid}
             contentContainerStyle={styles.productsList}
+            scrollEnabled={false}
           />
         </View>
 
-        {/* Botão para Explorar */}
+        {/* BOTÃO VER TODOS */}
         <View style={styles.section}>
           <TouchableOpacity 
             style={styles.exploreButton}
@@ -131,28 +152,58 @@ export default function HomeScreen() {
   );
 }
 
+const { width } = Dimensions.get('window');
+const categoryCardSize = (width - 60) / 2;
+
 const styles = StyleSheet.create({
-  container: {
+  fullContainer: {
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
   header: {
-    backgroundColor: '#126b1a',
-    padding: 20,
-    paddingTop: 50,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingTop: 15,
+    paddingBottom: 15,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
-  welcomeText: {
-    color: 'white',
-    fontSize: 22,
+  menuButton: {
+    padding: 5,
+  },
+  headerTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
+    color: '#126b1a',
   },
-  subtitle: {
-    color: 'white',
-    fontSize: 14,
-    opacity: 0.9,
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+  },
+  iconButton: {
+    padding: 5,
+  },
+  content: {
+    flex: 1,
+  },
+  bannerContainer: {
+    alignItems: 'center',
+    padding: 2,
+    backgroundColor: '#fff',
+  },
+  bannerImage: {
+    width: '100%',
+    height: 150,
+    maxHeight: 200,
   },
   section: {
     padding: 15,
+    backgroundColor: '#fff',
+    marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 20,
@@ -160,16 +211,20 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 15,
   },
-  categoriesList: {
-    paddingRight: 15,
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   categoryCard: {
     backgroundColor: 'white',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
-    marginRight: 10,
-    width: 100,
+    width: categoryCardSize,
+    height: categoryCardSize,
+    justifyContent: 'center',
+    marginBottom: 15,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -177,11 +232,11 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   categoryIcon: {
-    fontSize: 24,
-    marginBottom: 5,
+    fontSize: 32,
+    marginBottom: 8,
   },
   categoryName: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '500',
     color: '#333',
     textAlign: 'center',
@@ -204,18 +259,18 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
-  productImage: {
-    width: '100%',
-    height: 120,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-  },
   productImagePlaceholder: {
     width: '100%',
     height: 120,
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  productImage: {
+    width: '100%',
+    height: '100%',
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
   },
