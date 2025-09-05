@@ -32,14 +32,14 @@ const featuredProducts = [
     name: 'Vermífugo Bovino', 
     price: 'R$ 45,90', 
     category: 'Medicamentos',
-    emoji: '💊',
+    image: require('../../assets/images/produtos/vermifugo.png'),
   },
   { 
     id: '4', 
     name: 'Cela Equina', 
     price: 'R$ 289,90', 
     category: 'Acessórios',
-    emoji: '🐎',
+    image: require('../../assets/images/produtos/celaesquina.png'),
   },
 ];
 
