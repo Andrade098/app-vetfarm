@@ -20,7 +20,16 @@ export default function RootLayout() {
           name="home/index" 
           options={{ 
             title: 'Início',
-            headerShown: true // ou false se quiser sem header
+            headerShown: false // ou false se quiser sem header
+          }}
+        />
+        
+        {/* Tela de MENU - também sem header */}
+        <Stack.Screen 
+          name="home/menu" 
+          options={{ 
+            title: 'Menu',
+            headerShown: false // ADICIONE ESTA LINHA
           }}
         />
         

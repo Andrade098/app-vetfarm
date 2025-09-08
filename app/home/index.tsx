@@ -47,7 +47,8 @@ export default function HomeScreen() {
   const router = useRouter();
 
   function handleMenu() {
-    alert("Menu hamburger clicado! 🍔");
+    // Alterado para abrir o menu em vez de mostrar alerta
+    router.push('/home/menu');
   }
 
   function handleUser() {
