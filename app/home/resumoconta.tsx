@@ -8,11 +8,24 @@ export default function ResumoContaScreen() {
 
   // Dados do usuário (você pode substituir por dados reais)
   const userData = {
-    nome: 'João Pedro Castro de Souza',
+    nome: 'João Pedro Ferreira de Souza',
     email: 'contato.joaopedro@gmail.com',
     telefone: '(11) 99999-9999',
     cpf: '123.456.789-00',
     dataNascimento: '15/05/1990',
+  };
+
+  // Dados de fidelidade
+  const fidelidadeData = {
+    pontosAtuais: 720,
+    pontosNecessarios: 1000,
+    expiracao: '15/12/2025',
+    progresso: (720 / 1000) * 100, // 72%
+    historico: [
+      { data: '10/11/2024', compra: 'R$ 150,00', pontos: 60 },
+      { data: '05/11/2024', compra: 'R$ 89,90', pontos: 36 },
+      { data: '25/10/2024', compra: 'R$ 289,90', pontos: 116 },
+    ]
   };
 
   // Estatísticas (pode vir de uma API no futuro)
@@ -22,143 +35,178 @@ export default function ResumoContaScreen() {
     { id: '3', label: 'Endereços', valor: '2', icon: 'location' },
   ];
 
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Cabeçalho */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#126b1a" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Resumo da Conta</Text>
-        <View style={styles.headerRight} />
-      </View>
+return (
+  <SafeAreaView style={styles.container}>
+    {/* Cabeçalho */}
+    <View style={styles.header}>
+    <TouchableOpacity 
+      style={styles.backButton}
+      onPress={() => router.back()}
+    >
+    <Ionicons name="arrow-back" size={24} color="#126b1a" />
+    </TouchableOpacity>
+    <Text style={styles.headerTitle}>Resumo da Conta</Text>
+    <View style={styles.headerRight} />
+</View>
 
-      <ScrollView style={styles.content}>
-        {/* Saudação */}
-        <View style={styles.saudacaoContainer}>
-          <Text style={styles.saudacao}>Olá,</Text>
-          <Text style={styles.nomeUsuario}>João Pedro </Text>
-        </View>
+<ScrollView style={styles.content}>
+{/* Saudação */}
+  <View style={styles.saudacaoContainer}>
+    <Text style={styles.saudacao}>Olá,</Text>
+    <Text style={styles.nomeUsuario}>João Pedro Ferreira de Souza</Text>
+</View>
 
-        {/* Estatísticas */}
-        <View style={styles.estatisticasContainer}>
-          <Text style={styles.sectionTitle}>Sua Atividade</Text>
-          <View style={styles.estatisticasGrid}>
-            {estatisticas.map((item) => (
-              <View key={item.id} style={styles.estatisticaCard}>
-                <Ionicons name={item.icon as any} size={24} color="#126b1a" />
-                <Text style={styles.estatisticaValor}>{item.valor}</Text>
-                <Text style={styles.estatisticaLabel}>{item.label}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
+{/* Estatísticas */}
+    <View style={styles.estatisticasContainer}>
+    <Text style={styles.sectionTitle}>Sua Atividade</Text>
+    <View style={styles.estatisticasGrid}>
+     {estatisticas.map((item) => (
+  <View key={item.id} style={styles.estatisticaCard}>
+    <Ionicons name={item.icon as any} size={24} color="#126b1a" />
+    <Text style={styles.estatisticaValor}>{item.valor}</Text>
+    <Text style={styles.estatisticaLabel}>{item.label}</Text>
+</View>
+))}
+</View>
+</View>
 
-        {/* Dados da Conta */}
-        <View style={styles.dadosContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Dados da conta</Text>
-            <TouchableOpacity>
-              <Text style={styles.alterarTexto}>alterar</Text>
-            </TouchableOpacity>
-          </View>
+      {/* Dados da Conta */}
+<View style={styles.dadosContainer}>
+    <View style={styles.sectionHeader}>
+    <Text style={styles.sectionTitle}>Dados da conta</Text>
+<TouchableOpacity>
+    <Text style={styles.alterarTexto}>alterar</Text>
+</TouchableOpacity>
+</View>
 
-          <View style={styles.infoCard}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Nome completo</Text>
-              <Text style={styles.infoValue}>{userData.nome}</Text>
-            </View>
+    <View style={styles.infoCard}>
+    <View style={styles.infoItem}>
+    <Text style={styles.infoLabel}>Nome completo</Text>
+    <Text style={styles.infoValue}>{userData.nome}</Text>
+</View>
 
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>E-mail</Text>
-              <Text style={styles.infoValue}>{userData.email}</Text>
-            </View>
+    <View style={styles.infoItem}>
+    <Text style={styles.infoLabel}>E-mail</Text>
+    <Text style={styles.infoValue}>{userData.email}</Text>
+</View>
 
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Telefone</Text>
-              <Text style={styles.infoValue}>{userData.telefone}</Text>
-            </View>
+    <View style={styles.infoItem}>
+    <Text style={styles.infoLabel}>Telefone</Text>
+    <Text style={styles.infoValue}>{userData.telefone}</Text>
+</View>
 
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>CPF</Text>
-              <Text style={styles.infoValue}>{userData.cpf}</Text>
-            </View>
+    <View style={styles.infoItem}>
+    <Text style={styles.infoLabel}>CPF</Text>
+    <Text style={styles.infoValue}>{userData.cpf}</Text>
+    </View>
 
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Data de nascimento</Text>
-              <Text style={styles.infoValue}>{userData.dataNascimento}</Text>
-            </View>
-          </View>
-        </View>
+    <View style={styles.infoItem}>
+    <Text style={styles.infoLabel}>Data de nascimento</Text>
+    <Text style={styles.infoValue}>{userData.dataNascimento}</Text>
+</View>
+</View>
+</View>
 
-        {/* Alterar Senha */}
-        <TouchableOpacity style={styles.alterarSenhaButton}>
-          <Ionicons name="lock-closed" size={20} color="#126b1a" />
-          <Text style={styles.alterarSenhaText}>Alterar senha</Text>
-          <Ionicons name="chevron-forward" size={20} color="#666" />
-        </TouchableOpacity>
+      {/* Alterar Senha */}
+<TouchableOpacity style={styles.alterarSenhaButton}>
+    <Ionicons name="lock-closed" size={20} color="#126b1a" />
+    <Text style={styles.alterarSenhaText}>Alterar senha</Text>
+    <Ionicons name="chevron-forward" size={20} color="#666" />
+</TouchableOpacity>
 
-        {/* Informações de Assinatura (se aplicável) */}
-        <View style={styles.assinaturaContainer}>
-          <Text style={styles.sectionTitle}>Sua Assinatura</Text>
-          <View style={styles.assinaturaCard}>
-            <Ionicons name="star" size={24} color="#FFD700" />
-            <View style={styles.assinaturaInfo}>
-              <Text style={styles.assinaturaTitulo}>Plano Premium</Text>
-              <Text style={styles.assinaturaDescricao}>Válido até 15/12/2025</Text>
-            </View>
-            <TouchableOpacity style={styles.verDetalhesButton}>
-              <Text style={styles.verDetalhesText}>Ver detalhes</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        {/* Programa de Fidelidade */}
+<View style={styles.fidelidadeContainer}>
+    <Text style={styles.sectionTitle}>Seus Pontos de Fidelidade</Text>
+    <View style={styles.fidelidadeCard}>
+    <View style={styles.pontosHeader}>
+<Ionicons name="trophy" size={24} color="#FFD700" />
+    <View style={styles.pontosInfo}>
+    <Text style={styles.pontosTitulo}>{fidelidadeData.pontosAtuais} Pontos</Text>
+    <Text style={styles.pontosMeta}>
+    {fidelidadeData.pontosNecessarios - fidelidadeData.pontosAtuais} pontos para visita grátis
+</Text>
+</View>
+</View>
+
+       {/* Barra de progresso */}
+    <View style={styles.progressoContainer}>
+    <View style={styles.progressoBar}>
+    <View 
+    style={[
+    styles.progressoPreenchido, 
+    { width: `${fidelidadeData.progresso}%` }
+]} 
+/>
+</View>
+    <Text style={styles.progressoTexto}>
+    {Math.round(fidelidadeData.progresso)}% completo
+</Text>
+</View>
+
+    <Text style={styles.expiracaoTexto}> Pontos expiram em: {fidelidadeData.expiracao}
+    </Text>
+
+    <TouchableOpacity style={styles.verDetalhesButton}>
+    <Text style={styles.verDetalhesText}>Ver histórico completo</Text>
+    <Ionicons name="chevron-forward" size={16} color="#126b1a" />
+    </TouchableOpacity>
+</View>
+
+    {/* Prêmio */}
+<View style={styles.premioCard}>
+    <Ionicons name="gift" size={24} color="#126b1a" />
+    <View style={styles.premioInfo}>
+    <Text style={styles.premioTitulo}>Prêmio: Visitação Grátis</Text>
+    <Text style={styles.premioDescricao}>
+    Ao atingir 1000 pontos, ganhe uma visitação gratuita do nosso veterinário parceiro!
+</Text>
+</View>
+</View>
+</View>
+</ScrollView>
+</SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-    backgroundColor: '#fff',
-  },
-  backButton: {
-    padding: 5,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#126b1a',
-  },
+container: {
+  flex: 1,
+  backgroundColor: '#f8f9fa',
+},
+header: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  paddingHorizontal: 15,
+  paddingVertical: 15,
+  backgroundColor: '#fff',
+},
+backButton: {
+  padding: 5,
+},
+headerTitle: {
+  fontSize: 20,
+  fontWeight: 'bold',
+  color: '#126b1a',
+},
   headerRight: {
-    width: 34,
-  },
-  content: {
-    flex: 1,
-    padding: 15,
-  },
-  saudacaoContainer: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
+  width: 34,
+ },
+content: {
+  flex: 1,
+  padding: 15,
+},
+saudacaoContainer: {
+  backgroundColor: '#fff',
+  padding: 20,
+  borderRadius: 10,
+  marginBottom: 15,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 3,
+  elevation: 3,
+},
   saudacao: {
     fontSize: 16,
     color: '#666',
@@ -262,10 +310,79 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '500',
   },
-  assinaturaContainer: {
+  fidelidadeContainer: {
     marginBottom: 30,
   },
-  assinaturaCard: {
+  fidelidadeCard: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 10,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  pontosHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  pontosInfo: {
+    flex: 1,
+    marginLeft: 15,
+  },
+  pontosTitulo: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 2,
+  },
+  pontosMeta: {
+    fontSize: 14,
+    color: '#666',
+  },
+  progressoContainer: {
+    marginBottom: 15,
+  },
+  progressoBar: {
+    height: 8,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 4,
+    marginBottom: 5,
+    overflow: 'hidden',
+  },
+  progressoPreenchido: {
+    height: '100%',
+    backgroundColor: '#126b1a',
+    borderRadius: 4,
+  },
+  progressoTexto: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'right',
+  },
+  expiracaoTexto: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  verDetalhesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    backgroundColor: '#f0f8f0',
+    borderRadius: 5,
+  },
+  verDetalhesText: {
+    color: '#126b1a',
+    fontWeight: '500',
+    marginRight: 5,
+  },
+  premioCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
@@ -277,25 +394,18 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
-  assinaturaInfo: {
+  premioInfo: {
     flex: 1,
     marginLeft: 15,
   },
-  assinaturaTitulo: {
+  premioTitulo: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 2,
   },
-  assinaturaDescricao: {
+  premioDescricao: {
     fontSize: 14,
     color: '#666',
-  },
-  verDetalhesButton: {
-    padding: 5,
-  },
-  verDetalhesText: {
-    color: '#126b1a',
-    fontWeight: '500',
   },
 });

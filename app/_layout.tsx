@@ -12,7 +12,7 @@ export default function RootLayout() {
           headerStyle: {
             backgroundColor: '#126b1a',
           },
-          headerTintColor: '#fff',
+          headerTintColor: '#ffffffff',
         }}
       >
         {/* Tela HOME independente */}
@@ -38,6 +38,13 @@ export default function RootLayout() {
           name="home/resumoconta" 
           options={{ 
             title: 'Resumo da Conta',
+            headerShown: false
+          }}
+        />
+        <Stack.Screen 
+          name="home/meusdados" 
+          options={{ 
+            title: 'Meus Dados',
             headerShown: false
           }}
         />

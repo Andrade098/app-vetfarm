@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -7,9 +7,9 @@ export default function MenuScreen() {
   const router = useRouter();
 
   const menuItems = [
-    { id: '1', title: 'Resumo da conta', icon: 'person-outline', screen: 'account' },
+    { id: '1', title: 'Resumo da conta', icon: 'person-outline', screen: 'resumoconta' },
     { id: '2', title: 'Meus pedidos', icon: 'cart-outline', screen: 'orders' },
-    { id: '3', title: 'Meus dados', icon: 'id-card-outline', screen: 'profile' },
+    { id: '3', title: 'Meus dados', icon: 'id-card-outline', screen: 'meusdados' },
     { id: '4', title: 'Meus endereços', icon: 'location-outline', screen: 'addresses' },
     { id: '5', title: 'Favoritos', icon: 'heart-outline', screen: 'favorites' },
     { id: '6', title: 'Alterar senha', icon: 'lock-closed-outline', screen: 'change-password' },
@@ -18,12 +18,7 @@ export default function MenuScreen() {
 
   const handleMenuItemPress = (screen: string) => {
     if (screen === 'logout') {
-      // Lógica para logout
-      alert('Sair da conta');
       router.replace('/');
-    } else if (screen === 'account') {
-      // Navega para o resumo da conta
-      router.push('/home/resumoconta');
     } else {
       router.push(`/home/${screen}`);
     }
@@ -99,6 +94,7 @@ export default function MenuScreen() {
   );
 }
 
+// ... os estilos permanecem os mesmos ...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
