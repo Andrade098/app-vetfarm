@@ -46,7 +46,7 @@ export default function MeusDadosScreen() {
       <ScrollView style={styles.content}>
         {/* Formulário de Dados */}
         <View style={styles.formContainer}>
-          <Text style={styles.sectionTitle}>Informações Pessoais</Text>
+          <Text style={styles.sectionTitle}>Informações Pessoais</Text>         
 
           {/* Nome */}
           <View style={styles.inputGroup}>

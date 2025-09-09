@@ -9,10 +9,8 @@ export default function RootLayout() {
       
       <Stack
         screenOptions={{
-          headerStyle: {
-            backgroundColor: '#126b1a',
-          },
-          headerTintColor: '#ffffffff',
+          // REMOVIDO o backgroundColor verde
+          headerTintColor: '#126b1a', // Apenas cor do texto
         }}
       >
         {/* Tela HOME independente */}
@@ -41,10 +39,19 @@ export default function RootLayout() {
             headerShown: false
           }}
         />
+        
         <Stack.Screen 
           name="home/meusdados" 
           options={{ 
             title: 'Meus Dados',
+            headerShown: false
+          }}
+        />
+        
+        <Stack.Screen 
+          name="home/meusenderecos" 
+          options={{  // ← CORRIGIDO: "options" em vez de "ptions"
+            title: 'Meus Endereços',
             headerShown: false
           }}
         />
