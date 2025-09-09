@@ -21,6 +21,9 @@ export default function MenuScreen() {
       // Lógica para logout
       alert('Sair da conta');
       router.replace('/');
+    } else if (screen === 'account') {
+      // Navega para o resumo da conta
+      router.push('/home/resumoconta');
     } else {
       router.push(`/home/${screen}`);
     }
@@ -48,7 +51,7 @@ export default function MenuScreen() {
             style={styles.profileImage}
           />
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>João da Silva</Text>
+            <Text style={styles.profileName}>João Pedro</Text>
             <Text style={styles.profileEmail}>joao@email.com</Text>
           </View>
         </View>

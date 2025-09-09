@@ -20,7 +20,7 @@ export default function RootLayout() {
           name="home/index" 
           options={{ 
             title: 'Início',
-            headerShown: false // ou false se quiser sem header
+            headerShown: false
           }}
         />
         
@@ -29,7 +29,16 @@ export default function RootLayout() {
           name="home/menu" 
           options={{ 
             title: 'Menu',
-            headerShown: false // ADICIONE ESTA LINHA
+            headerShown: false
+          }}
+        />
+        
+        {/* Tela de RESUMO DA CONTA - sem header */}
+        <Stack.Screen 
+          name="home/resumoconta" 
+          options={{ 
+            title: 'Resumo da Conta',
+            headerShown: false
           }}
         />
         

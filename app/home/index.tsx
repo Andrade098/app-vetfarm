@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Dados de exemplo para categorias (agora com 4 itens para o layout 2x2)
 const categories = [
-  { id: '1', name: 'Vacinas', icon: '💉' },
+  { id: '1', name: 'Vacinas', icon: '💉', },
   { id: '2', name: 'Suplementos', icon: '🌱' },
   { id: '3', name: 'Medicamentos', icon: '💊' },
   { id: '4', name: 'Acessórios', icon: '🐎' },
