@@ -67,13 +67,22 @@ return (
           headerShown: false
   }}
 />
-
+      {/* Alterar senha */}
+      <Stack.Screen 
+        name="home/alterarsenha" 
+        options={{ 
+        title: 'Alterar Senha',
+        headerShown: false
+      }}
+      />
         
         {/* Grupo de tabs */}
         <Stack.Screen 
           name="(tabs)" 
           options={{ headerShown: false }}
         />
+
+
       </Stack>
     </SafeAreaView>
   );

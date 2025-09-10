@@ -105,10 +105,13 @@ return (
 </View>
 
       {/* Alterar Senha */}
-<TouchableOpacity style={styles.alterarSenhaButton}>
-    <Ionicons name="lock-closed" size={20} color="#126b1a" />
-    <Text style={styles.alterarSenhaText}>Alterar senha</Text>
-    <Ionicons name="chevron-forward" size={20} color="#666" />
+<TouchableOpacity 
+  style={styles.alterarSenhaButton}
+  onPress={() => router.push('/home/alterarsenha')} // ← Mude aqui
+>
+  <Ionicons name="lock-closed" size={20} color="#126b1a" />
+  <Text style={styles.alterarSenhaText}>Alterar senha</Text>
+  <Ionicons name="chevron-forward" size={20} color="#666" />
 </TouchableOpacity>
 
         {/* Programa de Fidelidade */}
