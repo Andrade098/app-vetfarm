@@ -55,6 +55,22 @@ export default function RootLayout() {
             headerShown: false
           }}
         />
+        {/* Meuspedidos */}
+        <Stack.Screen 
+          name="home/meuspedidos" 
+          options={{ 
+            title: 'Meus Pedidos',
+            headerShown: false
+  }}/>
+        {/*Rastrearpedido */}
+        <Stack.Screen 
+        name="home/rastrearpedido" 
+        options={{ 
+          title: 'Rastrear Pedido',
+          headerShown: false
+  }}
+/>
+
         
         {/* Grupo de tabs */}
         <Stack.Screen 

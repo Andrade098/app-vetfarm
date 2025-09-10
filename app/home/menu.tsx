@@ -8,7 +8,7 @@ export default function MenuScreen() {
 
   const menuItems = [
     { id: '1', title: 'Resumo da conta', icon: 'person-outline', screen: 'resumoconta' },
-    { id: '2', title: 'Meus pedidos', icon: 'cart-outline', screen: 'orders' },
+    { id: '2', title: 'Meus pedidos', icon: 'cart-outline', screen: 'meuspedidos' },
     { id: '3', title: 'Meus dados', icon: 'id-card-outline', screen: 'meusdados' },
     { id: '4', title: 'Meus endereços', icon: 'location-outline', screen: 'meusenderecos' },
     { id: '5', title: 'Favoritos', icon: 'heart-outline', screen: 'favorites' },
