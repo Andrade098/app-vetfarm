@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, TextInput, Alert, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, TextInput, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -11,38 +11,37 @@ export default function AlterarSenhaScreen() {
   const [mostrarSenhaAtual, setMostrarSenhaAtual] = useState(false);
   const [mostrarNovaSenha, setMostrarNovaSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
+  const [mensagemSucesso, setMensagemSucesso] = useState('');
+  const [mensagemErro, setMensagemErro] = useState('');
 
   const handleAlterarSenha = () => {
+    // Reset mensagens anteriores
+    setMensagemErro('');
+    setMensagemSucesso('');
+
     // Validações
     if (!senhaAtual || !novaSenha || !confirmarSenha) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos.');
+      setMensagemErro('Por favor, preencha todos os campos.');
       return;
     }
 
     if (novaSenha.length < 6) {
-      Alert.alert('Erro', 'A nova senha deve ter pelo menos 6 caracteres.');
+      setMensagemErro('A nova senha deve ter pelo menos 6 caracteres.');
       return;
     }
 
     if (novaSenha !== confirmarSenha) {
-      Alert.alert('Erro', 'As senhas não coincidem.');
+      setMensagemErro('As senhas não coincidem.');
       return;
     }
 
-    // Simulação de alteração de senha
-    Alert.alert(
-      'Sucesso', 
-      'Senha alterada com sucesso! Você será redirecionado para fazer login novamente.',
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            // Redireciona para o login
-            router.replace('/');
-          }
-        }
-      ]
-    );
+    // Simulação de alteração bem-sucedida
+    setMensagemSucesso('Senha alterada com sucesso! Redirecionando para login...');
+    
+    // Redireciona após 2 segundos
+    setTimeout(() => {
+      router.replace('/'); // Redireciona para tela de login
+    }, 2000);
   };
 
   return (
@@ -144,6 +143,21 @@ export default function AlterarSenhaScreen() {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* Mensagens de Feedback */}
+          {mensagemErro ? (
+            <View style={styles.mensagemErro}>
+              <Ionicons name="warning" size={20} color="#fff" />
+              <Text style={styles.mensagemErroTexto}>{mensagemErro}</Text>
+            </View>
+          ) : null}
+
+          {mensagemSucesso ? (
+            <View style={styles.mensagemSucesso}>
+              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+              <Text style={styles.mensagemSucessoTexto}>{mensagemSucesso}</Text>
+            </View>
+          ) : null}
 
           {/* Botão Salvar */}
           <TouchableOpacity 
@@ -278,5 +292,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginBottom: 4,
+  },
+  mensagemErro: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F44336',
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 15,
+    gap: 10,
+  },
+  mensagemErroTexto: {
+    color: '#fff',
+    fontSize: 14,
+    flex: 1,
+  },
+  mensagemSucesso: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 15,
+    gap: 10,
+  },
+  mensagemSucessoTexto: {
+    color: '#fff',
+    fontSize: 14,
+    flex: 1,
   },
 });
