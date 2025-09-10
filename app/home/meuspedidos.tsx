@@ -16,13 +16,10 @@ type Pedido = {
     preco: string;
   }[];
 };
-
 type FiltroStatus = 'todos' | 'entregue' | 'pendentes';
-
 export default function MeusPedidosScreen() {
   const router = useRouter();
   const [filtroAtivo, setFiltroAtivo] = useState<FiltroStatus>('todos');
-  
   // Dados de exemplo - pedidos do usuário
   const [pedidos, setPedidos] = useState<Pedido[]>([
     {
@@ -72,7 +69,6 @@ export default function MeusPedidosScreen() {
       ]
     }
   ]);
-
   // Filtrar pedidos baseado na aba selecionada
   const pedidosFiltrados = pedidos.filter(pedido => {
     if (filtroAtivo === 'todos') return true;

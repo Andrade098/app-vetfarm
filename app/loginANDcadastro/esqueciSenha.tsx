@@ -3,14 +3,12 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert,
 import { Link, Stack } from 'expo-router';
 
 export default function EsqueciSenha() {
-  const [email, setEmail] = useState('');
-
+const [email, setEmail] = useState('');
 function handleRecuperarSenha() {
     if (!email) {
     Alert.alert('Erro', 'Por favor, digite seu e-mail');
     return;
 }
-
 Alert.alert(
     'E-mail enviado!',
     `Enviamos um link de recuperação para: ${email}\n\nVerifique sua caixa de entrada e spam.`
@@ -19,8 +17,7 @@ Alert.alert(
 
 return (
 <>
-<Stack.Screen options={{ title: 'Recuperar Senha' }} />
-      
+<Stack.Screen options={{ title: 'Recuperar Senha' }} />   
 <ScrollView contentContainerStyle={styles.container}>
     {/* Logo */}
 <View style={styles.logoContainer}>

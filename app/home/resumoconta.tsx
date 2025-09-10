@@ -5,8 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function ResumoContaScreen() {
   const router = useRouter();
-
-  // Dados do usuário (você pode substituir por dados reais)
+// Dados do usuário (você pode substituir por dados reais)
   const userData = {
     nome: 'João Pedro Ferreira de Souza',
     email: 'contato.joaopedro@gmail.com',
@@ -14,8 +13,7 @@ export default function ResumoContaScreen() {
     cpf: '123.456.789-00',
     dataNascimento: '15/05/1990',
   };
-
-  // Dados de fidelidade
+// Dados de fidelidade
   const fidelidadeData = {
     pontosAtuais: 720,
     pontosNecessarios: 1000,
@@ -27,8 +25,7 @@ export default function ResumoContaScreen() {
       { data: '25/10/2024', compra: 'R$ 289,90', pontos: 116 },
     ]
   };
-
-  // Estatísticas (pode vir de uma API no futuro)
+// Estatísticas (pode vir de uma API no futuro)
   const estatisticas = [
     { id: '1', label: 'Pedidos Realizados', valor: '15', icon: 'cart' },
     { id: '2', label: 'Favoritos', valor: '8', icon: 'heart' },

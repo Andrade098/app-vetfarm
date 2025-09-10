@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function MenuScreen() {
   const router = useRouter();
-
   const menuItems = [
     { id: '1', title: 'Resumo da conta', icon: 'person-outline', screen: 'resumoconta' },
     { id: '2', title: 'Meus pedidos', icon: 'cart-outline', screen: 'meuspedidos' },
@@ -18,12 +17,11 @@ export default function MenuScreen() {
 
   const handleMenuItemPress = (screen: string) => {
     if (screen === 'logout') {
-      router.replace('/');
-    } else {
-      router.push(`/home/${screen}`);
+    router.replace('/');
+  } else {
+    router.push(`/home/${screen}`);
     }
   };
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Cabeçalho */}
@@ -37,7 +35,6 @@ export default function MenuScreen() {
         <Text style={styles.headerTitle}>Menu</Text>
         <View style={styles.headerRight} />
       </View>
-
       <ScrollView style={styles.content}>
         {/* Perfil do usuário */}
         <View style={styles.profileSection}>
@@ -83,7 +80,6 @@ export default function MenuScreen() {
             </TouchableOpacity>
           ))}
         </View>
-
         {/* Informações do app */}
         <View style={styles.appInfo}>
           <Text style={styles.appVersion}>VetFarm v1.0.0</Text>
@@ -93,7 +89,6 @@ export default function MenuScreen() {
     </SafeAreaView>
   );
 }
-
 // ... os estilos permanecem os mesmos ...
 const styles = StyleSheet.create({
   container: {

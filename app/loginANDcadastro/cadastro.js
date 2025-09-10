@@ -4,26 +4,22 @@ import { Link } from "expo-router";
 
 // Obtém a largura da tela
 const { width } = Dimensions.get('window');
-
 export default function Cadastro() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
-
-  function handleCadastro() {
+function handleCadastro() {
     if (senha !== confirmarSenha) {
       Alert.alert("Erro", "As senhas não coincidem!");
       return;
     }
-
     Alert.alert(
       "Cadastro realizado!",
       `Bem-vindo(a) ${nome}!\nEmail: ${email}\nTelefone: ${telefone}`
     );
   }
-
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Cabeçalho com IMAGEM */}
@@ -36,7 +32,6 @@ export default function Cadastro() {
         <Text style={styles.title}>Criar conta</Text>
         <Text style={styles.subtitle}>Preencha seus dados abaixo</Text>
       </View>
-
       {/* Formulário */}
       <View style={styles.form}>
         <TextInput
@@ -46,7 +41,6 @@ export default function Cadastro() {
           value={nome}
           onChangeText={setNome}
         />
-
         <TextInput
           style={styles.input}
           placeholder="E-mail"

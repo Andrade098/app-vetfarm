@@ -5,11 +5,10 @@ import { useState } from "react";
 
 export default function WelcomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
-
-  // Simula carregamento inicial
+// Simula carregamento inicial
   setTimeout(() => setIsLoading(false), 1500);
 
-  if (isLoading) {
+if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <Image 
@@ -21,7 +20,6 @@ export default function WelcomeScreen() {
       </View>
     );
   }
-
   return (
     <View style={styles.container}>
       {/* Logo */}
@@ -52,7 +50,6 @@ export default function WelcomeScreen() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,

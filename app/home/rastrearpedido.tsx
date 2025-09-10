@@ -12,12 +12,10 @@ type EtapaRastreio = {
   descricao: string;
   localizacao: string;
 };
-
 export default function RastrearPedidoScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const pedidoId = params.id as string;
-
   // Dados de exemplo - etapas do rastreamento
   const etapasRastreio: EtapaRastreio[] = [
     {
@@ -78,7 +76,6 @@ export default function RastrearPedidoScreen() {
       default: return 'ellipse';
     }
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'concluido': return '#4CAF50';
@@ -101,7 +98,6 @@ export default function RastrearPedidoScreen() {
         <Text style={styles.headerTitle}>Rastrear Pedido</Text>
         <View style={styles.headerRight} />
       </View>
-
       <ScrollView style={styles.content}>
         {/* Informações do Pedido */}
         <View style={styles.infoContainer}>

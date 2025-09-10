@@ -4,8 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function MeusDadosScreen() {
-  const router = useRouter();
-  
+const router = useRouter();
   // Estado dos dados do usuário
   const [userData, setUserData] = useState({
     nome: 'João',
@@ -17,7 +16,6 @@ export default function MeusDadosScreen() {
   });
 
   const [isEditing, setIsEditing] = useState(false);
-
   const handleSave = () => {
     // Aqui você pode adicionar a lógica para salvar os dados
     Alert.alert('Sucesso', 'Dados salvos com sucesso!');
@@ -28,7 +26,6 @@ export default function MeusDadosScreen() {
     setIsEditing(false);
     // Aqui você pode resetar os dados se necessário
   };
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Cabeçalho */}
@@ -42,7 +39,6 @@ export default function MeusDadosScreen() {
         <Text style={styles.headerTitle}>Meus Dados</Text>
         <View style={styles.headerRight} />
       </View>
-
       <ScrollView style={styles.content}>
         {/* Formulário de Dados */}
         <View style={styles.formContainer}>

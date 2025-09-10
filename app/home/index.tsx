@@ -5,12 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Dados de exemplo para categorias (agora com 4 itens para o layout 2x2)
 const categories = [
-  { id: '1', name: 'Vacinas', icon: '💉', },
-  { id: '2', name: 'Suplementos', icon: '🌱' },
-  { id: '3', name: 'Medicamentos', icon: '💊' },
-  { id: '4', name: 'Acessórios', icon: '🐎' },
+{ id: '1', name: 'Vacinas', icon: '💉', },
+{ id: '2', name: 'Suplementos', icon: '🌱' },
+{ id: '3', name: 'Medicamentos', icon: '💊' },
+{ id: '4', name: 'Acessórios', icon: '🐎' },
 ];
-
 // Dados de exemplo para produtos
 const featuredProducts = [
   { 
@@ -42,7 +41,6 @@ const featuredProducts = [
     image: require('../../assets/images/produtos/celaesquina.png'),
   },
 ];
-
 export default function HomeScreen() {
   const router = useRouter();
 
@@ -58,7 +56,6 @@ export default function HomeScreen() {
   function handleNotifications() {
     alert("Notificações clicadas! 🔔");
   }
-
   const renderProduct = ({ item }) => (
     <TouchableOpacity style={styles.productCard}>
       <View style={styles.productImagePlaceholder}>

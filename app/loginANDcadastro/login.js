@@ -3,18 +3,17 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView } from "react-native";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const router = useRouter();
+const [email, setEmail] = useState("");
+const [password, setPassword] = useState("");
+const router = useRouter();
 
-  async function handleLogin() {
-    try {
-      // Validação básica
-      if (!email || !password) {
-        alert('Por favor, preencha email e senha');
-        return;
+async function handleLogin() {
+try {
+    // Validação básica
+    if (!email || !password) {
+      alert('Por favor, preencha email e senha');
+      return;
       }
-
       // SIMULAÇÃO DE LOGIN (substitua pela sua API real)
       alert('Login simulado com sucesso! Redirecionando...');
       
@@ -22,22 +21,6 @@ export default function Login() {
       setTimeout(() => {
         router.push('/home');
       }, 1000);
-
-      // // CÓDIGO ORIGINAL DA API (descomente quando o backend estiver pronto):
-      // const response = await fetch("http://localhost:3000/auth/login", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ email: email, password: password }),
-      // });
-      // 
-      // const data = await response.json();
-      // 
-      // if (response.ok) {
-      //   alert(`Login bem-sucedido!\nNome: ${data.user.name}`);
-      //   router.push('/home');
-      // } else {
-      //   alert(`Erro: ${data.error}`);
-      // }
 
     } catch (err) {
       alert("Não foi possível conectar ao servidor.");

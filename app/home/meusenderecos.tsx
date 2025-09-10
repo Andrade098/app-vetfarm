@@ -4,21 +4,19 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 type Endereco = {
-  id: string;
-  apelido: string;
-  logradouro: string;
-  numero: string;
-  complemento?: string;
-  bairro: string;
-  cidade: string;
-  estado: string;
-  cep: string;
-  principal: boolean;
+id: string;
+apelido: string;
+logradouro: string;
+numero: string;
+complemento?: string;
+bairro: string;
+cidade: string;
+estado: string;
+cep: string;
+principal: boolean;
 };
-
 export default function MeusEnderecosScreen() {
   const router = useRouter();
-  
   // Dados de exemplo - endereços do usuário
   const [enderecos, setEnderecos] = useState<Endereco[]>([
     {
@@ -82,7 +80,6 @@ export default function MeusEnderecosScreen() {
     Alert.alert('Novo Endereço', 'Adicionar novo endereço');
     // router.push('/home/novo-endereco');
   };
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Cabeçalho */}

@@ -3,10 +3,9 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native';
 
 export default function RootLayout() {
-  return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <StatusBar style="dark" />
-      
+return (
+  <SafeAreaView style={{ flex: 1 }}>
+    <StatusBar style="dark" />
       <Stack
         screenOptions={{
           // REMOVIDO o backgroundColor verde
@@ -21,7 +20,6 @@ export default function RootLayout() {
             headerShown: false
           }}
         />
-        
         {/* Tela de MENU - também sem header */}
         <Stack.Screen 
           name="home/menu" 
@@ -30,7 +28,6 @@ export default function RootLayout() {
             headerShown: false
           }}
         />
-        
         {/* Tela de RESUMO DA CONTA - sem header */}
         <Stack.Screen 
           name="home/resumoconta" 
