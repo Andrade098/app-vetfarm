@@ -102,3 +102,13 @@ export default function RootLayout() {
     </EnderecoProvider>
   );
 }
+export default function LoginLayout() {
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false, // Isso esconde o header padrão
+        animation: 'slide_from_right',
+      }}
+    />
+  );
+}
