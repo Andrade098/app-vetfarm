@@ -81,7 +81,13 @@ return (
           name="(tabs)" 
           options={{ headerShown: false }}
         />
-
+        <Stack.Screen 
+          name="home/novoendereco" 
+          options={{ 
+          title: 'Novo Endereço',
+          headerShown: false
+  }}
+/>
 
       </Stack>
     </SafeAreaView>

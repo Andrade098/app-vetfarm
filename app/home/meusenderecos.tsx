@@ -17,6 +17,7 @@ principal: boolean;
 };
 export default function MeusEnderecosScreen() {
   const router = useRouter();
+  
   // Dados de exemplo - endereços do usuário
   const [enderecos, setEnderecos] = useState<Endereco[]>([
     {
@@ -77,9 +78,8 @@ export default function MeusEnderecosScreen() {
   };
 
   const handleNovoEndereco = () => {
-    Alert.alert('Novo Endereço', 'Adicionar novo endereço');
-    // router.push('/home/novo-endereco');
-  };
+  router.push('/home/novoendereco');
+};
   return (
     <SafeAreaView style={styles.container}>
       {/* Cabeçalho */}
