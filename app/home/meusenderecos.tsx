@@ -1,62 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useEnderecos } from '../../contexts/EnderecoContext';
 
-type Endereco = {
-id: string;
-apelido: string;
-logradouro: string;
-numero: string;
-complemento?: string;
-bairro: string;
-cidade: string;
-estado: string;
-cep: string;
-principal: boolean;
-};
 export default function MeusEnderecosScreen() {
   const router = useRouter();
-  
-  // Dados de exemplo - endereços do usuário
-  const [enderecos, setEnderecos] = useState<Endereco[]>([
-    {
-      id: '1',
-      apelido: 'Fazenda central',
-      logradouro: 'Estrada da Fazenda',
-      numero: 'S/N',
-      complemento: 'Km 12',
-      bairro: 'Zona Rural',
-      cidade: 'Campinas',
-      estado: 'SP',
-      cep: '13000-000',
-      principal: true
-    },
-    {
-      id: '2',
-      apelido: 'Fazenda secundária',
-      logradouro: 'Rodovia dos Bandeirantes',
-      numero: '1234',
-      complemento: 'Galpão 5',
-      bairro: 'Distrito Industrial',
-      cidade: 'Jundiaí',
-      estado: 'SP',
-      cep: '13200-000',
-      principal: false
-    }
-  ]);
+  const { enderecos, definirPrincipal, removerEndereco } = useEnderecos();
 
   const toggleEnderecoPrincipal = (id: string) => {
-    setEnderecos(enderecos.map(endereco => ({
-      ...endereco,
-      principal: endereco.id === id
-    })));
+    definirPrincipal(id);
     Alert.alert('Sucesso', 'Endereço principal atualizado!');
   };
 
   const handleEditarEndereco = (id: string) => {
     Alert.alert('Editar', `Editar endereço ${id}`);
-    // router.push(`/home/editar-endereco/${id}`);
   };
 
   const handleExcluirEndereco = (id: string) => {
@@ -69,7 +27,7 @@ export default function MeusEnderecosScreen() {
           text: 'Excluir',
           style: 'destructive',
           onPress: () => {
-            setEnderecos(enderecos.filter(e => e.id !== id));
+            removerEndereco(id);
             Alert.alert('Sucesso', 'Endereço excluído com sucesso!');
           }
         }
@@ -78,8 +36,9 @@ export default function MeusEnderecosScreen() {
   };
 
   const handleNovoEndereco = () => {
-  router.push('/home/novoendereco');
-};
+    router.push('/home/novoendereco');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Cabeçalho */}
@@ -177,6 +136,7 @@ export default function MeusEnderecosScreen() {
   );
 }
 
+// Os estilos permanecem EXATAMENTE os mesmos
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -189,7 +149,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 15,
     backgroundColor: '#fff',
-    // SEM barra verde - removidas as linhas de borda
   },
   backButton: {
     padding: 5,

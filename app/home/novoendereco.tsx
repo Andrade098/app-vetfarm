@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, TextInput, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useEnderecos } from '../../contexts/EnderecoContext';
 
 type NovoEndereco = {
   apelido: string;
@@ -17,6 +18,8 @@ type NovoEndereco = {
 
 export default function NovoEnderecoScreen() {
   const router = useRouter();
+  const { adicionarEndereco } = useEnderecos();
+  
   const [formData, setFormData] = useState<NovoEndereco>({
     apelido: '',
     cep: '',
@@ -31,7 +34,7 @@ export default function NovoEnderecoScreen() {
 
   const [erro, setErro] = useState('');
 
-  const handleInputChange = (campo: keyof NovoEndereco, valor: string) => {
+  const handleInputChange = (campo: keyof NovoEndereco, valor: string | boolean) => {
     setFormData(prev => ({
       ...prev,
       [campo]: valor
@@ -109,20 +112,21 @@ export default function NovoEnderecoScreen() {
   const handleSalvarEndereco = () => {
     if (!validarFormulario()) return;
 
-    // Simulação de salvamento
-    Alert.alert(
-      'Sucesso!',
-      'Endereço adicionado com sucesso!',
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            // Retorna para a tela de meus endereços
-            router.back();
-          }
-        }
-      ]
-    );
+    // Usa a função do contexto para adicionar o endereço
+    adicionarEndereco({
+      apelido: formData.apelido,
+      logradouro: formData.logradouro,
+      numero: formData.numero,
+      complemento: formData.complemento,
+      bairro: formData.bairro,
+      cidade: formData.cidade,
+      estado: formData.estado,
+      cep: formData.cep,
+      principal: formData.principal
+    });
+
+    Alert.alert('Sucesso!', 'Endereço adicionado com sucesso!');
+    router.back(); // Volta para a tela anterior
   };
 
   return (
