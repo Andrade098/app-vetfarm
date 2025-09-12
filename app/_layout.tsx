@@ -13,6 +13,22 @@ export default function RootLayout() {
             headerTintColor: '#126b1a',
           }}
         >
+          {/* TELA INICIAL (SUA TELA DE BOAS-VINDAS) - IMPORTANTE! */}
+          <Stack.Screen 
+            name="index" 
+            options={{ 
+              headerShown: false
+            }}
+          />
+          
+          {/* TELAS DE LOGIN - SEM HEADER */}
+          <Stack.Screen 
+            name="loginANDcadastro/index" 
+            options={{ 
+              headerShown: false
+            }}
+          />
+          
           {/* Tela HOME independente */}
           <Stack.Screen 
             name="home/index" 
@@ -100,15 +116,5 @@ export default function RootLayout() {
         </Stack>
       </SafeAreaView>
     </EnderecoProvider>
-  );
-}
-export default function LoginLayout() {
-  return (
-    <Stack
-      screenOptions={{
-        headerShown: false, // Isso esconde o header padrão
-        animation: 'slide_from_right',
-      }}
-    />
   );
 }

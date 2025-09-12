@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet, Animated, Easing, ScrollView } from "react-native";
 import { Link, useRouter } from "expo-router";
 
+
 export default function WelcomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const fadeAnim = new Animated.Value(0);
