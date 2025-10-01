@@ -5,38 +5,38 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Dados de exemplo para categorias (agora com 4 itens para o layout 2x2)
 const categories = [
-{ id: '1', name: 'Vacinas', icon: '💉', },
-{ id: '2', name: 'Suplementos', icon: '🌱' },
-{ id: '3', name: 'Medicamentos', icon: '💊' },
-{ id: '4', name: 'Acessórios', icon: '🐎' },
+  { id: '1', name: 'Vacinas', icon: '💉', },
+  { id: '2', name: 'Suplementos', icon: '🌱' },
+  { id: '3', name: 'Medicamentos', icon: '💊' },
+  { id: '4', name: 'Acessórios', icon: '🐎' },
 ];
 // Dados de exemplo para produtos
 const featuredProducts = [
-  { 
-    id: '1', 
-    name: 'Vacina Febre Aftosa', 
-    price: 'R$ 89,90', 
+  {
+    id: '1',
+    name: 'Vacina Febre Aftosa',
+    price: 'R$ 89,90',
     category: 'Vacinas',
     image: require('../../assets/images/produtos/vacina.png'),
   },
-  { 
-    id: '2', 
-    name: 'Suplemento Animais', 
-    price: 'R$ 149,90', 
+  {
+    id: '2',
+    name: 'Suplemento Animais',
+    price: 'R$ 149,90',
     category: 'Suplementos',
     image: require('../../assets/images/produtos/suplemento.png'),
   },
-  { 
-    id: '3', 
-    name: 'Vermífugo Bovino', 
-    price: 'R$ 45,90', 
+  {
+    id: '3',
+    name: 'Vermífugo Bovino',
+    price: 'R$ 45,90',
     category: 'Medicamentos',
     image: require('../../assets/images/produtos/vermifugo.png'),
   },
-  { 
-    id: '4', 
-    name: 'Cela Equina', 
-    price: 'R$ 289,90', 
+  {
+    id: '4',
+    name: 'Cela Equina',
+    price: 'R$ 289,90',
     category: 'Acessórios',
     image: require('../../assets/images/produtos/celaesquina.png'),
   },
@@ -60,7 +60,7 @@ export default function HomeScreen() {
     <TouchableOpacity style={styles.productCard}>
       <View style={styles.productImagePlaceholder}>
         {item.image ? (
-          <Image 
+          <Image
             source={item.image}
             style={styles.productImage}
             resizeMode="contain"
@@ -102,7 +102,7 @@ export default function HomeScreen() {
       <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
         {/* BANNER */}
         <View style={styles.bannerContainer}>
-          <Image 
+          <Image
             source={require('../../assets/images/bemvindos.png')}
             style={styles.bannerImage}
             resizeMode="contain"
@@ -111,7 +111,13 @@ export default function HomeScreen() {
 
         {/* CATEGORIAS */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Categorias</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Categorias</Text>
+            <TouchableOpacity onPress={() => router.push('/home/categoria')}>
+              <Text style={styles.viewAllText}>Ver mais →</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.categoriesGrid}>
             {categories.map((category) => (
               <TouchableOpacity key={category.id} style={styles.categoryCard}>
@@ -121,6 +127,8 @@ export default function HomeScreen() {
             ))}
           </View>
         </View>
+
+
 
         {/* PRODUTOS */}
         <View style={styles.section}>
@@ -138,7 +146,7 @@ export default function HomeScreen() {
 
         {/* BOTÃO VER TODOS */}
         <View style={styles.section}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.exploreButton}
             onPress={() => router.push('/(tabs)/explore')}
           >
@@ -318,4 +326,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  sectionHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 15,
+},
+viewAllText: {
+  fontSize: 14,
+  fontWeight: '500',
+  color: '#126b1a',
+},
 });
