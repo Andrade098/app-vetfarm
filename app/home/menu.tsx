@@ -10,8 +10,8 @@ export default function MenuScreen() {
     { id: '2', title: 'Meus pedidos', icon: 'cart-outline', screen: 'meuspedidos' },
     { id: '3', title: 'Meus dados', icon: 'id-card-outline', screen: 'meusdados' },
     { id: '4', title: 'Meus endereços', icon: 'location-outline', screen: 'meusenderecos' },
-    { id: '5', title: 'Favoritos', icon: 'heart-outline', screen: 'favorites' },
-    { id: '6', title: 'Alterar senha', icon: 'lock-closed-outline', screen: 'change-password' },
+    { id: '5', title: 'Favoritos', icon: 'heart-outline', screen: 'favoritos' },
+    { id: '6', title: 'Alterar senha', icon: 'lock-closed-outline', screen: 'alterarsenha' },
     { id: '7', title: 'Sair', icon: 'log-out-outline', screen: 'logout', isDestructive: true },
   ];
 
