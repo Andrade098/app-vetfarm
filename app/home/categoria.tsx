@@ -58,9 +58,15 @@ const categories = [
 export default function ProductsPage() {
   const router = useRouter();
 
-  const handleCategoryPress = (categoryId: number) => {
-    // Navegar para a página de detalhes da categoria
-    router.push(`/category/${categoryId}`);
+  const handleCategoryPress = (categoryId: number, categoryTitle: string) => {
+    // Navegar para a tela categoriaAnimal.tsx passando os parâmetros
+    router.push({
+      pathname: '/home/categoriaAnimal',
+      params: { 
+        categoriaId: categoryId.toString(),
+        categoriaNome: categoryTitle
+      }
+    });
   };
 
   return (
@@ -84,7 +90,7 @@ export default function ProductsPage() {
           <TouchableOpacity 
             key={category.id} 
             style={[styles.categoryCard, { borderLeftColor: category.color }]}
-            onPress={() => handleCategoryPress(category.id)}
+            onPress={() => handleCategoryPress(category.id, category.title)}
           >
             <View style={styles.categoryHeader}>
               <Text style={styles.categoryIcon}>{category.icon}</Text>

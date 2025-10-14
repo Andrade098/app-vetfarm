@@ -1,46 +1,46 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 
 // Dados simulados para as categorias
 const categories = [
   {
-    id: 1,
+    id: '1',
     title: 'Bovinos',
     description: 'Produtos especializados para gado de corte e leite',
     icon: '🐄',
     color: '#4CAF50',
   },
   {
-    id: 2,
+    id: '2',
     title: 'Ovinos',
     description: 'Cuidados especiais para carneiros e ovelhas',
     icon: '🐑',
     color: '#4CAF50',
   },
   {
-    id: 3,
+    id: '3',
     title: 'Suínos',
     description: 'Produtos para criação de porcos',
     icon: '🐖',
     color: '#4CAF50',
   },
   {
-    id: 4,
+    id: '4',
     title: 'Equinos',
     description: 'Cuidados completos para cavalos',
     icon: '🐎',
     color: '#4CAF50',
   },
   {
-    id: 5,
+    id: '5',
     title: 'Aves',
     description: 'Produtos para galinhas, frangos e aves caipiras',
     icon: '🐔',
     color: '#4CAF50',
   },
   {
-    id: 6,
+    id: '6',
     title: 'Peixe',
     description: 'Produtos para piscicultura e aquicultura',
     icon: '🐟',
@@ -50,12 +50,18 @@ const categories = [
 
 export default function ProductsPage() {
   const router = useRouter();
+  const params = useLocalSearchParams(); // ADICIONEI ESTA LINHA
 
-  const handleAnimalPress = (animalType: string) => {
-    // Redirecionar para a página categoriaProduto.tsx com parâmetro
+  const handleAnimalPress = (animalId: string, animalNome: string) => {
+    // Navegar para a tela de produtos da categoria
     router.push({
       pathname: '/home/categoriaProduto',
-      params: { animalType: animalType },
+      params: { 
+        categoriaId: params.categoriaId,
+        categoriaNome: params.categoriaNome,
+        animalId: animalId,
+        animalNome: animalNome
+      }
     });
   };
 
@@ -63,7 +69,7 @@ export default function ProductsPage() {
     <>
       <Stack.Screen 
         options={{
-          title: 'Produtos Veterinários',
+          title: params.categoriaNome || 'Produtos Veterinários', // TÍTULO DINÂMICO
           headerTitleStyle: {
             fontWeight: 'bold',
             fontSize: 20,
@@ -72,9 +78,11 @@ export default function ProductsPage() {
       />
       <ScrollView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Categorias de Animais</Text>
+          <Text style={styles.headerTitle}>
+            {params.categoriaNome || 'Categoria'} para Animais
+          </Text>
           <Text style={styles.headerSubtitle}>
-            Selecione uma categoria para ver os produtos disponíveis
+            Selecione um animal para ver os produtos disponíveis
           </Text>
         </View>
 
@@ -82,7 +90,7 @@ export default function ProductsPage() {
           <TouchableOpacity 
             key={category.id} 
             style={[styles.categoryCard, { borderLeftColor: category.color }]}
-            onPress={() => handleAnimalPress(category.title)} // agora usa a função certa
+            onPress={() => handleAnimalPress(category.id, category.title)} // CORRIGIDO: passa id e nome
           >
             <View style={styles.categoryHeader}>
               <Text style={styles.categoryIcon}>{category.icon}</Text>

@@ -1,170 +1,319 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, FlatList } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
-// Dados simulados para as categorias
-const categories = [
-  {
-    id: 1,
-    title: 'Vacinas',
-    description: 'Proteção essencial para o rebanho. Previnem doenças como brucelose, febre aftosa e raiva, garantindo animais saudáveis e produtivos.',
-    icon: '💉',
-    color: '#4CAF50',
-  },
-  {
-    id: 2,
-    title: 'Antiparasitários',
-    description: 'Combate eficaz contra vermes e parasitas. Protegem carneiros, cabras e outros animais, melhorando a absorção de nutrientes e o desenvolvimento.',
-    icon: '🐛',
-    color: '#FF9800',
-  },
-  {
-    id: 3,
-    title: 'Suplementos',
-    description: 'Fortalecimento nutricional para porcos e outros animais. Vitaminas, minerais e aminoácidos que melhoram a imunidade e o crescimento.',
-    icon: '💊',
-    color: '#2196F3',
-  },
-  {
-    id: 4,
-    title: 'Antibióticos',
-    description: 'Tratamento de infecções bacterianas. Auxiliam na recuperação de animais doentes, garantindo saúde e bem-estar.',
-    icon: '🦠',
-    color: '#F44336',
-  },
-  {
-    id: 5,
-    title: 'Nutrição',
-    description: 'Alimentação balanceada para aves e outros animais. Rações enriquecidas e suplementos que garantem desenvolvimento saudável e alta produtividade.',
-    icon: '🌾',
-    color: '#9C27B0',
-  },
-  {
-    id: 6,
-    title: 'Higiene',
-    description: 'Produtos para limpeza e desinfecção de instalações e animais. Previnem doenças e garantem um ambiente saudável para o rebanho.',
-    icon: '🧼',
-    color: '#00BCD4',
-  },
-  {
-    id: 7,
-    title: 'Acessórios',
-    description: 'Itens práticos para o manejo diário. Desde equipamentos de aplicação de medicamentos até materiais para organização e cuidado animal.',
-    icon: '🛒',
-    color: '#795548',
-  },
-];
+// Dados de exemplo para produtos por categoria e animal
+const produtosPorCategoria = {
+  'Vacinas-Bovinos': [
+    {
+      id: '1',
+      nome: 'Vacina Febre Aftosa',
+      preco: 'R$ 89,90',
+      descricao: 'Proteção contra febre aftosa - dose única',
+      // imagem: require('../../assets/images/produtos/vacina-aftosa.png'),
+      icone: '💉'
+    },
+    {
+      id: '2',
+      nome: 'Vacina Brucelose',
+      preco: 'R$ 67,50',
+      descricao: 'Prevenção contra brucelose bovina',
+      // imagem: require('../../assets/images/produtos/vacina-brucelose.png'),
+      icone: '💉'
+    },
+    {
+      id: '3',
+      nome: 'Vacina Raiva',
+      preco: 'R$ 95,00',
+      descricao: 'Proteção contra raiva animal',
+      // imagem: require('../../assets/images/produtos/vacina-raiva.png'),
+      icone: '💉'
+    },
+    {
+      id: '4',
+      nome: 'Vacina Clostridiose',
+      preco: 'R$ 78,90',
+      descricao: 'Combate a doenças clostridiais',
+      // imagem: require('../../assets/images/produtos/vacina-clostridiose.png'),
+      icone: '💉'
+    },
+  ],
+  'Vacinas-Suínos': [
+    {
+      id: '1',
+      nome: 'Vacina Peste Suína',
+      preco: 'R$ 75,90',
+      descricao: 'Proteção contra peste suína clássica',
+      // imagem: require('../../assets/images/produtos/vacina-peste-suina.png'),
+      icone: '💉'
+    },
+    {
+      id: '2',
+      nome: 'Vacina Rinite Atrófica',
+      preco: 'R$ 82,50',
+      descricao: 'Prevenção contra rinite atrófica',
+      // imagem: require('../../assets/images/produtos/vacina-rinite.png'),
+      icone: '💉'
+    },
+  ],
+  'Antiparasitários-Bovinos': [
+    {
+      id: '1',
+      nome: 'Vermífugo Bovino Plus',
+      preco: 'R$ 45,90',
+      descricao: 'Vermífugo de amplo espectro',
+      // imagem: require('../../assets/images/produtos/vermifugo-bovino.png'),
+      icone: '🐛'
+    },
+    {
+      id: '2',
+      nome: 'Ivermectina Injetável',
+      preco: 'R$ 38,50',
+      descricao: 'Controle de parasitas internos e externos',
+      // imagem: require('../../assets/images/produtos/ivermectina.png'),
+      icone: '🐛'
+    },
+  ],
+  'Suplementos-Bovinos': [
+    {
+      id: '1',
+      nome: 'Suplemento Mineral Bovino',
+      preco: 'R$ 149,90',
+      descricao: 'Suplemento mineral completo para bovinos',
+      // imagem: require('../../assets/images/produtos/suplemento-mineral.png'),
+      icone: '💊'
+    },
+    {
+      id: '2',
+      nome: 'Vitamina A-D-E',
+      preco: 'R$ 67,80',
+      descricao: 'Complexo vitamínico essencial',
+      // imagem: require('../../assets/images/produtos/vitamina-ade.png'),
+      icone: '💊'
+    },
+  ],
+};
 
-export default function ProductsPage() {
+export default function CategoriaProdutoScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  
+  const categoriaId = params.categoriaId;
+  const categoriaNome = params.categoriaNome;
+  const animalNome = params.animalNome;
+  const animalId = params.animalId;
 
-  const handleCategoryPress = (categoryId: number) => {
-    // Navegar para a página de detalhes da categoria
-    router.push(`/category/${categoryId}`);
-  };
+  // Gera a chave para buscar os produtos
+  const chaveProdutos = `${categoriaNome}-${animalNome}`;
+  const produtos = produtosPorCategoria[chaveProdutos] || [];
+
+  const renderProduto = ({ item }) => (
+    <TouchableOpacity style={styles.produtoCard}>
+      <View style={styles.produtoImagemContainer}>
+        {/* ÁREA PARA IMAGEM - COMENTADA */}
+        {/* <Image
+          source={item.imagem}
+          style={styles.produtoImagem}
+          resizeMode="contain"
+        /> */}
+        
+        {/* ÍCONE TEMPORÁRIO */}
+        <Text style={styles.produtoIcone}>{item.icone}</Text>
+      </View>
+      
+      <View style={styles.produtoInfo}>
+        <Text style={styles.produtoNome}>{item.nome}</Text>
+        <Text style={styles.produtoDescricao}>{item.descricao}</Text>
+        <Text style={styles.produtoPreco}>{item.preco}</Text>
+        
+        <TouchableOpacity style={styles.adicionarButton}>
+          <Text style={styles.adicionarButtonText}>+ Adicionar</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
-    <>
+    <View style={styles.container}>
       <Stack.Screen 
         options={{
-          title: 'Produtos Veterinários',
+          title: `${categoriaNome} - ${animalNome}`,
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 20,
+            fontSize: 18,
           },
         }} 
       />
-      <ScrollView style={styles.container}>
+      
+      <ScrollView style={styles.content}>
+        {/* Cabeçalho */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Categorias de Produtos</Text>
-          <Text style={styles.headerSubtitle}>Selecione uma categoria para ver os produtos disponíveis</Text>
+          <Text style={styles.titulo}>
+            {categoriaNome} para {animalNome}
+          </Text>
+          <Text style={styles.subtitulo}>
+            {produtos.length} produtos encontrados
+          </Text>
         </View>
 
-        {categories.map((category) => (
-          <TouchableOpacity 
-            key={category.id} 
-            style={[styles.categoryCard, { borderLeftColor: category.color }]}
-            onPress={() => handleCategoryPress(category.id)}
-          >
-            <View style={styles.categoryHeader}>
-              <Text style={styles.categoryIcon}>{category.icon}</Text>
-              <Text style={styles.categoryTitle}>{category.title}</Text>
-            </View>
-            <Text style={styles.categoryDescription}>{category.description}</Text>
-          </TouchableOpacity>
-        ))}
-        
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Entre em contato para mais informações</Text>
-        </View>
+        {/* Lista de Produtos */}
+        {produtos.length > 0 ? (
+          <FlatList
+            data={produtos}
+            renderItem={renderProduto}
+            keyExtractor={item => item.id}
+            scrollEnabled={false}
+            contentContainerStyle={styles.listaProdutos}
+          />
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="alert-circle-outline" size={60} color="#ccc" />
+            <Text style={styles.emptyStateText}>Nenhum produto encontrado</Text>
+            <Text style={styles.emptyStateSubtext}>
+              Não há produtos de {categoriaNome.toLowerCase()} para {animalNome.toLowerCase()} no momento.
+            </Text>
+          </View>
+        )}
+
+        {/* Botão Voltar */}
+        <TouchableOpacity 
+          style={styles.voltarButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.voltarButtonText}>Voltar</Text>
+        </TouchableOpacity>
       </ScrollView>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9fa',
+  },
+  content: {
+    flex: 1,
+    padding: 15,
   },
   header: {
+    backgroundColor: '#fff',
     padding: 20,
-    backgroundColor: 'white',
-    marginBottom: 10,
+    borderRadius: 10,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  headerTitle: {
-    fontSize: 22,
+  titulo: {
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 5,
     color: '#333',
+    marginBottom: 5,
   },
-  headerSubtitle: {
+  subtitulo: {
     fontSize: 14,
     color: '#666',
   },
-  categoryCard: {
+  listaProdutos: {
+    paddingBottom: 20,
+  },
+  produtoCard: {
     backgroundColor: 'white',
-    padding: 15,
-    marginHorizontal: 10,
-    marginVertical: 5,
-    borderRadius: 8,
-    borderLeftWidth: 4,
+    borderRadius: 12,
+    marginBottom: 15,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  categoryHeader: {
+    shadowRadius: 3,
+    elevation: 3,
     flexDirection: 'row',
+  },
+  produtoImagemContainer: {
+    width: 100,
+    height: 120,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
   },
-  categoryIcon: {
-    fontSize: 24,
-    marginRight: 10,
+  produtoImagem: {
+    width: '80%',
+    height: '80%',
   },
-  categoryTitle: {
+  produtoIcone: {
+    fontSize: 40,
+  },
+  produtoInfo: {
+    flex: 1,
+    padding: 15,
+    justifyContent: 'space-between',
+  },
+  produtoNome: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  produtoDescricao: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 8,
+    lineHeight: 16,
+  },
+  produtoPreco: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#126b1a',
+    marginBottom: 10,
   },
-  categoryDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-  footer: {
-    padding: 20,
+  adicionarButton: {
+    backgroundColor: '#126b1a',
+    padding: 8,
+    borderRadius: 6,
     alignItems: 'center',
-    marginTop: 20,
   },
-  footerText: {
+  adicionarButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
     fontSize: 14,
     color: '#999',
-    fontStyle: 'italic',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  voltarButton: {
+    backgroundColor: '#95a5a6',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  voltarButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
