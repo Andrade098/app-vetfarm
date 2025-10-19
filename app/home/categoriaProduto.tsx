@@ -6,21 +6,22 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Dados de exemplo para produtos por categoria e animal
 const produtosPorCategoria = {
+  // 🐄 BOVINOS
   'Vacinas-Bovinos': [
     {
       id: '1',
-      nome: 'Vacina Febre Aftosa',
+      nome: 'Vacina Brucelose B19',
       preco: 'R$ 89,90',
-      descricao: 'Proteção contra febre aftosa - dose única',
-      // imagem: require('../../assets/images/produtos/vacina-aftosa.png'),
+      descricao: 'Proteção contra brucelose bovina',
+      imagem: require('../../assets/images/produtos/vacina-brucelose.png'),
       icone: '💉'
     },
     {
       id: '2',
-      nome: 'Vacina Brucelose',
+      nome: 'Vacina Febre Aftosa',
       preco: 'R$ 67,50',
-      descricao: 'Prevenção contra brucelose bovina',
-      // imagem: require('../../assets/images/produtos/vacina-brucelose.png'),
+      descricao: 'Proteção contra febre aftosa',
+      imagem: require('../../assets/images/produtos/vacina.png'),
       icone: '💉'
     },
     {
@@ -28,7 +29,7 @@ const produtosPorCategoria = {
       nome: 'Vacina Raiva',
       preco: 'R$ 95,00',
       descricao: 'Proteção contra raiva animal',
-      // imagem: require('../../assets/images/produtos/vacina-raiva.png'),
+      imagem: require('../../assets/images/produtos/vacina-raiva.png'),
       icone: '💉'
     },
     {
@@ -36,53 +37,53 @@ const produtosPorCategoria = {
       nome: 'Vacina Clostridiose',
       preco: 'R$ 78,90',
       descricao: 'Combate a doenças clostridiais',
-      // imagem: require('../../assets/images/produtos/vacina-clostridiose.png'),
+      imagem: require('../../assets/images/produtos/vacina-clostridiose.png'),
       icone: '💉'
     },
   ],
-  'Vacinas-Suínos': [
+  'Medicamentos-Bovinos': [
     {
       id: '1',
-      nome: 'Vacina Peste Suína',
-      preco: 'R$ 75,90',
-      descricao: 'Proteção contra peste suína clássica',
-      // imagem: require('../../assets/images/produtos/vacina-peste-suina.png'),
-      icone: '💉'
-    },
-    {
-      id: '2',
-      nome: 'Vacina Rinite Atrófica',
-      preco: 'R$ 82,50',
-      descricao: 'Prevenção contra rinite atrófica',
-      // imagem: require('../../assets/images/produtos/vacina-rinite.png'),
-      icone: '💉'
-    },
-  ],
-  'Antiparasitários-Bovinos': [
-    {
-      id: '1',
-      nome: 'Vermífugo Bovino Plus',
+      nome: 'Ivermectina 1%',
       preco: 'R$ 45,90',
-      descricao: 'Vermífugo de amplo espectro',
-      // imagem: require('../../assets/images/produtos/vermifugo-bovino.png'),
-      icone: '🐛'
+      descricao: 'Antiparasitário de amplo espectro',
+      // imagem: require('../../assets/images/produtos/ivermectina.png'),
+      icone: '💊'
     },
     {
       id: '2',
-      nome: 'Ivermectina Injetável',
+      nome: 'Albendazol 10%',
       preco: 'R$ 38,50',
-      descricao: 'Controle de parasitas internos e externos',
-      // imagem: require('../../assets/images/produtos/ivermectina.png'),
-      icone: '🐛'
+      descricao: 'Vermífugo para bovinos',
+      // imagem: require('../../assets/images/produtos/albendazol.png'),
+      icone: '💊'
+    },
+  ],
+  'Acessórios-Bovinos': [
+    {
+      id: '1',
+      nome: 'Brinco de Identificação Bovino',
+      preco: 'R$ 12,90',
+      descricao: 'Brinco plástico numerado para identificação',
+      // imagem: require('../../assets/images/produtos/brinco-bovino.png'),
+      icone: '🏷️'
+    },
+    {
+      id: '2',
+      nome: 'Aplicador de Brincos',
+      preco: 'R$ 89,00',
+      descricao: 'Aplicador profissional para brincos',
+      // imagem: require('../../assets/images/produtos/aplicador-brinco.png'),
+      icone: '🔧'
     },
   ],
   'Suplementos-Bovinos': [
     {
       id: '1',
-      nome: 'Suplemento Mineral Bovino',
+      nome: 'Núcleo Mineral para Gado de Corte',
       preco: 'R$ 149,90',
       descricao: 'Suplemento mineral completo para bovinos',
-      // imagem: require('../../assets/images/produtos/suplemento-mineral.png'),
+      imagem: require('../../assets/images/produtos/suplemento-mineral.png'),
       icone: '💊'
     },
     {
@@ -90,7 +91,226 @@ const produtosPorCategoria = {
       nome: 'Vitamina A-D-E',
       preco: 'R$ 67,80',
       descricao: 'Complexo vitamínico essencial',
-      // imagem: require('../../assets/images/produtos/vitamina-ade.png'),
+      imagem: require('../../assets/images/produtos/vitamina-ade.png'),
+      icone: '💊'
+    },
+  ],
+
+  // 🐑 OVINOS
+  'Vacinas-Ovinos': [
+    {
+      id: '1',
+      nome: 'Vacina Clostridial (Covexin 10)',
+      preco: 'R$ 82,50',
+      descricao: 'Proteção contra doenças clostridiais',
+      imagem: require('../../assets/images/produtos/vacina-clostridial.png'),
+      icone: '💉'
+    },
+  ],
+  'Medicamentos-Ovinos': [
+    {
+      id: '1',
+      nome: 'Albendazol 10%',
+      preco: 'R$ 42,90',
+      descricao: 'Vermífugo para ovinos',
+      // imagem: require('../../assets/images/produtos/albendazol-ovino.png'),
+      icone: '💊'
+    },
+  ],
+  'Acessórios-Ovinos': [
+    {
+      id: '1',
+      nome: 'Tesoura para Tosa de Lã',
+      preco: 'R$ 35,00',
+      descricao: 'Tesoura profissional para tosa de ovinos',
+      // imagem: require('../../assets/images/produtos/tesoura-tosa.png'),
+      icone: '✂️'
+    },
+  ],
+  'Suplementos-Ovinos': [
+    {
+      id: '1',
+      nome: 'Sal Mineral para Ovinos',
+      preco: 'R$ 79,90',
+      descricao: 'Suplemento mineral específico para ovinos',
+      imagem: require('../../assets/images/produtos/sal-mineral-ovino.png'),
+      icone: '💊'
+    },
+  ],
+
+  // 🐖 SUÍNOS
+  'Vacinas-Suínos': [
+    {
+      id: '1',
+      nome: 'Vacina Peste Suína',
+      preco: 'R$ 75,90',
+      descricao: 'Proteção contra peste suína clássica',
+      imagem: require('../../assets/images/produtos/vacina-peste-suina.png'),
+      icone: '💉'
+    },
+    {
+      id: '2',
+      nome: 'Vacina Rinite Atrófica',
+      preco: 'R$ 82,50',
+      descricao: 'Prevenção contra rinite atrófica',
+      imagem: require('../../assets/images/produtos/vacina-rinite.png'),
+      icone: '💉'
+    },
+    
+  ],
+  'Medicamentos-Suínos': [
+    {
+      id: '1',
+      nome: 'Enrofloxacina 10%',
+      preco: 'R$ 58,90',
+      descricao: 'Antibiótico para infecções bacterianas',
+      // imagem: require('../../assets/images/produtos/enrofloxacina.png'),
+      icone: '💊'
+    },
+  ],
+  'Acessórios-Suínos': [
+    {
+      id: '1',
+      nome: 'Bebedouro Tipo Nipple',
+      preco: 'R$ 24,90',
+      descricao: 'Bebedouro automático para suínos',
+      // imagem: require('../../assets/images/produtos/bebedouro-nipple.png'),
+      icone: '🚰'
+    },
+  ],
+  'Suplementos-Suínos': [
+    {
+      id: '1',
+      nome: 'Premix Vitamínico para Suínos',
+      preco: 'R$ 129,90',
+      descricao: 'Complexo vitamínico para suínos',
+      imagem: require('../../assets/images/produtos/premix-suino.png'),
+      icone: '💊'
+    },
+  ],
+
+  // 🐎 EQUINOS
+  'Vacinas-Equinos': [
+    {
+      id: '1',
+      nome: 'Vacina Antitetânica',
+      preco: 'R$ 65,00',
+      descricao: 'Proteção contra tétano em equinos',
+      imagem: require('../../assets/images/produtos/vacina-antitetanica.png'),
+      icone: '💉'
+    },
+  ],
+  'Medicamentos-Equinos': [
+    {
+      id: '1',
+      nome: 'Pasta Vermífuga com Ivermectina',
+      preco: 'R$ 52,90',
+      descricao: 'Vermífugo em pasta para equinos',
+      // imagem: require('../../assets/images/produtos/pasta-vermifuga.png'),
+      icone: '💊'
+    },
+  ],
+  'Acessórios-Equinos': [
+    {
+      id: '1',
+      nome: 'Cabeçada de Couro',
+      preco: 'R$ 89,90',
+      descricao: 'Cabeçada profissional em couro legítimo',
+      // imagem: require('../../assets/images/produtos/cabcada-couro.png'),
+      icone: '🎠'
+    },
+  ],
+  'Suplementos-Equinos': [
+    {
+      id: '1',
+      nome: 'Suplemento Vitamínico-Mineral',
+      preco: 'R$ 139,90',
+      descricao: 'Suplemento completo para equinos',
+      imagem: require('../../assets/images/produtos/suplemento-equino.png'),
+      icone: '💊'
+    },
+  ],
+
+  // 🐔 AVES
+  'Vacinas-Aves': [
+    {
+      id: '1',
+      nome: 'Vacina contra Newcastle',
+      preco: 'R$ 48,90',
+      descricao: 'Proteção contra doença de Newcastle',
+      imagem: require('../../assets/images/produtos/vacina-newcastle.png'),
+      icone: '💉'
+    },
+  ],
+  'Medicamentos-Aves': [
+    {
+      id: '1',
+      nome: 'Oxitetraciclina Solúvel',
+      preco: 'R$ 32,50',
+      descricao: 'Antibiótico de amplo espectro para aves',
+      // imagem: require('../../assets/images/produtos/oxitetraciclina.png'),
+      icone: '💊'
+    },
+  ],
+  'Acessórios-Aves': [
+    {
+      id: '1',
+      nome: 'Comedouro Automático para Aves',
+      preco: 'R$ 45,00',
+      descricao: 'Comedouro automático para granjas',
+      // imagem: require('../../assets/images/produtos/comedouro-aves.png'),
+      icone: '🍽️'
+    },
+  ],
+  'Suplementos-Aves': [
+    {
+      id: '1',
+      nome: 'Complexo Vitamínico para Aves',
+      preco: 'R$ 39,90',
+      descricao: 'Vitaminas essenciais para aves',
+      imagem: require('../../assets/images/produtos/vitaminas-aves.png'),
+      icone: '💊'
+    },
+  ],
+
+  // 🐟 PEIXES
+  'Vacinas-Peixes': [
+    {
+      id: '1',
+      nome: 'Vacina contra Streptococcus',
+      preco: 'R$ 125,00',
+      descricao: 'Proteção contra streptococcus em peixes',
+      // imagem: require('../../assets/images/produtos/vacina-streptococcus.png'),
+      icone: '💉'
+    },
+  ],
+  'Medicamentos-Peixes': [
+    {
+      id: '1',
+      nome: 'Formalina',
+      preco: 'R$ 28,90',
+      descricao: 'Tratamento antiparasitário para aquicultura',
+      // imagem: require('../../assets/images/produtos/formalin.png'),
+      icone: '💊'
+    },
+  ],
+  'Acessórios-Peixes': [
+    {
+      id: '1',
+      nome: 'Rede de Manejo para Peixes',
+      preco: 'R$ 34,90',
+      descricao: 'Rede profissional para manejo de peixes',
+      // imagem: require('../../assets/images/produtos/rede-peixes.png'),
+      icone: '🎣'
+    },
+  ],
+  'Suplementos-Peixes': [
+    {
+      id: '1',
+      nome: 'Ração com Probióticos',
+      preco: 'R$ 89,90',
+      descricao: 'Ração enriquecida para peixes',
+      // imagem: require('../../assets/images/produtos/racao-probiotico.png'),
       icone: '💊'
     },
   ],
@@ -112,15 +332,19 @@ export default function CategoriaProdutoScreen() {
   const renderProduto = ({ item }) => (
     <TouchableOpacity style={styles.produtoCard}>
       <View style={styles.produtoImagemContainer}>
-        {/* ÁREA PARA IMAGEM - COMENTADA */}
-        {/* <Image
-          source={item.imagem}
-          style={styles.produtoImagem}
-          resizeMode="contain"
-        /> */}
-        
-        {/* ÍCONE TEMPORÁRIO */}
-        <Text style={styles.produtoIcone}>{item.icone}</Text>
+        {/* IMAGEM DO PRODUTO - SÓ MOSTRA SE TIVER IMAGEM */}
+        {item.imagem ? (
+          <Image
+            source={item.imagem}
+            style={styles.produtoImagem}
+            resizeMode="contain"
+          />
+        ) : (
+          // ÍCONE PARA PRODUTOS SEM IMAGEM
+          <View style={styles.iconeContainer}>
+            <Text style={styles.produtoIcone}>{item.icone}</Text>
+          </View>
+        )}
       </View>
       
       <View style={styles.produtoInfo}>
@@ -236,15 +460,21 @@ const styles = StyleSheet.create({
   produtoImagemContainer: {
     width: 100,
     height: 120,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
     borderTopLeftRadius: 12,
     borderBottomLeftRadius: 12,
   },
   produtoImagem: {
-    width: '80%',
-    height: '80%',
+    width: '120%',
+    height: '120%',
+  },
+  iconeContainer: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   produtoIcone: {
     fontSize: 40,

@@ -26,7 +26,17 @@ export default function FinalizarCompra() {
     cartao: '',
     validade: '',
     cvv: '',
-    nomeTitular: ''
+    nomeTitular: '',
+    cpfNotaFiscal: '',
+    emailNotaFiscal: ''
+  });
+
+  // DADOS DO PEDIDO CONFIRMADO
+  const [pedidoConfirmado, setPedidoConfirmado] = useState({
+    numeroPedido: Math.floor(100000 + Math.random() * 900000).toString(),
+    codigoRastreio: `VF${Math.floor(100000000 + Math.random() * 900000000)}BR`,
+    dataEntrega: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('pt-BR'),
+    dataPedido: new Date().toLocaleDateString('pt-BR')
   });
 
   const formasPagamento = [
@@ -46,30 +56,46 @@ export default function FinalizarCompra() {
         return;
       }
       setCurrentStep(2);
+    } else if (currentStep === 2) {
+      // Validação dos dados de pagamento
+      if (formaPagamento !== 'pix') {
+        if (!dadosPagamento.cartao || !dadosPagamento.validade || !dadosPagamento.cvv || !dadosPagamento.nomeTitular) {
+          Alert.alert('Erro', 'Por favor, preencha todos os dados do cartão');
+          return;
+        }
+      }
+      setCurrentStep(3);
+    } else if (currentStep === 3) {
+      setCurrentStep(4);
+    } else if (currentStep === 4) {
+      if (!dadosPagamento.cpfNotaFiscal) {
+        Alert.alert('Atenção', 'Por favor, informe o CPF para emissão da nota fiscal');
+        return;
+      }
+      setCurrentStep(5);
     }
   };
 
   const handleVoltar = () => {
-    if (currentStep === 2) {
-      setCurrentStep(1);
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
     } else {
       router.back();
     }
   };
 
   const handleFinalizarCompra = () => {
-    // Validação básica
-    if (!dadosPagamento.nome || !dadosPagamento.email || !dadosPagamento.endereco) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos obrigatórios');
-      return;
-    }
-
+    // Simular processamento do pedido
     Alert.alert(
-      'Compra Finalizada!',
-      'Sua compra foi processada com sucesso!',
+      'Compra Finalizada com Sucesso!',
+      `Seu pedido #${pedidoConfirmado.numeroPedido} foi processado.\nCódigo de rastreio: ${pedidoConfirmado.codigoRastreio}`,
       [
         {
-          text: 'OK',
+          text: 'Acompanhar Pedido',
+          onPress: () => router.push('/home/rastrearpedido')
+        },
+        {
+          text: 'Voltar à Loja',
           onPress: () => router.push('/home/')
         }
       ]
@@ -78,7 +104,7 @@ export default function FinalizarCompra() {
 
   const renderStep1 = () => (
     <>
-      {/* Resumo do Pedido - AGORA DINÂMICO */}
+      {/* Resumo do Pedido */}
       <View style={styles.resumo}>
         <Text style={styles.subtitulo}>Resumo do Pedido</Text>
         {cartItems.map((item: any, index: number) => (
@@ -186,7 +212,7 @@ export default function FinalizarCompra() {
 
   const renderStep2 = () => (
     <>
-      {/* Resumo com forma de pagamento - AGORA DINÂMICO */}
+      {/* Resumo com forma de pagamento */}
       <View style={styles.resumo}>
         <Text style={styles.subtitulo}>Resumo do Pedido</Text>
         {cartItems.map((item: any, index: number) => (
@@ -295,6 +321,217 @@ export default function FinalizarCompra() {
     </>
   );
 
+  const renderStep3 = () => (
+    <>
+      {/* REVISÃO COMPLETA DO PEDIDO */}
+      <View style={styles.secao}>
+        <Text style={styles.subtitulo}>Revise seu Pedido</Text>
+        <Text style={styles.instrucao}>Confirme todas as informações antes de finalizar</Text>
+        
+        {/* Dados Pessoais */}
+        <View style={styles.revisaoGrupo}>
+          <Text style={styles.revisaoTitulo}>Dados Pessoais</Text>
+          <Text style={styles.revisaoTexto}>{dadosPagamento.nome}</Text>
+          <Text style={styles.revisaoTexto}>{dadosPagamento.email}</Text>
+          <Text style={styles.revisaoTexto}>{dadosPagamento.telefone}</Text>
+        </View>
+
+        {/* Endereço */}
+        <View style={styles.revisaoGrupo}>
+          <Text style={styles.revisaoTitulo}>Endereço de Entrega</Text>
+          <Text style={styles.revisaoTexto}>
+            {dadosPagamento.endereco}, {dadosPagamento.numero}
+          </Text>
+          <Text style={styles.revisaoTexto}>
+            {dadosPagamento.cidade} - {dadosPagamento.estado}
+          </Text>
+          <Text style={styles.revisaoTexto}>CEP: {dadosPagamento.cep}</Text>
+        </View>
+
+        {/* Pagamento */}
+        <View style={styles.revisaoGrupo}>
+          <Text style={styles.revisaoTitulo}>Forma de Pagamento</Text>
+          <Text style={styles.revisaoTexto}>
+            {formaPagamento === 'credito' && 'Cartão de Crédito'}
+            {formaPagamento === 'debito' && 'Cartão de Débito'}
+            {formaPagamento === 'pix' && 'PIX'}
+          </Text>
+          {formaPagamento !== 'pix' && (
+            <Text style={styles.revisaoTexto}>Final {dadosPagamento.cartao?.slice(-4)}</Text>
+          )}
+        </View>
+
+        {/* Itens do Pedido */}
+        <View style={styles.revisaoGrupo}>
+          <Text style={styles.revisaoTitulo}>Itens do Pedido</Text>
+          {cartItems.map((item: any, index: number) => (
+            <View key={index} style={styles.revisaoItem}>
+              <Text style={styles.revisaoTexto}>{item.quantity}x {item.name}</Text>
+              <Text style={styles.revisaoTexto}>{item.price}</Text>
+            </View>
+          ))}
+          <View style={styles.revisaoTotal}>
+            <Text style={styles.revisaoTotalTexto}>Total: R$ {total}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Termos e Condições */}
+      <View style={styles.termosContainer}>
+        <Text style={styles.termosTexto}>
+          Ao confirmar o pedido, você concorda com nossos{' '}
+          <Text style={styles.termosLink}>Termos de Uso</Text> e{' '}
+          <Text style={styles.termosLink}>Política de Privacidade</Text>.
+        </Text>
+      </View>
+    </>
+  );
+
+  const renderStep4 = () => (
+    <>
+      {/* NOTA FISCAL */}
+      <View style={styles.secao}>
+        <Text style={styles.subtitulo}>Nota Fiscal</Text>
+        <Text style={styles.instrucao}>
+          Informe os dados para emissão da nota fiscal
+        </Text>
+
+        <View style={styles.notaFiscalContainer}>
+          <View style={styles.notaFiscalInfo}>
+            <Ionicons name="document-text-outline" size={24} color="#126b1a" />
+            <Text style={styles.notaFiscalTitulo}>Nota Fiscal Eletrônica</Text>
+          </View>
+          <Text style={styles.notaFiscalDescricao}>
+            A nota fiscal será enviada automaticamente para seu email após a confirmação do pagamento.
+          </Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="CPF para nota fiscal*"
+            keyboardType="numeric"
+            value={dadosPagamento.cpfNotaFiscal}
+            onChangeText={(text) => setDadosPagamento({...dadosPagamento, cpfNotaFiscal: text})}
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Email para receber a nota (opcional)"
+            keyboardType="email-address"
+            value={dadosPagamento.emailNotaFiscal}
+            onChangeText={(text) => setDadosPagamento({...dadosPagamento, emailNotaFiscal: text})}
+          />
+
+          <View style={styles.notaFiscalAviso}>
+            <Ionicons name="information-circle-outline" size={16} color="#666" />
+            <Text style={styles.notaFiscalAvisoTexto}>
+              Se não informar um email específico, usaremos: {dadosPagamento.email}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </>
+  );
+
+  const renderStep5 = () => (
+    <>
+      {/* CONFIRMAÇÃO E RASTREAMENTO */}
+      <View style={styles.secao}>
+        <View style={styles.confirmacaoHeader}>
+          <Ionicons name="checkmark-circle" size={60} color="#27ae60" />
+          <Text style={styles.confirmacaoTitulo}>Pedido Confirmado!</Text>
+          <Text style={styles.confirmacaoSubtitulo}>
+            Seu pedido foi processado com sucesso
+          </Text>
+        </View>
+
+        {/* Dados do Pedido */}
+        <View style={styles.pedidoInfoContainer}>
+          <View style={styles.pedidoInfo}>
+            <Text style={styles.pedidoInfoLabel}>Número do Pedido</Text>
+            <Text style={styles.pedidoInfoValor}>#{pedidoConfirmado.numeroPedido}</Text>
+          </View>
+
+          <View style={styles.pedidoInfo}>
+            <Text style={styles.pedidoInfoLabel}>Data do Pedido</Text>
+            <Text style={styles.pedidoInfoValor}>{pedidoConfirmado.dataPedido}</Text>
+          </View>
+
+          <View style={styles.pedidoInfo}>
+            <Text style={styles.pedidoInfoLabel}>Previsão de Entrega</Text>
+            <Text style={styles.pedidoInfoValor}>{pedidoConfirmado.dataEntrega}</Text>
+          </View>
+        </View>
+
+        {/* Código de Rastreio */}
+        <View style={styles.rastreioContainer}>
+          <Text style={styles.rastreioTitulo}>Acompanhe seu Pedido</Text>
+          <View style={styles.codigoRastreioBox}>
+            <Text style={styles.codigoRastreio}>{pedidoConfirmado.codigoRastreio}</Text>
+            <TouchableOpacity style={styles.botaoCopiarRastreio}>
+              <Ionicons name="copy-outline" size={16} color="#126b1a" />
+              <Text style={styles.botaoCopiarRastreioTexto}>Copiar</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.botaoRastrear}
+            onPress={() => router.push('/home/rastrearpedido')}
+          >
+            <Ionicons name="search-outline" size={20} color="white" />
+            <Text style={styles.botaoRastrearTexto}>Rastrear Pedido Agora</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.rastreioAviso}>
+            Você receberá atualizações por email e WhatsApp
+          </Text>
+        </View>
+
+        {/* Resumo Final */}
+        <View style={styles.resumoFinal}>
+          <Text style={styles.resumoFinalTitulo}>Resumo da Compra</Text>
+          <View style={styles.resumoFinalItem}>
+            <Text style={styles.resumoFinalLabel}>Itens:</Text>
+            <Text style={styles.resumoFinalValor}>{cartItems.length} produto(s)</Text>
+          </View>
+          <View style={styles.resumoFinalItem}>
+            <Text style={styles.resumoFinalLabel}>Total:</Text>
+            <Text style={styles.resumoFinalValor}>R$ {total}</Text>
+          </View>
+          <View style={styles.resumoFinalItem}>
+            <Text style={styles.resumoFinalLabel}>Forma de Pagamento:</Text>
+            <Text style={styles.resumoFinalValor}>
+              {formaPagamento === 'credito' && 'Cartão de Crédito'}
+              {formaPagamento === 'debito' && 'Cartão de Débito'}
+              {formaPagamento === 'pix' && 'PIX'}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </>
+  );
+
+  const getStepTitle = () => {
+    switch(currentStep) {
+      case 1: return 'Finalizar Compra';
+      case 2: return 'Pagamento';
+      case 3: return 'Revisão do Pedido';
+      case 4: return 'Nota Fiscal';
+      case 5: return 'Confirmação';
+      default: return 'Finalizar Compra';
+    }
+  };
+
+  const getButtonText = () => {
+    switch(currentStep) {
+      case 1: return 'Avançar';
+      case 2: return 'Revisar Pedido';
+      case 3: return 'Continuar para Nota Fiscal';
+      case 4: return 'Confirmar e Finalizar';
+      case 5: return 'Acompanhar Pedido';
+      default: return 'Avançar';
+    }
+  };
+
   return (
     <View style={styles.fullContainer}>
       {/* REMOVE O HEADER PADRÃO */}
@@ -308,23 +545,29 @@ export default function FinalizarCompra() {
         >
           <Ionicons name="arrow-back" size={24} color="#126b1a" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {currentStep === 1 ? 'Finalizar Compra' : 'Pagamento'}
-        </Text>
+        <Text style={styles.headerTitle}>{getStepTitle()}</Text>
         <View style={styles.headerPlaceholder} />
       </View>
 
-      {/* INDICADOR DE STEPS */}
+      {/* INDICADOR DE STEPS EXPANDIDO */}
       <View style={styles.stepsContainer}>
-        <View style={[styles.step, currentStep === 1 && styles.stepAtivo]}>
-          <Text style={[styles.stepText, currentStep === 1 && styles.stepTextAtivo]}>1</Text>
-          <Text style={[styles.stepLabel, currentStep === 1 && styles.stepLabelAtivo]}>Dados</Text>
-        </View>
-        <View style={styles.stepLine} />
-        <View style={[styles.step, currentStep === 2 && styles.stepAtivo]}>
-          <Text style={[styles.stepText, currentStep === 2 && styles.stepTextAtivo]}>2</Text>
-          <Text style={[styles.stepLabel, currentStep === 2 && styles.stepLabelAtivo]}>Pagamento</Text>
-        </View>
+        {[1, 2, 3, 4, 5].map((step) => (
+          <React.Fragment key={step}>
+            <View style={[styles.step, currentStep === step && styles.stepAtivo]}>
+              <Text style={[styles.stepText, currentStep === step && styles.stepTextAtivo]}>
+                {step}
+              </Text>
+              <Text style={[styles.stepLabel, currentStep === step && styles.stepLabelAtivo]}>
+                {step === 1 && 'Dados'}
+                {step === 2 && 'Pagamento'}
+                {step === 3 && 'Revisão'}
+                {step === 4 && 'Nota Fiscal'}
+                {step === 5 && 'Confirmação'}
+              </Text>
+            </View>
+            {step < 5 && <View style={styles.stepLine} />}
+          </React.Fragment>
+        ))}
       </View>
 
       {/* CONTEÚDO SCROLLABLE */}
@@ -333,28 +576,55 @@ export default function FinalizarCompra() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {currentStep === 1 ? renderStep1() : renderStep2()}
+        {currentStep === 1 && renderStep1()}
+        {currentStep === 2 && renderStep2()}
+        {currentStep === 3 && renderStep3()}
+        {currentStep === 4 && renderStep4()}
+        {currentStep === 5 && renderStep5()}
 
-        {/* Botões */}
-        <View style={styles.botoes}>
-          <TouchableOpacity 
-            style={styles.botaoVoltar}
-            onPress={handleVoltar}
-          >
-            <Text style={styles.botaoVoltarTexto}>
-              {currentStep === 1 ? 'Voltar' : 'Anterior'}
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.botaoAvancar}
-            onPress={currentStep === 1 ? handleAvancar : handleFinalizarCompra}
-          >
-            <Text style={styles.botaoAvancarTexto}>
-              {currentStep === 1 ? 'Avançar' : 'Confirmar Compra'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* Botões - Não mostrar na etapa final */}
+        {currentStep !== 5 && (
+          <View style={styles.botoes}>
+            <TouchableOpacity 
+              style={styles.botaoVoltar}
+              onPress={handleVoltar}
+            >
+              <Text style={styles.botaoVoltarTexto}>
+                {currentStep === 1 ? 'Voltar' : 'Anterior'}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.botaoAvancar}
+              onPress={handleAvancar} // CORREÇÃO APLICADA AQUI
+            >
+              <Text style={styles.botaoAvancarTexto}>
+                {getButtonText()}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Botões específicos para etapa final */}
+        {currentStep === 5 && (
+          <View style={styles.botoesFinal}>
+            <TouchableOpacity 
+              style={styles.botaoSecundario}
+              onPress={() => router.push('/home/rastrearpedido')}
+            >
+              <Ionicons name="search-outline" size={20} color="#126b1a" />
+              <Text style={styles.botaoSecundarioTexto}>Acompanhar Pedido</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.botaoPrimario}
+              onPress={() => router.push('/home/')}
+            >
+              <Ionicons name="home-outline" size={20} color="white" />
+              <Text style={styles.botaoPrimarioTexto}>Voltar à Loja</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -400,10 +670,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingVertical: 15,
     marginTop: 100,
+    paddingHorizontal: 10,
   },
   step: {
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 5,
   },
   stepAtivo: {
     // Estilo quando step está ativo
@@ -424,9 +695,10 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   stepLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#666',
     marginTop: 4,
+    textAlign: 'center',
   },
   stepLabelAtivo: {
     color: '#126b1a',
@@ -436,8 +708,8 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 2,
     backgroundColor: '#ddd',
-    marginHorizontal: 10,
-    maxWidth: 60,
+    marginHorizontal: 5,
+    maxWidth: 40,
   },
   scrollView: {
     flex: 1,
@@ -622,7 +894,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     fontFamily: 'monospace',
-    
   },
   botaoCopiar: {
     backgroundColor: '#126b1a',
@@ -696,5 +967,259 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+
+  // NOVOS ESTILOS PARA AS ETAPAS ADICIONAIS
+
+  // Estilos para revisão (etapa 3)
+  revisaoGrupo: {
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ecf0f1',
+  },
+  revisaoTitulo: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: 8,
+  },
+  revisaoTexto: {
+    fontSize: 14,
+    color: '#34495e',
+    marginBottom: 4,
+  },
+  revisaoItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  revisaoTotal: {
+    borderTopWidth: 1,
+    borderTopColor: '#bdc3c7',
+    paddingTop: 10,
+    marginTop: 10,
+  },
+  revisaoTotalTexto: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#27ae60',
+  },
+  termosContainer: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  termosTexto: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  termosLink: {
+    color: '#126b1a',
+    fontWeight: '500',
+  },
+
+  // Estilos para nota fiscal (etapa 4)
+  notaFiscalContainer: {
+    alignItems: 'center',
+  },
+  notaFiscalInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  notaFiscalTitulo: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#126b1a',
+    marginLeft: 10,
+  },
+  notaFiscalDescricao: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  notaFiscalAviso: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  notaFiscalAvisoTexto: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 8,
+    flex: 1,
+  },
+
+  // Estilos para confirmação (etapa 5)
+  confirmacaoHeader: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  confirmacaoTitulo: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#27ae60',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  confirmacaoSubtitulo: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+  pedidoInfoContainer: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  pedidoInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  pedidoInfoLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  pedidoInfoValor: {
+    fontSize: 14,
+    color: '#2c3e50',
+    fontWeight: 'bold',
+  },
+  rastreioContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  rastreioTitulo: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: 15,
+  },
+  codigoRastreioBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#126b1a',
+    marginBottom: 15,
+    width: '100%',
+  },
+  codigoRastreio: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#126b1a',
+    fontFamily: 'monospace',
+  },
+  botaoCopiarRastreio: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f9f0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  botaoCopiarRastreioTexto: {
+    fontSize: 12,
+    color: '#126b1a',
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  botaoRastrear: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#126b1a',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  botaoRastrearTexto: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  rastreioAviso: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+  },
+  resumoFinal: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 10,
+  },
+  resumoFinalTitulo: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: 10,
+  },
+  resumoFinalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  resumoFinalLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  resumoFinalValor: {
+    fontSize: 14,
+    color: '#2c3e50',
+    fontWeight: '500',
+  },
+
+  // Botões da etapa final
+  botoesFinal: {
+    marginTop: 20,
+    marginBottom: 40,
+  },
+  botaoSecundario: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    padding: 15,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#126b1a',
+    marginBottom: 10,
+  },
+  botaoSecundarioTexto: {
+    color: '#126b1a',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  botaoPrimario: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#27ae60',
+    padding: 15,
+    borderRadius: 8,
+  },
+  botaoPrimarioTexto: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
