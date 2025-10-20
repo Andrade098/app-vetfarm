@@ -52,29 +52,46 @@ export default function FavoritosScreen() {
   const router = useRouter();
   const [favorites, setFavorites] = useState(initialFavorites);
 
-  // Função para remover item dos favoritos
+  // Função para remover item dos favoritos - CORRIGIDA
   const removeFromFavorites = (productId: string, productName: string) => {
     Alert.alert(
       'Remover dos favoritos',
       `Deseja remover "${productName}" dos favoritos?`,
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Cancelar', 
+          style: 'cancel',
+          onPress: () => console.log('Cancelado')
+        },
         { 
           text: 'Remover', 
           style: 'destructive',
           onPress: () => {
-            setFavorites(favorites.filter(item => item.id !== productId));
+            const updatedFavorites = favorites.filter(item => item.id !== productId);
+            setFavorites(updatedFavorites);
+            
+            // Feedback visual opcional
+            if (updatedFavorites.length === 0) {
+              // Se não houver mais favoritos, mostra mensagem
+              setTimeout(() => {
+                Alert.alert('Sucesso', 'Produto removido dos favoritos!');
+              }, 300);
+            }
           }
         },
-      ]
+      ],
+      { cancelable: true } // Permite fechar clicando fora
     );
+  };
+
+  // Função alternativa mais simples (sem Alert)
+  const removeFromFavoritesDirect = (productId: string) => {
+    setFavorites(favorites.filter(item => item.id !== productId));
   };
 
   // Função para navegar para detalhes do produto
   const goToProductDetails = (product: any) => {
-    // Aqui você pode navegar para a página de detalhes do produto
     Alert.alert('Detalhes', `Ver detalhes de ${product.name}`);
-    // router.push({ pathname: '/home/produto', params: { productId: product.id } });
   };
 
   // Função para adicionar ao carrinho
@@ -82,7 +99,7 @@ export default function FavoritosScreen() {
     Alert.alert('Sucesso', `${product.name} adicionado ao carrinho!`);
   };
 
-  // Renderizar cada item favorito
+  // Renderizar cada item favorito - CORRIGIDO
   const renderFavoriteItem = ({ item }: { item: any }) => (
     <View style={styles.favoriteCard}>
       <TouchableOpacity 
@@ -147,7 +164,9 @@ export default function FavoritosScreen() {
 
         <TouchableOpacity 
           style={styles.removeButton}
-          onPress={() => removeFromFavorites(item.id, item.name)}
+          onPress={() => removeFromFavoritesDirect(item.id)}
+          // Alternativa direta (sem confirmação):
+          // onPress={() => removeFromFavoritesDirect(item.id)}
         >
           <Ionicons name="heart-dislike-outline" size={20} color="#f44336" />
           <Text style={styles.removeButtonText}>Remover</Text>

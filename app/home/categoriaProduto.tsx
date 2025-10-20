@@ -47,7 +47,7 @@ const produtosPorCategoria = {
       nome: 'Ivermectina 1%',
       preco: 'R$ 45,90',
       descricao: 'Antiparasitário de amplo espectro',
-      // imagem: require('../../assets/images/produtos/ivermectina.png'),
+      imagem: require('../../assets/images/produtos/ivermectina.png'),
       icone: '💊'
     },
     {
@@ -55,7 +55,7 @@ const produtosPorCategoria = {
       nome: 'Albendazol 10%',
       preco: 'R$ 38,50',
       descricao: 'Vermífugo para bovinos',
-      // imagem: require('../../assets/images/produtos/albendazol.png'),
+      imagem: require('../../assets/images/produtos/albendazol.png'),
       icone: '💊'
     },
   ],
@@ -65,7 +65,7 @@ const produtosPorCategoria = {
       nome: 'Brinco de Identificação Bovino',
       preco: 'R$ 12,90',
       descricao: 'Brinco plástico numerado para identificação',
-      // imagem: require('../../assets/images/produtos/brinco-bovino.png'),
+      imagem: require('../../assets/images/produtos/brinco-bovino.png'),
       icone: '🏷️'
     },
     {
@@ -73,7 +73,7 @@ const produtosPorCategoria = {
       nome: 'Aplicador de Brincos',
       preco: 'R$ 89,00',
       descricao: 'Aplicador profissional para brincos',
-      // imagem: require('../../assets/images/produtos/aplicador-brinco.png'),
+      imagem: require('../../assets/images/produtos/aplicador-brinco.png'),
       icone: '🔧'
     },
   ],
@@ -113,7 +113,7 @@ const produtosPorCategoria = {
       nome: 'Albendazol 10%',
       preco: 'R$ 42,90',
       descricao: 'Vermífugo para ovinos',
-      // imagem: require('../../assets/images/produtos/albendazol-ovino.png'),
+      imagem: require('../../assets/images/produtos/albendazol-ovino.png'),
       icone: '💊'
     },
   ],
@@ -123,7 +123,7 @@ const produtosPorCategoria = {
       nome: 'Tesoura para Tosa de Lã',
       preco: 'R$ 35,00',
       descricao: 'Tesoura profissional para tosa de ovinos',
-      // imagem: require('../../assets/images/produtos/tesoura-tosa.png'),
+      imagem: require('../../assets/images/produtos/tesoura-tosa.png'),
       icone: '✂️'
     },
   ],
@@ -164,7 +164,7 @@ const produtosPorCategoria = {
       nome: 'Enrofloxacina 10%',
       preco: 'R$ 58,90',
       descricao: 'Antibiótico para infecções bacterianas',
-      // imagem: require('../../assets/images/produtos/enrofloxacina.png'),
+      imagem: require('../../assets/images/produtos/enrofloxacina.png'),
       icone: '💊'
     },
   ],
@@ -174,7 +174,7 @@ const produtosPorCategoria = {
       nome: 'Bebedouro Tipo Nipple',
       preco: 'R$ 24,90',
       descricao: 'Bebedouro automático para suínos',
-      // imagem: require('../../assets/images/produtos/bebedouro-nipple.png'),
+      imagem: require('../../assets/images/produtos/bebedouro-nipple.png'),
       icone: '🚰'
     },
   ],
@@ -206,7 +206,7 @@ const produtosPorCategoria = {
       nome: 'Pasta Vermífuga com Ivermectina',
       preco: 'R$ 52,90',
       descricao: 'Vermífugo em pasta para equinos',
-      // imagem: require('../../assets/images/produtos/pasta-vermifuga.png'),
+      imagem: require('../../assets/images/produtos/pasta-vermifuga.png'),
       icone: '💊'
     },
   ],
@@ -248,7 +248,7 @@ const produtosPorCategoria = {
       nome: 'Oxitetraciclina Solúvel',
       preco: 'R$ 32,50',
       descricao: 'Antibiótico de amplo espectro para aves',
-      // imagem: require('../../assets/images/produtos/oxitetraciclina.png'),
+      imagem: require('../../assets/images/produtos/oxitetraciclina.png'),
       icone: '💊'
     },
   ],
@@ -258,7 +258,7 @@ const produtosPorCategoria = {
       nome: 'Comedouro Automático para Aves',
       preco: 'R$ 45,00',
       descricao: 'Comedouro automático para granjas',
-      // imagem: require('../../assets/images/produtos/comedouro-aves.png'),
+      imagem: require('../../assets/images/produtos/comedouro-aves.png'),
       icone: '🍽️'
     },
   ],

@@ -254,8 +254,93 @@ export default function ResumoContaScreen() {
           </View>
 
           <View style={styles.infoCard}>
-            {/* ... (código dos dados da conta permanece igual) */}
-          </View>
+  {!isEditing ? (
+    // MODO VISUALIZAÇÃO
+    <>
+      <View style={styles.infoItem}>
+        <Text style={styles.infoLabel}>Nome completo</Text>
+        <Text style={styles.infoValue}>{userData.nome}</Text>
+      </View>
+      <View style={styles.infoItem}>
+        <Text style={styles.infoLabel}>E-mail</Text>
+        <Text style={styles.infoValue}>{userData.email}</Text>
+      </View>
+      <View style={styles.infoItem}>
+        <Text style={styles.infoLabel}>Telefone</Text>
+        <Text style={styles.infoValue}>{userData.telefone}</Text>
+      </View>
+      <View style={styles.infoItem}>
+        <Text style={styles.infoLabel}>CPF</Text>
+        <Text style={styles.infoValue}>{userData.cpf}</Text>
+      </View>
+      <View style={styles.infoItem}>
+        <Text style={styles.infoLabel}>Data de nascimento</Text>
+        <Text style={styles.infoValue}>{userData.dataNascimento}</Text>
+      </View>
+    </>
+  ) : (
+    // MODO EDIÇÃO
+    <>
+      <View style={styles.infoItem}>
+        <Text style={styles.infoLabel}>Nome completo</Text>
+        <TextInput
+          style={styles.input}
+          value={dadosEditados.nome}
+          onChangeText={(text) => handleInputChange('nome', text)}
+          placeholder="Digite seu nome completo"
+        />
+      </View>
+      <View style={styles.infoItem}>
+        <Text style={styles.infoLabel}>E-mail</Text>
+        <TextInput
+          style={styles.input}
+          value={dadosEditados.email}
+          onChangeText={(text) => handleInputChange('email', text)}
+          placeholder="Digite seu e-mail"
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+      </View>
+      <View style={styles.infoItem}>
+        <Text style={styles.infoLabel}>Telefone</Text>
+        <TextInput
+          style={styles.input}
+          value={dadosEditados.telefone}
+          onChangeText={(text) => handleInputChange('telefone', text)}
+          placeholder="Digite seu telefone"
+          keyboardType="phone-pad"
+        />
+      </View>
+      <View style={styles.infoItem}>
+        <Text style={styles.infoLabel}>CPF</Text>
+        <TextInput
+          style={styles.input}
+          value={dadosEditados.cpf}
+          onChangeText={(text) => handleInputChange('cpf', text)}
+          placeholder="Digite seu CPF"
+          keyboardType="numeric"
+        />
+      </View>
+      <View style={styles.infoItem}>
+        <Text style={styles.infoLabel}>Data de nascimento</Text>
+        <TextInput
+          style={styles.input}
+          value={dadosEditados.dataNascimento}
+          onChangeText={(text) => handleInputChange('dataNascimento', text)}
+          placeholder="DD/MM/AAAA"
+        />
+      </View>
+      
+      {/* Botão Salvar */}
+      <TouchableOpacity 
+        style={styles.salvarButton}
+        onPress={handleSalvarAlteracoes}
+      >
+        <Text style={styles.salvarButtonText}>Salvar Alterações</Text>
+      </TouchableOpacity>
+    </>
+  )}
+</View>
         </View>
 
         {/* Alterar Senha */}
