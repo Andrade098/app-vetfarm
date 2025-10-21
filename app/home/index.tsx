@@ -461,7 +461,7 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <TouchableOpacity
             style={styles.exploreButton}
-            onPress={() => router.push('/home/categoria')}
+            onPress={() => router.push('/home/produtos')}
           >
             <Text style={styles.exploreButtonText}>Ver Todos os Produtos</Text>
           </TouchableOpacity>

@@ -4,81 +4,99 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
-// Opções para os selects
-const animalCategories = [
-  { label: 'Bovinos', value: 'bovinos' },
-  { label: 'Equinos', value: 'equinos' },
-  { label: 'Ovinos', value: 'ovinos' },
-  { label: 'Suínos', value: 'suinos' },
-  { label: 'Peixes', value: 'peixes' },
-  { label: 'Aves', value: 'aves' }
+const states = [
+  { label: 'Acre', value: 'AC' },
+  { label: 'Alagoas', value: 'AL' },
+  { label: 'Amapá', value: 'AP' },
+  { label: 'Amazonas', value: 'AM' },
+  { label: 'Bahia', value: 'BA' },
+  { label: 'Ceará', value: 'CE' },
+  { label: 'Distrito Federal', value: 'DF' },
+  { label: 'Espírito Santo', value: 'ES' },
+  { label: 'Goiás', value: 'GO' },
+  { label: 'Maranhão', value: 'MA' },
+  { label: 'Mato Grosso', value: 'MT' },
+  { label: 'Mato Grosso do Sul', value: 'MS' },
+  { label: 'Minas Gerais', value: 'MG' },
+  { label: 'Pará', value: 'PA' },
+  { label: 'Paraíba', value: 'PB' },
+  { label: 'Paraná', value: 'PR' },
+  { label: 'Pernambuco', value: 'PE' },
+  { label: 'Piauí', value: 'PI' },
+  { label: 'Rio de Janeiro', value: 'RJ' },
+  { label: 'Rio Grande do Norte', value: 'RN' },
+  { label: 'Rio Grande do Sul', value: 'RS' },
+  { label: 'Rondônia', value: 'RO' },
+  { label: 'Roraima', value: 'RR' },
+  { label: 'Santa Catarina', value: 'SC' },
+  { label: 'São Paulo', value: 'SP' },
+  { label: 'Sergipe', value: 'SE' },
+  { label: 'Tocantins', value: 'TO' }
 ];
 
-const productCategories = [
-  { label: 'Vacinas', value: 'vacinas' },
-  { label: 'Suplementos', value: 'suplementos' },
-  { label: 'Nutrição', value: 'nutricao' },
-  { label: 'Higiene', value: 'higiene' },
-  { label: 'Acessórios', value: 'acessorios' },
-  { label: 'Antibióticos', value: 'antibioticos' },
-  { label: 'Antiparasitários', value: 'antiparasitarios' }
-];
-
-// Dados simulados do produto (em uma aplicação real, viria da API)
-const mockProductData = {
+// Dados simulados do parceiro (em uma aplicação real, viria da API)
+const mockPartnerData = {
   id: 1,
-  name: 'Vacina contra Febre Aftosa',
-  animalCategory: 'bovinos',
-  productCategory: 'vacinas',
-  description: 'Vacina para prevenção da febre aftosa em bovinos. Alta eficácia e segurança comprovada.',
-  price: '89.90',
-  stock: '24',
+  name: 'Farmácia Veterinária Central',
+  description: 'Farmácia especializada em produtos veterinários com entrega rápida e atendimento 24h.',
+  address: 'Rua das Flores, 123',
+  neighborhood: 'Centro',
+  city: 'São Paulo',
+  state: 'SP',
+  zipCode: '01234-567',
+  phone: '(11) 9999-9999',
+  email: 'contato@farmaciacentral.com.br',
   images: [
-    'https://via.placeholder.com/300?text=Imagem+1',
-    'https://via.placeholder.com/300?text=Imagem+2'
+    'https://via.placeholder.com/300?text=Logo+Farmácia',
+    'https://via.placeholder.com/300?text=Estabelecimento'
   ]
 };
 
-export default function EditProductScreen() {
+export default function EditPartnerScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const productId = params.id ? parseInt(params.id as string) : 1;
+  const partnerId = params.id ? parseInt(params.id as string) : 1;
 
   const [images, setImages] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: '',
-    animalCategory: '',
-    productCategory: '',
     description: '',
-    price: '',
-    stock: ''
+    address: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    phone: '',
+    email: ''
   });
-  const [showAnimalCategories, setShowAnimalCategories] = useState(false);
-  const [showProductCategories, setShowProductCategories] = useState(false);
+  const [showStates, setShowStates] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Simular carregamento dos dados do produto
+  // Simular carregamento dos dados do parceiro
   useEffect(() => {
-    const loadProductData = async () => {
+    const loadPartnerData = async () => {
       setIsLoading(true);
       // Simular delay de API
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setFormData({
-        name: mockProductData.name,
-        animalCategory: mockProductData.animalCategory,
-        productCategory: mockProductData.productCategory,
-        description: mockProductData.description,
-        price: mockProductData.price,
-        stock: mockProductData.stock.toString()
+        name: mockPartnerData.name,
+        description: mockPartnerData.description,
+        address: mockPartnerData.address,
+        neighborhood: mockPartnerData.neighborhood,
+        city: mockPartnerData.city,
+        state: mockPartnerData.state,
+        zipCode: mockPartnerData.zipCode,
+        phone: mockPartnerData.phone,
+        email: mockPartnerData.email
       });
       
-      setImages(mockProductData.images);
+      setImages(mockPartnerData.images);
       setIsLoading(false);
     };
 
-    loadProductData();
-  }, [productId]);
+    loadPartnerData();
+  }, [partnerId]);
 
   const pickImage = async () => {
     try {
@@ -122,26 +140,53 @@ export default function EditProductScreen() {
     }));
   };
 
-  const selectAnimalCategory = (value: string) => {
-    handleInputChange('animalCategory', value);
-    setShowAnimalCategories(false);
+  const selectState = (value: string) => {
+    handleInputChange('state', value);
+    setShowStates(false);
   };
 
-  const selectProductCategory = (value: string) => {
-    handleInputChange('productCategory', value);
-    setShowProductCategories(false);
+  const formatPhone = (text: string) => {
+    // Formatação simples do telefone
+    const numbers = text.replace(/\D/g, '');
+    if (numbers.length <= 10) {
+      return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    } else {
+      return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    }
+  };
+
+  const formatZipCode = (text: string) => {
+    const numbers = text.replace(/\D/g, '');
+    return numbers.replace(/(\d{5})(\d{3})/, '$1-$2');
+  };
+
+  const handlePhoneChange = (text: string) => {
+    const formatted = formatPhone(text);
+    handleInputChange('phone', formatted);
+  };
+
+  const handleZipCodeChange = (text: string) => {
+    const formatted = formatZipCode(text);
+    handleInputChange('zipCode', formatted);
   };
 
   const handleSubmit = () => {
     // Validação básica
-    if (!formData.name || !formData.animalCategory || !formData.productCategory || !formData.price) {
+    if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.phone || !formData.email) {
       Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    // Validação de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      Alert.alert('Erro', 'Digite um email válido');
       return;
     }
 
     Alert.alert(
       'Confirmar Alterações',
-      'Deseja salvar as alterações neste produto?',
+      'Deseja salvar as alterações nesta farmácia parceira?',
       [
         { text: 'Cancelar', style: 'cancel' },
         { text: 'Salvar', onPress: submitChanges }
@@ -150,26 +195,20 @@ export default function EditProductScreen() {
   };
 
   const submitChanges = () => {
-    // Aqui você faria a chamada para sua API para atualizar o produto
-    const productData = {
+    // Aqui você faria a chamada para sua API para atualizar o parceiro
+    const partnerData = {
       ...formData,
       images,
-      price: parseFloat(formData.price),
-      stock: parseInt(formData.stock) || 0,
-      id: productId
+      id: partnerId
     };
 
-    console.log('Produto atualizado:', productData);
-    Alert.alert('Sucesso', 'Produto atualizado com sucesso!');
+    console.log('Parceiro atualizado:', partnerData);
+    Alert.alert('Sucesso', 'Farmácia parceira atualizada com sucesso!');
     router.back();
   };
 
-  const getAnimalCategoryLabel = () => {
-    return animalCategories.find(cat => cat.value === formData.animalCategory)?.label || 'Selecione a categoria';
-  };
-
-  const getProductCategoryLabel = () => {
-    return productCategories.find(cat => cat.value === formData.productCategory)?.label || 'Selecione a categoria';
+  const getStateLabel = () => {
+    return states.find(state => state.value === formData.state)?.label || 'Selecione o estado';
   };
 
   if (isLoading) {
@@ -177,7 +216,7 @@ export default function EditProductScreen() {
       <View style={styles.container}>
         <Stack.Screen 
           options={{
-            title: 'Editar Produto',
+            title: 'Editar Parceiro',
             headerTitleStyle: {
               fontWeight: 'bold',
               fontSize: 20,
@@ -186,7 +225,7 @@ export default function EditProductScreen() {
         />
         <View style={styles.loadingContainer}>
           <Ionicons name="refresh" size={40} color="#3498db" />
-          <Text style={styles.loadingText}>Carregando produto...</Text>
+          <Text style={styles.loadingText}>Carregando dados da farmácia...</Text>
         </View>
       </View>
     );
@@ -196,7 +235,7 @@ export default function EditProductScreen() {
     <View style={styles.container}>
       <Stack.Screen 
         options={{
-          title: 'Editar Produto',
+          title: 'Editar Parceiro',
           headerTitleStyle: {
             fontWeight: 'bold',
             fontSize: 20,
@@ -205,16 +244,16 @@ export default function EditProductScreen() {
       />
 
       <ScrollView style={styles.scrollView}>
-        {/* Cabeçalho com ID do produto */}
+        {/* Cabeçalho com ID do parceiro */}
         <View style={styles.headerSection}>
-          <Text style={styles.productId}>ID: #{productId}</Text>
+          <Text style={styles.partnerId}>ID: #{partnerId}</Text>
           <Text style={styles.lastUpdate}>Última atualização: 15/12/2023</Text>
         </View>
 
         {/* Seção de Imagens */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Imagens do Produto</Text>
-          <Text style={styles.sectionSubtitle}>Clique para adicionar ou remover imagens</Text>
+          <Text style={styles.sectionTitle}>Imagens da Farmácia</Text>
+          <Text style={styles.sectionSubtitle}>Logo e fotos do estabelecimento</Text>
           
           <ScrollView horizontal style={styles.imagesContainer}>
             {images.map((uri, index) => (
@@ -243,88 +282,120 @@ export default function EditProductScreen() {
           <Text style={styles.sectionTitle}>Informações Básicas</Text>
           
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Nome do Produto *</Text>
+            <Text style={styles.label}>Nome da Farmácia *</Text>
             <TextInput
               style={styles.input}
               value={formData.name}
               onChangeText={(text) => handleInputChange('name', text)}
-              placeholder="Ex: Vacina contra Febre Aftosa"
+              placeholder="Ex: Farmácia Veterinária Central"
             />
           </View>
 
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
-              <Text style={styles.label}>Categoria do Animal *</Text>
-              <TouchableOpacity 
-                style={styles.selectContainer}
-                onPress={() => setShowAnimalCategories(true)}
-              >
-                <Text style={styles.selectText}>
-                  {getAnimalCategoryLabel()}
-                </Text>
-                <Ionicons name="chevron-down" size={20} color="#7f8c8d" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Categoria do Produto *</Text>
-              <TouchableOpacity 
-                style={styles.selectContainer}
-                onPress={() => setShowProductCategories(true)}
-              >
-                <Text style={styles.selectText}>
-                  {getProductCategoryLabel()}
-                </Text>
-                <Ionicons name="chevron-down" size={20} color="#7f8c8d" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        {/* Preço e Estoque */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preço e Estoque</Text>
-          
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
-              <Text style={styles.label}>Preço (R$) *</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.price}
-                onChangeText={(text) => handleInputChange('price', text)}
-                placeholder="0,00"
-                keyboardType="decimal-pad"
-              />
-            </View>
-
-            <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Estoque *</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.stock}
-                onChangeText={(text) => handleInputChange('stock', text)}
-                placeholder="Quantidade"
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Descrição */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Descrição</Text>
-          
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Descrição do Produto</Text>
+            <Text style={styles.label}>Descrição</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
               value={formData.description}
               onChangeText={(text) => handleInputChange('description', text)}
-              placeholder="Descreva as características do produto..."
+              placeholder="Descreva os serviços e especialidades da farmácia..."
               multiline
-              numberOfLines={4}
+              numberOfLines={3}
               textAlignVertical="top"
             />
+          </View>
+        </View>
+
+        {/* Endereço */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Endereço</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Endereço *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.address}
+              onChangeText={(text) => handleInputChange('address', text)}
+              placeholder="Ex: Rua das Flores, 123"
+            />
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+              <Text style={styles.label}>Bairro</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.neighborhood}
+                onChangeText={(text) => handleInputChange('neighborhood', text)}
+                placeholder="Ex: Centro"
+              />
+            </View>
+
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>Cidade *</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.city}
+                onChangeText={(text) => handleInputChange('city', text)}
+                placeholder="Ex: São Paulo"
+              />
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+              <Text style={styles.label}>Estado *</Text>
+              <TouchableOpacity 
+                style={styles.selectContainer}
+                onPress={() => setShowStates(true)}
+              >
+                <Text style={styles.selectText}>
+                  {getStateLabel()}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#7f8c8d" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>CEP</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.zipCode}
+                onChangeText={handleZipCodeChange}
+                placeholder="00000-000"
+                keyboardType="numeric"
+                maxLength={9}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Contato */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Contato</Text>
+          
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+              <Text style={styles.label}>Telefone *</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.phone}
+                onChangeText={handlePhoneChange}
+                placeholder="(00) 00000-0000"
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.label}>Email *</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.email}
+                onChangeText={(text) => handleInputChange('email', text)}
+                placeholder="contato@exemplo.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
           </View>
         </View>
 
@@ -344,63 +415,30 @@ export default function EditProductScreen() {
         </View>
       </ScrollView>
 
-      {/* Modal para Categorias de Animal */}
+      {/* Modal para Estados */}
       <Modal
-        visible={showAnimalCategories}
+        visible={showStates}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setShowAnimalCategories(false)}
+        onRequestClose={() => setShowStates(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Selecione a Categoria do Animal</Text>
-              <TouchableOpacity onPress={() => setShowAnimalCategories(false)}>
+              <Text style={styles.modalTitle}>Selecione o Estado</Text>
+              <TouchableOpacity onPress={() => setShowStates(false)}>
                 <Ionicons name="close" size={24} color="#7f8c8d" />
               </TouchableOpacity>
             </View>
             <ScrollView>
-              {animalCategories.map((category) => (
+              {states.map((state) => (
                 <TouchableOpacity
-                  key={category.value}
+                  key={state.value}
                   style={styles.modalOption}
-                  onPress={() => selectAnimalCategory(category.value)}
+                  onPress={() => selectState(state.value)}
                 >
-                  <Text style={styles.modalOptionText}>{category.label}</Text>
-                  {formData.animalCategory === category.value && (
-                    <Ionicons name="checkmark" size={20} color="#3498db" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal para Categorias de Produto */}
-      <Modal
-        visible={showProductCategories}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowProductCategories(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Selecione a Categoria do Produto</Text>
-              <TouchableOpacity onPress={() => setShowProductCategories(false)}>
-                <Ionicons name="close" size={24} color="#7f8c8d" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView>
-              {productCategories.map((category) => (
-                <TouchableOpacity
-                  key={category.value}
-                  style={styles.modalOption}
-                  onPress={() => selectProductCategory(category.value)}
-                >
-                  <Text style={styles.modalOptionText}>{category.label}</Text>
-                  {formData.productCategory === category.value && (
+                  <Text style={styles.modalOptionText}>{state.label}</Text>
+                  {formData.state === state.value && (
                     <Ionicons name="checkmark" size={20} color="#3498db" />
                   )}
                 </TouchableOpacity>
@@ -440,7 +478,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e9ecef',
   },
-  productId: {
+  partnerId: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#2c3e50',
@@ -531,7 +569,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
   },
   textArea: {
-    minHeight: 100,
+    minHeight: 80,
     textAlignVertical: 'top',
   },
   row: {

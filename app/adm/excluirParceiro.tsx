@@ -3,122 +3,173 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-// Dados simulados de produtos
-const mockProducts = [
+// Dados simulados de farmácias parceiras
+const mockPartners = [
   {
     id: 1,
-    name: 'Vacina contra Febre Aftosa',
-    category: 'Bovinos - Vacinas',
-    price: 89.90,
-    stock: 24,
+    name: 'Farmácia Veterinária Central',
+    category: 'Farmácia - Premium',
+    address: 'Rua das Flores, 123 - Centro',
+    city: 'São Paulo - SP',
+    phone: '(11) 9999-9999',
+    email: 'contato@farmaciacentral.com.br',
+    rating: 4.8,
+    productsCount: 45,
     image: 'https://via.placeholder.com/100',
-    description: 'Vacina para prevenção da febre aftosa em bovinos'
+    description: 'Farmácia especializada em produtos veterinários com entrega rápida'
   },
   {
     id: 2,
-    name: 'Vermífugo para Ovinos',
-    category: 'Ovinos - Antiparasitários',
-    price: 45.50,
-    stock: 18,
+    name: 'DrogaVet Express',
+    category: 'Farmácia - Express',
+    address: 'Av. Principal, 456 - Jardim',
+    city: 'Rio de Janeiro - RJ',
+    phone: '(21) 8888-8888',
+    email: 'sac@drogavet.com.br',
+    rating: 4.5,
+    productsCount: 32,
     image: 'https://via.placeholder.com/100',
-    description: 'Vermífugo específico para ovinos'
+    description: 'Atendimento 24h com entrega em toda região metropolitana'
   },
   {
     id: 3,
-    name: 'Ração para Aves Caipiras',
-    category: 'Aves - Nutrição',
-    price: 120.00,
-    stock: 32,
+    name: 'VetFarm Parceira',
+    category: 'Farmácia - Standard',
+    address: 'Rua dos Animais, 789 - Zona Rural',
+    city: 'Campinas - SP',
+    phone: '(19) 7777-7777',
+    email: 'vendas@vetfarm.com.br',
+    rating: 4.2,
+    productsCount: 28,
     image: 'https://via.placeholder.com/100',
-    description: 'Ração balanceada para aves caipiras'
+    description: 'Especializada em produtos para grandes animais'
   },
   {
     id: 4,
-    name: 'Shampoo Antiséptico',
-    category: 'Todos - Higiene',
-    price: 28.90,
-    stock: 15,
+    name: 'Farmácia do Campo',
+    category: 'Farmácia - Rural',
+    address: 'Estrada Rural, S/N - Fazenda',
+    city: 'Ribeirão Preto - SP',
+    phone: '(16) 6666-6666',
+    email: 'campo@farmaciadocampo.com.br',
+    rating: 4.7,
+    productsCount: 38,
     image: 'https://via.placeholder.com/100',
-    description: 'Shampoo para higiene animal'
+    description: 'Atendimento especializado para produtores rurais'
   },
   {
     id: 5,
-    name: 'Antibiótico Broad Spectrum',
-    category: 'Todos - Antibióticos',
-    price: 75.00,
-    stock: 28,
+    name: 'PetVet Solutions',
+    category: 'Farmácia - Pet',
+    address: 'Alameda Pets, 321 - Pet Center',
+    city: 'Belo Horizonte - MG',
+    phone: '(31) 5555-5555',
+    email: 'solutions@petvet.com.br',
+    rating: 4.9,
+    productsCount: 52,
     image: 'https://via.placeholder.com/100',
-    description: 'Antibiótico de amplo espectro'
+    description: 'Produtos de alta qualidade para pets e animais de produção'
   },
   {
     id: 6,
-    name: 'Brinco Identificador',
-    category: 'Bovinos - Acessórios',
-    price: 2.50,
-    stock: 200,
+    name: 'AgroFarmácia Brasil',
+    category: 'Farmácia - Agro',
+    address: 'Rodovia BR-101, Km 205',
+    city: 'Porto Alegre - RS',
+    phone: '(51) 4444-4444',
+    email: 'brasil@agrofarmacia.com.br',
+    rating: 4.6,
+    productsCount: 41,
     image: 'https://via.placeholder.com/100',
-    description: 'Brinco para identificação animal'
+    description: 'Distribuidora autorizada dos principais laboratórios'
   }
 ];
 
-export default function DeleteProductScreen() {
+export default function DeletePartnerScreen() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
-  const [products, setProducts] = useState(mockProducts);
+  const [selectedPartner, setSelectedPartner] = useState<number | null>(null);
+  const [partners, setPartners] = useState(mockPartners);
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPartners = partners.filter(partner =>
+    partner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    partner.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    partner.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleSearch = (text: string) => {
     setSearchTerm(text);
   };
 
-  const selectProduct = (productId: number) => {
-    setSelectedProduct(productId === selectedProduct ? null : productId);
+  const selectPartner = (partnerId: number) => {
+    setSelectedPartner(partnerId === selectedPartner ? null : partnerId);
   };
 
   const confirmDelete = () => {
-    if (!selectedProduct) {
-      Alert.alert('Atenção', 'Selecione um produto para excluir');
+    if (!selectedPartner) {
+      Alert.alert('Atenção', 'Selecione uma farmácia parceira para excluir');
       return;
     }
 
-    const product = products.find(p => p.id === selectedProduct);
+    const partner = partners.find(p => p.id === selectedPartner);
     
     Alert.alert(
       'Confirmar Exclusão',
-      `Tem certeza que deseja excluir permanentemente o produto "${product?.name}"?`,
+      `Tem certeza que deseja excluir permanentemente a farmácia parceira "${partner?.name}"?\n\nEsta ação não pode ser desfeita.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         { 
           text: 'Excluir', 
           style: 'destructive',
-          onPress: () => deleteProduct(selectedProduct)
+          onPress: () => deletePartner(selectedPartner)
         }
       ]
     );
   };
 
-  const deleteProduct = (productId: number) => {
+  const deletePartner = (partnerId: number) => {
     // Simulando exclusão - na prática, você faria uma chamada API aqui
-    setProducts(products.filter(product => product.id !== productId));
-    setSelectedProduct(null);
+    setPartners(partners.filter(partner => partner.id !== partnerId));
+    setSelectedPartner(null);
     
-    Alert.alert('Sucesso', 'Produto excluído com sucesso!');
+    Alert.alert('Sucesso', 'Farmácia parceira excluída com sucesso!');
   };
 
-  const getSelectedProduct = () => {
-    return products.find(product => product.id === selectedProduct);
+  const getSelectedPartner = () => {
+    return partners.find(partner => partner.id === selectedPartner);
+  };
+
+  const renderStars = (rating: number) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(<Ionicons key={i} name="star" size={16} color="#FFD700" />);
+    }
+
+    if (hasHalfStar) {
+      stars.push(<Ionicons key="half" name="star-half" size={16} color="#FFD700" />);
+    }
+
+    const emptyStars = 5 - stars.length;
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(<Ionicons key={`empty-${i}`} name="star-outline" size={16} color="#FFD700" />);
+    }
+
+    return (
+      <View style={styles.ratingContainer}>
+        {stars}
+        <Text style={styles.ratingText}>({rating})</Text>
+      </View>
+    );
   };
 
   return (
     <View style={styles.container}>
       <Stack.Screen 
         options={{
-          title: 'Excluir Produto',
+          title: 'Excluir Parceiro',
           headerTitleStyle: {
             fontWeight: 'bold',
             fontSize: 20,
@@ -133,7 +184,7 @@ export default function DeleteProductScreen() {
             <Ionicons name="search" size={20} color="#7f8c8d" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Buscar produto por nome ou categoria..."
+              placeholder="Buscar farmácia por nome, cidade ou categoria..."
               value={searchTerm}
               onChangeText={handleSearch}
             />
@@ -145,49 +196,68 @@ export default function DeleteProductScreen() {
           </View>
         </View>
 
-        {/* Lista de Produtos */}
+        {/* Lista de Farmácias Parceiras */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            {filteredProducts.length} produto{filteredProducts.length !== 1 ? 's' : ''} encontrado{filteredProducts.length !== 1 ? 's' : ''}
+            {filteredPartners.length} farmácia{filteredPartners.length !== 1 ? 's' : ''} parceira{filteredPartners.length !== 1 ? 's' : ''} encontrada{filteredPartners.length !== 1 ? 's' : ''}
           </Text>
 
-          {filteredProducts.length === 0 ? (
+          {filteredPartners.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="search-off" size={48} color="#bdc3c7" />
-              <Text style={styles.emptyStateText}>Nenhum produto encontrado</Text>
+              <Ionicons name="business-outline" size={48} color="#bdc3c7" />
+              <Text style={styles.emptyStateText}>Nenhuma farmácia encontrada</Text>
               <Text style={styles.emptyStateSubtext}>
                 Tente buscar por outro termo ou verifique a ortografia
               </Text>
             </View>
           ) : (
-            filteredProducts.map(product => (
+            filteredPartners.map(partner => (
               <TouchableOpacity
-                key={product.id}
+                key={partner.id}
                 style={[
-                  styles.productCard,
-                  selectedProduct === product.id && styles.selectedProductCard
+                  styles.partnerCard,
+                  selectedPartner === partner.id && styles.selectedPartnerCard
                 ]}
-                onPress={() => selectProduct(product.id)}
+                onPress={() => selectPartner(partner.id)}
               >
-                <Image source={{ uri: product.image }} style={styles.productImage} />
+                <Image source={{ uri: partner.image }} style={styles.partnerImage} />
                 
-                <View style={styles.productInfo}>
-                  <Text style={styles.productName} numberOfLines={1}>
-                    {product.name}
+                <View style={styles.partnerInfo}>
+                  <Text style={styles.partnerName} numberOfLines={1}>
+                    {partner.name}
                   </Text>
-                  <Text style={styles.productCategory}>{product.category}</Text>
-                  <Text style={styles.productDescription} numberOfLines={2}>
-                    {product.description}
+                  <Text style={styles.partnerCategory}>{partner.category}</Text>
+                  
+                  {renderStars(partner.rating)}
+                  
+                  <View style={styles.partnerContact}>
+                    <Ionicons name="location" size={12} color="#7f8c8d" />
+                    <Text style={styles.partnerAddress} numberOfLines={1}>
+                      {partner.address}, {partner.city}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.partnerContact}>
+                    <Ionicons name="call" size={12} color="#7f8c8d" />
+                    <Text style={styles.partnerPhone}>{partner.phone}</Text>
+                  </View>
+
+                  <Text style={styles.partnerDescription} numberOfLines={2}>
+                    {partner.description}
                   </Text>
                   
-                  <View style={styles.productDetails}>
-                    <Text style={styles.productPrice}>R$ {product.price.toFixed(2)}</Text>
-                    <Text style={styles.productStock}>{product.stock} em estoque</Text>
+                  <View style={styles.partnerDetails}>
+                    <Text style={styles.productsCount}>
+                      {partner.productsCount} produtos
+                    </Text>
+                    <Text style={styles.partnerEmail} numberOfLines={1}>
+                      {partner.email}
+                    </Text>
                   </View>
                 </View>
 
                 <View style={styles.selectionIndicator}>
-                  {selectedProduct === product.id ? (
+                  {selectedPartner === partner.id ? (
                     <Ionicons name="checkmark-circle" size={24} color="#2ecc71" />
                   ) : (
                     <Ionicons name="radio-button-off" size={24} color="#bdc3c7" />
@@ -198,24 +268,43 @@ export default function DeleteProductScreen() {
           )}
         </View>
 
-        {/* Produto Selecionado */}
-        {selectedProduct && (
+        {/* Farmácia Selecionada */}
+        {selectedPartner && (
           <View style={styles.selectedSection}>
-            <Text style={styles.sectionTitle}>Produto Selecionado</Text>
-            <View style={styles.selectedProduct}>
-              <Image source={{ uri: getSelectedProduct()?.image }} style={styles.selectedProductImage} />
+            <Text style={styles.sectionTitle}>Farmácia Selecionada para Exclusão</Text>
+            <View style={styles.selectedPartner}>
+              <Image source={{ uri: getSelectedPartner()?.image }} style={styles.selectedPartnerImage} />
               
-              <View style={styles.selectedProductInfo}>
-                <Text style={styles.selectedProductName}>{getSelectedProduct()?.name}</Text>
-                <Text style={styles.selectedProductCategory}>{getSelectedProduct()?.category}</Text>
-                <Text style={styles.selectedProductDescription}>{getSelectedProduct()?.description}</Text>
+              <View style={styles.selectedPartnerInfo}>
+                <Text style={styles.selectedPartnerName}>{getSelectedPartner()?.name}</Text>
+                <Text style={styles.selectedPartnerCategory}>{getSelectedPartner()?.category}</Text>
                 
-                <View style={styles.selectedProductDetails}>
-                  <Text style={styles.selectedProductPrice}>
-                    R$ {getSelectedProduct()?.price.toFixed(2)}
+                {getSelectedPartner() && renderStars(getSelectedPartner().rating)}
+                
+                <View style={styles.selectedPartnerContact}>
+                  <Ionicons name="location" size={14} color="#7f8c8d" />
+                  <Text style={styles.selectedPartnerAddress}>
+                    {getSelectedPartner()?.address}, {getSelectedPartner()?.city}
                   </Text>
-                  <Text style={styles.selectedProductStock}>
-                    {getSelectedProduct()?.stock} unidades
+                </View>
+                
+                <View style={styles.selectedPartnerContact}>
+                  <Ionicons name="call" size={14} color="#7f8c8d" />
+                  <Text style={styles.selectedPartnerPhone}>{getSelectedPartner()?.phone}</Text>
+                </View>
+
+                <View style={styles.selectedPartnerContact}>
+                  <Ionicons name="mail" size={14} color="#7f8c8d" />
+                  <Text style={styles.selectedPartnerEmail}>{getSelectedPartner()?.email}</Text>
+                </View>
+
+                <Text style={styles.selectedPartnerDescription}>
+                  {getSelectedPartner()?.description}
+                </Text>
+                
+                <View style={styles.selectedPartnerDetails}>
+                  <Text style={styles.selectedProductsCount}>
+                    {getSelectedPartner()?.productsCount} produtos cadastrados
                   </Text>
                 </View>
               </View>
@@ -228,13 +317,13 @@ export default function DeleteProductScreen() {
           <TouchableOpacity 
             style={[
               styles.deleteButton,
-              !selectedProduct && styles.deleteButtonDisabled
+              !selectedPartner && styles.deleteButtonDisabled
             ]}
             onPress={confirmDelete}
-            disabled={!selectedProduct}
+            disabled={!selectedPartner}
           >
             <Ionicons name="trash" size={20} color="white" />
-            <Text style={styles.deleteButtonText}>Excluir Produto Selecionado</Text>
+            <Text style={styles.deleteButtonText}>Excluir Farmácia Parceira</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -306,7 +395,7 @@ const styles = StyleSheet.create({
     color: '#bdc3c7',
     textAlign: 'center',
   },
-  productCard: {
+  partnerCard: {
     flexDirection: 'row',
     backgroundColor: 'white',
     padding: 15,
@@ -315,49 +404,77 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e9ecef',
   },
-  selectedProductCard: {
+  selectedPartnerCard: {
     borderColor: '#3498db',
     backgroundColor: '#e8f4fd',
   },
-  productImage: {
+  partnerImage: {
     width: 60,
     height: 60,
     borderRadius: 8,
     backgroundColor: '#ecf0f1',
   },
-  productInfo: {
+  partnerInfo: {
     flex: 1,
     marginLeft: 15,
   },
-  productName: {
+  partnerName: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#2c3e50',
     marginBottom: 4,
   },
-  productCategory: {
+  partnerCategory: {
     fontSize: 12,
     color: '#7f8c8d',
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  productDescription: {
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  ratingText: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    marginLeft: 5,
+  },
+  partnerContact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  partnerAddress: {
+    fontSize: 11,
+    color: '#7f8c8d',
+    marginLeft: 4,
+    flex: 1,
+  },
+  partnerPhone: {
+    fontSize: 11,
+    color: '#7f8c8d',
+    marginLeft: 4,
+  },
+  partnerDescription: {
     fontSize: 12,
     color: '#7f8c8d',
     marginBottom: 8,
   },
-  productDetails: {
+  partnerDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  productPrice: {
-    fontSize: 14,
-    fontWeight: 'bold',
+  productsCount: {
+    fontSize: 12,
+    fontWeight: '600',
     color: '#27ae60',
   },
-  productStock: {
-    fontSize: 12,
+  partnerEmail: {
+    fontSize: 11,
     color: '#7f8c8d',
+    flex: 1,
+    marginLeft: 10,
   },
   selectionIndicator: {
     justifyContent: 'center',
@@ -368,7 +485,7 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 15,
   },
-  selectedProduct: {
+  selectedPartner: {
     flexDirection: 'row',
     backgroundColor: '#e8f4fd',
     padding: 15,
@@ -376,45 +493,62 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#3498db',
   },
-  selectedProductImage: {
+  selectedPartnerImage: {
     width: 80,
     height: 80,
     borderRadius: 8,
     backgroundColor: '#ecf0f1',
   },
-  selectedProductInfo: {
+  selectedPartnerInfo: {
     flex: 1,
     marginLeft: 15,
   },
-  selectedProductName: {
+  selectedPartnerName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#2c3e50',
     marginBottom: 4,
   },
-  selectedProductCategory: {
+  selectedPartnerCategory: {
     fontSize: 14,
     color: '#7f8c8d',
+    marginBottom: 6,
+  },
+  selectedPartnerContact: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 4,
   },
-  selectedProductDescription: {
+  selectedPartnerAddress: {
+    fontSize: 13,
+    color: '#7f8c8d',
+    marginLeft: 6,
+    flex: 1,
+  },
+  selectedPartnerPhone: {
+    fontSize: 13,
+    color: '#7f8c8d',
+    marginLeft: 6,
+  },
+  selectedPartnerEmail: {
+    fontSize: 13,
+    color: '#7f8c8d',
+    marginLeft: 6,
+  },
+  selectedPartnerDescription: {
     fontSize: 14,
     color: '#7f8c8d',
     marginBottom: 8,
   },
-  selectedProductDetails: {
+  selectedPartnerDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  selectedProductPrice: {
-    fontSize: 16,
+  selectedProductsCount: {
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#27ae60',
-  },
-  selectedProductStock: {
-    fontSize: 14,
-    color: '#7f8c8d',
   },
   actionSection: {
     backgroundColor: 'white',
