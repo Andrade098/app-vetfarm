@@ -46,9 +46,13 @@ export default function AddPartnerScreen() {
     state: '',
     zipCode: '',
     phone: '',
-    email: ''
+    email: '',
+    password: '',
+    confirmPassword: ''
   });
   const [showStates, setShowStates] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const pickImage = async () => {
     try {
@@ -85,7 +89,6 @@ export default function AddPartnerScreen() {
   };
 
   const formatPhone = (text: string) => {
-    // Formatação simples do telefone
     const numbers = text.replace(/\D/g, '');
     if (numbers.length <= 10) {
       return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
@@ -111,7 +114,7 @@ export default function AddPartnerScreen() {
 
   const handleSubmit = () => {
     // Validação básica
-    if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.phone || !formData.email) {
+    if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.phone || !formData.email || !formData.password) {
       Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
       return;
     }
@@ -120,6 +123,18 @@ export default function AddPartnerScreen() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       Alert.alert('Erro', 'Digite um email válido');
+      return;
+    }
+
+    // Validação de senha
+    if (formData.password.length < 6) {
+      Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+
+    // Validação de confirmação de senha
+    if (formData.password !== formData.confirmPassword) {
+      Alert.alert('Erro', 'As senhas não coincidem');
       return;
     }
 
@@ -312,6 +327,73 @@ export default function AddPartnerScreen() {
           </View>
         </View>
 
+        {/* Credenciais de Acesso */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Credenciais de Acesso</Text>
+          <Text style={styles.sectionSubtitle}>Estas credenciais serão usadas para acessar o sistema</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Email de Acesso *</Text>
+            <TextInput
+              style={styles.input}
+              value={formData.email}
+              onChangeText={(text) => handleInputChange('email', text)}
+              placeholder="seu@email.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Senha *</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[styles.input, styles.passwordInput]}
+                value={formData.password}
+                onChangeText={(text) => handleInputChange('password', text)}
+                placeholder="Digite sua senha"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Ionicons 
+                  name={showPassword ? "eye-off" : "eye"} 
+                  size={20} 
+                  color="#7f8c8d" 
+                />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.passwordHint}>A senha deve ter pelo menos 6 caracteres</Text>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Confirmar Senha *</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[styles.input, styles.passwordInput]}
+                value={formData.confirmPassword}
+                onChangeText={(text) => handleInputChange('confirmPassword', text)}
+                placeholder="Confirme sua senha"
+                secureTextEntry={!showConfirmPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                <Ionicons 
+                  name={showConfirmPassword ? "eye-off" : "eye"} 
+                  size={20} 
+                  color="#7f8c8d" 
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
         {/* Botão de Submit */}
         <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
           <Text style={styles.submitButtonText}>Adicionar Farmácia Parceira</Text>
@@ -464,6 +546,23 @@ const styles = StyleSheet.create({
   selectText: {
     fontSize: 16,
     color: '#2c3e50',
+  },
+  passwordContainer: {
+    position: 'relative',
+  },
+  passwordInput: {
+    paddingRight: 50,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    zIndex: 1,
+  },
+  passwordHint: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    marginTop: 5,
   },
   submitButton: {
     backgroundColor: '#2ecc71',

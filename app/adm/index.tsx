@@ -39,37 +39,6 @@ export default function AdminPanel() {
     activePartners: 12 // Adicionado estatística de parceiros ativos
   };
 
-  // Redireciona para a página adicionarProduto.tsx
-  const handleAdd = () => {
-    router.push('/adicionarProduto');
-  };
-
-  const handleEdit = () => {
-    Alert.alert('Editar', 'Funcionalidade de editar produto existente');
-  };
-
-  const handleDelete = () => {
-    Alert.alert('Excluir', 'Tem certeza que deseja excluir este produto?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Excluir', style: 'destructive', onPress: () => console.log('Produto excluído') }
-    ]);
-  };
-
-  const handleAddPartner = () => {
-    Alert.alert('Adicionar', 'Funcionalidade de adicionar novo parceiro');
-  };
-
-  const handleEditPartner = () => {
-    Alert.alert('Editar', 'Funcionalidade de editar parceiro existente');
-  };
-
-  const handleDeletePartner = () => {
-    Alert.alert('Excluir', 'Tem certeza que deseja excluir este parceiro?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Excluir', style: 'destructive', onPress: () => console.log('Parceiro excluído') }
-    ]);
-  };
-
   return (
     <View style={styles.container}>
       <Stack.Screen
@@ -100,6 +69,12 @@ export default function AdminPanel() {
               <Text style={styles.statNumber}>{stats.activeCategories}</Text>
               <Text style={styles.statLabel}>Categorias Ativas</Text>
             </View>
+            
+            {/* Mensagem de atenção acima dos cards de parceiros */}
+            <View style={styles.fullWidthWarning}>
+              <Text style={styles.warningText}>ATENÇÃO! Estes dois cards abaixo (Parceiros e Parceiros ativos) só deve aparecer para a nossa farmacia, farmacias parceiras NAO DEVEM VER ISSO</Text>
+            </View>
+            
             <View style={styles.statCard}>
               <Text style={styles.statNumber}>{stats.totalPartners}</Text>
               <Text style={styles.statLabel}>Parceiros</Text>
@@ -117,7 +92,7 @@ export default function AdminPanel() {
             {/* Botão Adicionar Produto */}
             <TouchableOpacity
               style={styles.statCard}
-              onPress={() => router.push('/adm/adicionarProduto')} // rota direto aqui
+              onPress={() => router.push('/adm/adicionarProduto')}
             >
               <View style={styles.actionContent}>
                 <Text style={styles.statNumber}>+</Text>
@@ -142,11 +117,12 @@ export default function AdminPanel() {
                 <Text style={styles.statLabel}>Excluir Produto</Text>
               </View>
             </TouchableOpacity>
-            <View />
+            <View style={styles.emptyCard} />
           </View>
 
           {/* Seção Gerenciar Parceiros */}
           <Text style={[styles.tabTitle, { marginTop: 20 }]}>Gerenciar Parceiros</Text>
+          <Text style={styles.warningSectionText}>ATENÇÃO! Esta parte (Gerenciar parceiros)só deve aparecer para a nossa farmacia, farmacias parceiras NAO DEVEM VER ISSO</Text>
 
           <View style={styles.statsContainer}>
             {/* Botão Adicionar Parceiro */}
@@ -174,7 +150,7 @@ export default function AdminPanel() {
                 <Text style={styles.statLabel}>Excluir Parceiro</Text>
               </View>
             </TouchableOpacity>
-            <View />
+            <View style={styles.emptyCard} />
           </View>
         </View>
       </ScrollView>
@@ -258,5 +234,34 @@ const styles = StyleSheet.create({
     color: '#7f8c8d',
     textAlign: 'center',
     fontWeight: '600',
+  },
+  fullWidthWarning: {
+    width: '100%',
+    backgroundColor: '#ffeaa7',
+    padding: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#fdcb6e',
+    marginBottom: 10,
+  },
+  warningText: {
+    fontSize: 12,
+    color: '#e74c3c',
+    textAlign: 'center',
+    fontWeight: 'bold',
+    fontStyle: 'italic',
+  },
+  warningSectionText: {
+    fontSize: 12,
+    color: '#e74c3c',
+    textAlign: 'center',
+    fontWeight: 'bold',
+    marginBottom: 15,
+    fontStyle: 'italic',
+    backgroundColor: '#ffeaa7',
+    padding: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#fdcb6e',
   },
 });
