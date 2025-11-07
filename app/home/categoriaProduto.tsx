@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, FlatList } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router';
@@ -43,7 +43,7 @@ const produtosPorCategoria = {
   ],
   'Medicamentos-Bovinos': [
     {
-      id: '1',
+      id: '5',
       nome: 'Ivermectina 1%',
       preco: 'R$ 45,90',
       descricao: 'Antiparasitário de amplo espectro',
@@ -51,7 +51,7 @@ const produtosPorCategoria = {
       icone: '💊'
     },
     {
-      id: '2',
+      id: '6',
       nome: 'Albendazol 10%',
       preco: 'R$ 38,50',
       descricao: 'Vermífugo para bovinos',
@@ -61,7 +61,7 @@ const produtosPorCategoria = {
   ],
   'Acessórios-Bovinos': [
     {
-      id: '1',
+      id: '7',
       nome: 'Brinco de Identificação Bovino',
       preco: 'R$ 12,90',
       descricao: 'Brinco plástico numerado para identificação',
@@ -69,7 +69,7 @@ const produtosPorCategoria = {
       icone: '🏷️'
     },
     {
-      id: '2',
+      id: '8',
       nome: 'Aplicador de Brincos',
       preco: 'R$ 89,00',
       descricao: 'Aplicador profissional para brincos',
@@ -79,7 +79,7 @@ const produtosPorCategoria = {
   ],
   'Suplementos-Bovinos': [
     {
-      id: '1',
+      id: '9',
       nome: 'Núcleo Mineral para Gado de Corte',
       preco: 'R$ 149,90',
       descricao: 'Suplemento mineral completo para bovinos',
@@ -87,7 +87,7 @@ const produtosPorCategoria = {
       icone: '💊'
     },
     {
-      id: '2',
+      id: '10',
       nome: 'Vitamina A-D-E',
       preco: 'R$ 67,80',
       descricao: 'Complexo vitamínico essencial',
@@ -99,7 +99,7 @@ const produtosPorCategoria = {
   // 🐑 OVINOS
   'Vacinas-Ovinos': [
     {
-      id: '1',
+      id: '11',
       nome: 'Vacina Clostridial (Covexin 10)',
       preco: 'R$ 82,50',
       descricao: 'Proteção contra doenças clostridiais',
@@ -109,7 +109,7 @@ const produtosPorCategoria = {
   ],
   'Medicamentos-Ovinos': [
     {
-      id: '1',
+      id: '12',
       nome: 'Albendazol 10%',
       preco: 'R$ 42,90',
       descricao: 'Vermífugo para ovinos',
@@ -119,7 +119,7 @@ const produtosPorCategoria = {
   ],
   'Acessórios-Ovinos': [
     {
-      id: '1',
+      id: '13',
       nome: 'Tesoura para Tosa de Lã',
       preco: 'R$ 35,00',
       descricao: 'Tesoura profissional para tosa de ovinos',
@@ -129,7 +129,7 @@ const produtosPorCategoria = {
   ],
   'Suplementos-Ovinos': [
     {
-      id: '1',
+      id: '14',
       nome: 'Sal Mineral para Ovinos',
       preco: 'R$ 79,90',
       descricao: 'Suplemento mineral específico para ovinos',
@@ -141,7 +141,7 @@ const produtosPorCategoria = {
   // 🐖 SUÍNOS
   'Vacinas-Suínos': [
     {
-      id: '1',
+      id: '15',
       nome: 'Vacina Peste Suína',
       preco: 'R$ 75,90',
       descricao: 'Proteção contra peste suína clássica',
@@ -149,7 +149,7 @@ const produtosPorCategoria = {
       icone: '💉'
     },
     {
-      id: '2',
+      id: '16',
       nome: 'Vacina Rinite Atrófica',
       preco: 'R$ 82,50',
       descricao: 'Prevenção contra rinite atrófica',
@@ -160,7 +160,7 @@ const produtosPorCategoria = {
   ],
   'Medicamentos-Suínos': [
     {
-      id: '1',
+      id: '17',
       nome: 'Enrofloxacina 10%',
       preco: 'R$ 58,90',
       descricao: 'Antibiótico para infecções bacterianas',
@@ -170,7 +170,7 @@ const produtosPorCategoria = {
   ],
   'Acessórios-Suínos': [
     {
-      id: '1',
+      id: '18',
       nome: 'Bebedouro Tipo Nipple',
       preco: 'R$ 24,90',
       descricao: 'Bebedouro automático para suínos',
@@ -180,7 +180,7 @@ const produtosPorCategoria = {
   ],
   'Suplementos-Suínos': [
     {
-      id: '1',
+      id: '19',
       nome: 'Premix Vitamínico para Suínos',
       preco: 'R$ 129,90',
       descricao: 'Complexo vitamínico para suínos',
@@ -192,7 +192,7 @@ const produtosPorCategoria = {
   // 🐎 EQUINOS
   'Vacinas-Equinos': [
     {
-      id: '1',
+      id: '20',
       nome: 'Vacina Antitetânica',
       preco: 'R$ 65,00',
       descricao: 'Proteção contra tétano em equinos',
@@ -202,7 +202,7 @@ const produtosPorCategoria = {
   ],
   'Medicamentos-Equinos': [
     {
-      id: '1',
+      id: '21',
       nome: 'Pasta Vermífuga com Ivermectina',
       preco: 'R$ 52,90',
       descricao: 'Vermífugo em pasta para equinos',
@@ -212,17 +212,16 @@ const produtosPorCategoria = {
   ],
   'Acessórios-Equinos': [
     {
-      id: '1',
+      id: '22',
       nome: 'Cabeçada de Couro',
       preco: 'R$ 89,90',
       descricao: 'Cabeçada profissional em couro legítimo',
-      // imagem: require('../../assets/images/produtos/cabcada-couro.png'),
       icone: '🎠'
     },
   ],
   'Suplementos-Equinos': [
     {
-      id: '1',
+      id: '23',
       nome: 'Suplemento Vitamínico-Mineral',
       preco: 'R$ 139,90',
       descricao: 'Suplemento completo para equinos',
@@ -234,7 +233,7 @@ const produtosPorCategoria = {
   // 🐔 AVES
   'Vacinas-Aves': [
     {
-      id: '1',
+      id: '24',
       nome: 'Vacina contra Newcastle',
       preco: 'R$ 48,90',
       descricao: 'Proteção contra doença de Newcastle',
@@ -244,7 +243,7 @@ const produtosPorCategoria = {
   ],
   'Medicamentos-Aves': [
     {
-      id: '1',
+      id: '25',
       nome: 'Oxitetraciclina Solúvel',
       preco: 'R$ 32,50',
       descricao: 'Antibiótico de amplo espectro para aves',
@@ -254,7 +253,7 @@ const produtosPorCategoria = {
   ],
   'Acessórios-Aves': [
     {
-      id: '1',
+      id: '26',
       nome: 'Comedouro Automático para Aves',
       preco: 'R$ 45,00',
       descricao: 'Comedouro automático para granjas',
@@ -264,7 +263,7 @@ const produtosPorCategoria = {
   ],
   'Suplementos-Aves': [
     {
-      id: '1',
+      id: '27',
       nome: 'Complexo Vitamínico para Aves',
       preco: 'R$ 39,90',
       descricao: 'Vitaminas essenciais para aves',
@@ -276,41 +275,37 @@ const produtosPorCategoria = {
   // 🐟 PEIXES
   'Vacinas-Peixes': [
     {
-      id: '1',
+      id: '28',
       nome: 'Vacina contra Streptococcus',
       preco: 'R$ 125,00',
       descricao: 'Proteção contra streptococcus em peixes',
-      // imagem: require('../../assets/images/produtos/vacina-streptococcus.png'),
       icone: '💉'
     },
   ],
   'Medicamentos-Peixes': [
     {
-      id: '1',
+      id: '29',
       nome: 'Formalina',
       preco: 'R$ 28,90',
       descricao: 'Tratamento antiparasitário para aquicultura',
-      // imagem: require('../../assets/images/produtos/formalin.png'),
       icone: '💊'
     },
   ],
   'Acessórios-Peixes': [
     {
-      id: '1',
+      id: '30',
       nome: 'Rede de Manejo para Peixes',
       preco: 'R$ 34,90',
       descricao: 'Rede profissional para manejo de peixes',
-      // imagem: require('../../assets/images/produtos/rede-peixes.png'),
       icone: '🎣'
     },
   ],
   'Suplementos-Peixes': [
     {
-      id: '1',
+      id: '31',
       nome: 'Ração com Probióticos',
       preco: 'R$ 89,90',
       descricao: 'Ração enriquecida para peixes',
-      // imagem: require('../../assets/images/produtos/racao-probiotico.png'),
       icone: '💊'
     },
   ],
@@ -324,6 +319,20 @@ export default function CategoriaProdutoScreen() {
   const categoriaNome = params.categoriaNome;
   const animalNome = params.animalNome;
   const animalId = params.animalId;
+
+  // Estado do carrinho
+  const [cart, setCart] = useState<string[]>([]);
+
+  // Função para adicionar/remover do carrinho
+  const toggleCart = (productId: string) => {
+    setCart(prev => {
+      if (prev.includes(productId)) {
+        return prev.filter(id => id !== productId);
+      } else {
+        return [...prev, productId];
+      }
+    });
+  };
 
   // Gera a chave para buscar os produtos
   const chaveProdutos = `${categoriaNome}-${animalNome}`;
@@ -352,8 +361,20 @@ export default function CategoriaProdutoScreen() {
         <Text style={styles.produtoDescricao}>{item.descricao}</Text>
         <Text style={styles.produtoPreco}>{item.preco}</Text>
         
-        <TouchableOpacity style={styles.adicionarButton}>
-          <Text style={styles.adicionarButtonText}>+ Adicionar</Text>
+        {/* BOTÃO ADICIONAR AO CARRINHO - CORRIGIDO */}
+        <TouchableOpacity 
+          style={[
+            styles.adicionarButton,
+            cart.includes(item.id) && styles.adicionarButtonAdded
+          ]}
+          onPress={() => toggleCart(item.id)}
+        >
+          <Text style={[
+            styles.adicionarButtonText,
+            cart.includes(item.id) && styles.adicionarButtonTextAdded
+          ]}>
+            {cart.includes(item.id) ? '✓ Adicionado' : '+ Adicionar'}
+          </Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -504,14 +525,23 @@ const styles = StyleSheet.create({
   },
   adicionarButton: {
     backgroundColor: '#126b1a',
-    padding: 8,
+    padding: 12,
     borderRadius: 6,
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#126b1a',
+  },
+  adicionarButtonAdded: {
+    backgroundColor: 'white',
+    borderColor: '#27ae60',
   },
   adicionarButtonText: {
     color: 'white',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
+  },
+  adicionarButtonTextAdded: {
+    color: '#27ae60',
   },
   emptyState: {
     alignItems: 'center',

@@ -1,40 +1,329 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, FlatList, Modal } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-const products = [
-  {
-    id: 1,
-    category: 'Medicamentos',
-    name: 'Vermifugo Bovino',
-    price: 45.90,
-    animal: 'Bovino',
-    icon: '💊'
-  },
-  {
-    id: 2,
-    category: 'Acessórios',
-    name: 'Cela Equina',
-    price: 289.90,
-    animal: 'Equino',
-    icon: '🏇'
-  },
-  {
-    id: 3,
-    category: 'Vacinas',
-    name: 'Vacina Aftosa',
-    price: 32.50,
-    animal: 'Bovino',
-    icon: '💉'
-  },
-];
+// Dados de exemplo para produtos por categoria e animal
+const produtosPorCategoria = {
+  // 🐄 BOVINOS
+  'Vacinas-Bovinos': [
+    {
+      id: '1',
+      nome: 'Vacina Brucelose B19',
+      preco: 'R$ 89,90',
+      descricao: 'Proteção contra brucelose bovina',
+      imagem: require('../../assets/images/produtos/vacina-brucelose.png'),
+      icone: '💉'
+    },
+    {
+      id: '2',
+      nome: 'Vacina Febre Aftosa',
+      preco: 'R$ 67,50',
+      descricao: 'Proteção contra febre aftosa',
+      imagem: require('../../assets/images/produtos/vacina.png'),
+      icone: '💉'
+    },
+    {
+      id: '3',
+      nome: 'Vacina Raiva',
+      preco: 'R$ 95,00',
+      descricao: 'Proteção contra raiva animal',
+      imagem: require('../../assets/images/produtos/vacina-raiva.png'),
+      icone: '💉'
+    },
+    {
+      id: '4',
+      nome: 'Vacina Clostridiose',
+      preco: 'R$ 78,90',
+      descricao: 'Combate a doenças clostridiais',
+      imagem: require('../../assets/images/produtos/vacina-clostridiose.png'),
+      icone: '💉'
+    },
+  ],
+  'Medicamentos-Bovinos': [
+    {
+      id: '5',
+      nome: 'Ivermectina 1%',
+      preco: 'R$ 45,90',
+      descricao: 'Antiparasitário de amplo espectro',
+      imagem: require('../../assets/images/produtos/ivermectina.png'),
+      icone: '💊'
+    },
+    {
+      id: '6',
+      nome: 'Albendazol 10%',
+      preco: 'R$ 38,50',
+      descricao: 'Vermífugo para bovinos',
+      imagem: require('../../assets/images/produtos/albendazol.png'),
+      icone: '💊'
+    },
+  ],
+  'Acessórios-Bovinos': [
+    {
+      id: '7',
+      nome: 'Brinco de Identificação Bovino',
+      preco: 'R$ 12,90',
+      descricao: 'Brinco plástico numerado para identificação',
+      imagem: require('../../assets/images/produtos/brinco-bovino.png'),
+      icone: '🏷️'
+    },
+    {
+      id: '8',
+      nome: 'Aplicador de Brincos',
+      preco: 'R$ 89,00',
+      descricao: 'Aplicador profissional para brincos',
+      imagem: require('../../assets/images/produtos/aplicador-brinco.png'),
+      icone: '🔧'
+    },
+  ],
+  'Suplementos-Bovinos': [
+    {
+      id: '9',
+      nome: 'Núcleo Mineral para Gado de Corte',
+      preco: 'R$ 149,90',
+      descricao: 'Suplemento mineral completo para bovinos',
+      imagem: require('../../assets/images/produtos/suplemento-mineral.png'),
+      icone: '💊'
+    },
+    {
+      id: '10',
+      nome: 'Vitamina A-D-E',
+      preco: 'R$ 67,80',
+      descricao: 'Complexo vitamínico essencial',
+      imagem: require('../../assets/images/produtos/vitamina-ade.png'),
+      icone: '💊'
+    },
+  ],
 
-export default function ProductsPage() {
-  const [cart, setCart] = useState<number[]>([]);
+  // 🐑 OVINOS
+  'Vacinas-Ovinos': [
+    {
+      id: '11',
+      nome: 'Vacina Clostridial (Covexin 10)',
+      preco: 'R$ 82,50',
+      descricao: 'Proteção contra doenças clostridiais',
+      imagem: require('../../assets/images/produtos/vacina-clostridial.png'),
+      icone: '💉'
+    },
+  ],
+  'Medicamentos-Ovinos': [
+    {
+      id: '12',
+      nome: 'Albendazol 10%',
+      preco: 'R$ 42,90',
+      descricao: 'Vermífugo para ovinos',
+      imagem: require('../../assets/images/produtos/albendazol-ovino.png'),
+      icone: '💊'
+    },
+  ],
+  'Acessórios-Ovinos': [
+    {
+      id: '13',
+      nome: 'Tesoura para Tosa de Lã',
+      preco: 'R$ 35,00',
+      descricao: 'Tesoura profissional para tosa de ovinos',
+      imagem: require('../../assets/images/produtos/tesoura-tosa.png'),
+      icone: '✂️'
+    },
+  ],
+  'Suplementos-Ovinos': [
+    {
+      id: '14',
+      nome: 'Sal Mineral para Ovinos',
+      preco: 'R$ 79,90',
+      descricao: 'Suplemento mineral específico para ovinos',
+      imagem: require('../../assets/images/produtos/sal-mineral-ovino.png'),
+      icone: '💊'
+    },
+  ],
+
+  // 🐖 SUÍNOS
+  'Vacinas-Suínos': [
+    {
+      id: '15',
+      nome: 'Vacina Peste Suína',
+      preco: 'R$ 75,90',
+      descricao: 'Proteção contra peste suína clássica',
+      imagem: require('../../assets/images/produtos/vacina-peste-suina.png'),
+      icone: '💉'
+    },
+    {
+      id: '16',
+      nome: 'Vacina Rinite Atrófica',
+      preco: 'R$ 82,50',
+      descricao: 'Prevenção contra rinite atrófica',
+      imagem: require('../../assets/images/produtos/vacina-rinite.png'),
+      icone: '💉'
+    },
+    
+  ],
+  'Medicamentos-Suínos': [
+    {
+      id: '17',
+      nome: 'Enrofloxacina 10%',
+      preco: 'R$ 58,90',
+      descricao: 'Antibiótico para infecções bacterianas',
+      imagem: require('../../assets/images/produtos/enrofloxacina.png'),
+      icone: '💊'
+    },
+  ],
+  'Acessórios-Suínos': [
+    {
+      id: '18',
+      nome: 'Bebedouro Tipo Nipple',
+      preco: 'R$ 24,90',
+      descricao: 'Bebedouro automático para suínos',
+      imagem: require('../../assets/images/produtos/bebedouro-nipple.png'),
+      icone: '🚰'
+    },
+  ],
+  'Suplementos-Suínos': [
+    {
+      id: '19',
+      nome: 'Premix Vitamínico para Suínos',
+      preco: 'R$ 129,90',
+      descricao: 'Complexo vitamínico para suínos',
+      imagem: require('../../assets/images/produtos/premix-suino.png'),
+      icone: '💊'
+    },
+  ],
+
+  // 🐎 EQUINOS
+  'Vacinas-Equinos': [
+    {
+      id: '20',
+      nome: 'Vacina Antitetânica',
+      preco: 'R$ 65,00',
+      descricao: 'Proteção contra tétano em equinos',
+      imagem: require('../../assets/images/produtos/vacina-antitetanica.png'),
+      icone: '💉'
+    },
+  ],
+  'Medicamentos-Equinos': [
+    {
+      id: '21',
+      nome: 'Pasta Vermífuga com Ivermectina',
+      preco: 'R$ 52,90',
+      descricao: 'Vermífugo em pasta para equinos',
+      imagem: require('../../assets/images/produtos/pasta-vermifuga.png'),
+      icone: '💊'
+    },
+  ],
+  'Acessórios-Equinos': [
+    {
+      id: '22',
+      nome: 'Cabeçada de Couro',
+      preco: 'R$ 89,90',
+      descricao: 'Cabeçada profissional em couro legítimo',
+      icone: '🎠'
+    },
+  ],
+  'Suplementos-Equinos': [
+    {
+      id: '23',
+      nome: 'Suplemento Vitamínico-Mineral',
+      preco: 'R$ 139,90',
+      descricao: 'Suplemento completo para equinos',
+      imagem: require('../../assets/images/produtos/suplemento-equino.png'),
+      icone: '💊'
+    },
+  ],
+
+  // 🐔 AVES
+  'Vacinas-Aves': [
+    {
+      id: '24',
+      nome: 'Vacina contra Newcastle',
+      preco: 'R$ 48,90',
+      descricao: 'Proteção contra doença de Newcastle',
+      imagem: require('../../assets/images/produtos/vacina-newcastle.png'),
+      icone: '💉'
+    },
+  ],
+  'Medicamentos-Aves': [
+    {
+      id: '25',
+      nome: 'Oxitetraciclina Solúvel',
+      preco: 'R$ 32,50',
+      descricao: 'Antibiótico de amplo espectro para aves',
+      imagem: require('../../assets/images/produtos/oxitetraciclina.png'),
+      icone: '💊'
+    },
+  ],
+  'Acessórios-Aves': [
+    {
+      id: '26',
+      nome: 'Comedouro Automático para Aves',
+      preco: 'R$ 45,00',
+      descricao: 'Comedouro automático para granjas',
+      imagem: require('../../assets/images/produtos/comedouro-aves.png'),
+      icone: '🍽️'
+    },
+  ],
+  'Suplementos-Aves': [
+    {
+      id: '27',
+      nome: 'Complexo Vitamínico para Aves',
+      preco: 'R$ 39,90',
+      descricao: 'Vitaminas essenciais para aves',
+      imagem: require('../../assets/images/produtos/vitaminas-aves.png'),
+      icone: '💊'
+    },
+  ],
+
+  // 🐟 PEIXES
+  'Vacinas-Peixes': [
+    {
+      id: '28',
+      nome: 'Vacina contra Streptococcus',
+      preco: 'R$ 125,00',
+      descricao: 'Proteção contra streptococcus em peixes',
+      icone: '💉'
+    },
+  ],
+  'Medicamentos-Peixes': [
+    {
+      id: '29',
+      nome: 'Formalina',
+      preco: 'R$ 28,90',
+      descricao: 'Tratamento antiparasitário para aquicultura',
+      icone: '💊'
+    },
+  ],
+  'Acessórios-Peixes': [
+    {
+      id: '30',
+      nome: 'Rede de Manejo para Peixes',
+      preco: 'R$ 34,90',
+      descricao: 'Rede profissional para manejo de peixes',
+      icone: '🎣'
+    },
+  ],
+  'Suplementos-Peixes': [
+    {
+      id: '31',
+      nome: 'Ração com Probióticos',
+      preco: 'R$ 89,90',
+      descricao: 'Ração enriquecida para peixes',
+      icone: '💊'
+    },
+  ],
+};
+
+export default function CategoriaProdutoScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  
+  const categoriaNome = params.categoriaNome;
+  const animalNome = params.animalNome;
+
+  // ESTADO DO CARRINHO - igual ao da produtos.tsx
+  const [cart, setCart] = useState<string[]>([]);
   const [cartModalVisible, setCartModalVisible] = useState(false);
 
-  const toggleCart = (productId: number) => {
+  // FUNÇÃO TOGGLE CART - igual ao da produtos.tsx
+  const toggleCart = (productId: string) => {
     setCart(prev => 
       prev.includes(productId) 
         ? prev.filter(id => id !== productId)
@@ -43,13 +332,20 @@ export default function ProductsPage() {
   };
 
   const getCartItems = () => {
-    return products.filter(product => cart.includes(product.id));
+    const chaveProdutos = `${categoriaNome}-${animalNome}`;
+    const produtos = produtosPorCategoria[chaveProdutos] || [];
+    return produtos.filter(product => cart.includes(product.id));
   };
 
   const getTotalPrice = () => {
-    return getCartItems().reduce((total, item) => total + item.price, 0);
+    return getCartItems().reduce((total, item) => {
+      // Converte "R$ 89,90" para 89.90
+      const precoNumerico = parseFloat(item.preco.replace('R$ ', '').replace(',', '.'));
+      return total + precoNumerico;
+    }, 0);
   };
 
+  // MODAL DO CARRINHO - igual ao da produtos.tsx
   const CartModal = () => (
     <Modal
       animationType="slide"
@@ -58,37 +354,32 @@ export default function ProductsPage() {
       onRequestClose={() => setCartModalVisible(false)}
     >
       <View style={styles.modalContainer}>
-        {/* Header do Modal */}
         <View style={styles.modalHeader}>
           <Text style={styles.modalTitle}>Meu Carrinho</Text>
           <TouchableOpacity 
-            style={styles.closeButton}
             onPress={() => setCartModalVisible(false)}
           >
             <Text style={styles.closeButtonText}>Fechar</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Itens do Carrinho */}
         <View style={styles.cartContent}>
           <Text style={styles.itemsTitle}>Itens</Text>
           
           {getCartItems().length === 0 ? (
-            // Carrinho vazio
             <View style={styles.emptyCart}>
               <Ionicons name="cart-outline" size={64} color="#bdc3c7" />
               <Text style={styles.emptyCartTitle}>Carrinho vazio</Text>
               <Text style={styles.emptyCartText}>Adicione produtos ao carrinho</Text>
             </View>
           ) : (
-            // Lista de itens do carrinho
             <ScrollView style={styles.cartItems}>
               {getCartItems().map(item => (
                 <View key={item.id} style={styles.cartItem}>
                   <View style={styles.itemInfo}>
-                    <Text style={styles.itemName}>{item.name}</Text>
-                    <Text style={styles.itemAnimal}>{item.animal}</Text>
-                    <Text style={styles.itemPrice}>R$ {item.price.toFixed(2)}</Text>
+                    <Text style={styles.itemName}>{item.nome}</Text>
+                    <Text style={styles.itemAnimal}>{animalNome}</Text>
+                    <Text style={styles.itemPrice}>{item.preco}</Text>
                   </View>
                   <TouchableOpacity 
                     style={styles.removeButton}
@@ -99,7 +390,6 @@ export default function ProductsPage() {
                 </View>
               ))}
               
-              {/* Total */}
               <View style={styles.totalContainer}>
                 <Text style={styles.totalText}>Total: R$ {getTotalPrice().toFixed(2)}</Text>
               </View>
@@ -110,72 +400,111 @@ export default function ProductsPage() {
     </Modal>
   );
 
+  const chaveProdutos = `${categoriaNome}-${animalNome}`;
+  const produtos = produtosPorCategoria[chaveProdutos] || [];
+
+  const renderProduto = ({ item }) => (
+    <TouchableOpacity style={styles.produtoCard}>
+      <View style={styles.produtoImagemContainer}>
+        {item.imagem ? (
+          <Image
+            source={item.imagem}
+            style={styles.produtoImagem}
+            resizeMode="contain"
+          />
+        ) : (
+          <View style={styles.iconeContainer}>
+            <Text style={styles.produtoIcone}>{item.icone}</Text>
+          </View>
+        )}
+      </View>
+      
+      <View style={styles.produtoInfo}>
+        <Text style={styles.produtoNome}>{item.nome}</Text>
+        <Text style={styles.produtoDescricao}>{item.descricao}</Text>
+        <Text style={styles.produtoPreco}>{item.preco}</Text>
+        
+        {/* BOTÃO ADICIONAR - FUNCIONANDO IGUAL AO DA produtos.tsx */}
+        <TouchableOpacity 
+          style={[
+            styles.adicionarButton,
+            cart.includes(item.id) && styles.adicionarButtonAdded
+          ]}
+          onPress={() => toggleCart(item.id)}
+        >
+          <Text style={[
+            styles.adicionarButtonText,
+            cart.includes(item.id) && styles.adicionarButtonTextAdded
+          ]}>
+            {cart.includes(item.id) ? '✓ Adicionado' : '+ Adicionar'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
       <Stack.Screen 
         options={{
-          title: 'Produtos',
+          title: `${categoriaNome} - ${animalNome}`,
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 20,
+            fontSize: 18,
           },
         }} 
       />
       
-      {/* Header */}
+      {/* HEADER COM CARRINHO - igual ao da produtos.tsx */}
       <View style={styles.header}>
-        <Text style={styles.storeName}>Produtos</Text>
+        <View>
+          <Text style={styles.storeName}>{categoriaNome} - {animalNome}</Text>
+          <Text style={styles.subtitulo}>{produtos.length} produtos encontrados</Text>
+        </View>
         <TouchableOpacity 
           style={styles.cartButton}
           onPress={() => setCartModalVisible(true)}
         >
-          {/* ÍCONE DO CARRINHO ATUALIZADO */}
           <View style={styles.cartIconContainer}>
             <Ionicons name="cart-outline" size={28} color="#126b1a" />
             {cart.length > 0 && (
               <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>
-                  {cart.reduce((total, productId) => {
-                    const product = products.find(p => p.id === productId);
-                    return total + 1; // Conta cada produto individualmente
-                  }, 0)}
-                </Text>
+                <Text style={styles.cartBadgeText}>{cart.length}</Text>
               </View>
             )}
           </View>
         </TouchableOpacity>
       </View>
 
-      {/* Lista de Produtos */}
-      <ScrollView style={styles.productsContainer}>
-        {products.map(product => (
-          <View key={product.id} style={styles.productCard}>
-            <Text style={styles.categoryText}>{product.category}</Text>
-            <Text style={styles.productName}>{product.name}</Text>
-            <Text style={styles.animalText}>{product.animal}</Text>
-            <Text style={styles.priceText}>R$ {product.price.toFixed(2)}</Text>
-            
-            <TouchableOpacity 
-              style={[
-                styles.addButton,
-                cart.includes(product.id) && styles.addedButton
-              ]}
-              onPress={() => toggleCart(product.id)}
-            >
-              <Text style={[
-                styles.addButtonText,
-                cart.includes(product.id) && styles.addedButtonText
-              ]}>
-                {cart.includes(product.id) ? '✓ Adicionado' : '+ Adicionar'}
-              </Text>
-            </TouchableOpacity>
+      <ScrollView style={styles.content}>
+        {/* Lista de Produtos */}
+        {produtos.length > 0 ? (
+          <FlatList
+            data={produtos}
+            renderItem={renderProduto}
+            keyExtractor={item => item.id}
+            scrollEnabled={false}
+            contentContainerStyle={styles.listaProdutos}
+          />
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons name="alert-circle-outline" size={60} color="#ccc" />
+            <Text style={styles.emptyStateText}>Nenhum produto encontrado</Text>
+            <Text style={styles.emptyStateSubtext}>
+              Não há produtos de {categoriaNome.toLowerCase()} para {animalNome.toLowerCase()} no momento.
+            </Text>
           </View>
-        ))}
-        
-        <View style={styles.spacer} />
+        )}
+
+        <TouchableOpacity 
+          style={styles.voltarButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.voltarButtonText}>Voltar</Text>
+        </TouchableOpacity>
       </ScrollView>
 
-      {/* Modal do Carrinho */}
+      {/* MODAL DO CARRINHO */}
       <CartModal />
     </View>
   );
@@ -186,6 +515,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
+  // HEADER estilo da produtos.tsx
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -201,6 +531,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#126b1a',
+  },
+  subtitulo: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
   },
   cartButton: {
     padding: 5,
@@ -225,73 +560,123 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
   },
-  productsContainer: {
+  content: {
     flex: 1,
-    padding: 16,
+    padding: 15,
   },
-  productCard: {
+  listaProdutos: {
+    paddingBottom: 20,
+  },
+  produtoCard: {
     backgroundColor: 'white',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    marginBottom: 15,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
+    flexDirection: 'row',
   },
-  categoryText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#7f8c8d',
-    marginBottom: 4,
-    textTransform: 'uppercase',
+  produtoImagemContainer: {
+    width: 100,
+    height: 120,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
   },
-  productName: {
+  produtoImagem: {
+    width: '120%',
+    height: '120%',
+  },
+  iconeContainer: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  produtoIcone: {
+    fontSize: 40,
+  },
+  produtoInfo: {
+    flex: 1,
+    padding: 15,
+    justifyContent: 'space-between',
+  },
+  produtoNome: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  produtoDescricao: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 8,
+    lineHeight: 16,
+  },
+  produtoPreco: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2c3e50',
-    marginBottom: 4,
+    color: '#126b1a',
+    marginBottom: 10,
   },
-  animalText: {
-    fontSize: 14,
-    color: '#95a5a6',
-    marginBottom: 8,
-  },
-  priceText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#27ae60',
-    marginBottom: 12,
-  },
-  addButton: {
+  adicionarButton: {
     backgroundColor: '#126b1a',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    padding: 12,
+    borderRadius: 6,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#126b1a',
   },
-  addedButton: {
+  adicionarButtonAdded: {
     backgroundColor: 'white',
     borderColor: '#27ae60',
   },
-  addButtonText: {
+  adicionarButtonText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
-  addedButtonText: {
+  adicionarButtonTextAdded: {
     color: '#27ae60',
   },
-  spacer: {
-    height: 20,
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginBottom: 20,
   },
-  // Estilos do Modal do Carrinho
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  voltarButton: {
+    backgroundColor: '#95a5a6',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  voltarButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  // ESTILOS DO MODAL (da produtos.tsx)
   modalContainer: {
     flex: 1,
     backgroundColor: 'white',
@@ -308,9 +693,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#2c3e50',
-  },
-  closeButton: {
-    padding: 8,
   },
   closeButtonText: {
     fontSize: 16,

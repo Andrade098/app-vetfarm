@@ -19,7 +19,7 @@ try {
       
       // Redireciona para a home após 1 segundo (simula loading)
       setTimeout(() => {
-        router.push('/adm');
+        router.push('/home');
       }, 1000);
 
     } catch (err) {
@@ -28,7 +28,7 @@ try {
       
       // Redireciona mesmo com erro para teste
       setTimeout(() => {
-        router.push('/adm');
+        router.push('/home');
       }, 1500);
     }
   }
