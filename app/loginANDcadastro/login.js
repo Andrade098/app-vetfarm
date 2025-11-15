@@ -1,35 +1,47 @@
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Alert } from "react-native";
+import { loginUser } from '../database/asyncStorageDB';
 
 export default function Login() {
-const [email, setEmail] = useState("");
-const [password, setPassword] = useState("");
-const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-async function handleLogin() {
-try {
+  async function handleLogin() {
     // Validação básica
     if (!email || !password) {
-      alert('Por favor, preencha email e senha');
+      Alert.alert('Erro', 'Por favor, preencha email e senha');
       return;
-      }
-      // SIMULAÇÃO DE LOGIN (substitua pela sua API real)
-      alert('Login simulado com sucesso! Redirecionando...');
-      
-      // Redireciona para a home após 1 segundo (simula loading)
-      setTimeout(() => {
-        router.push('/home');
-      }, 1000);
+    }
 
+    setLoading(true);
+
+    try {
+      const user = await loginUser(email, password);
+
+      if (user) {
+        Alert.alert(
+          'Login realizado!',
+          `Bem-vindo de volta, ${user.nome}!`,
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                router.push('/home');
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert("Erro", "Email ou senha incorretos!");
+      }
     } catch (err) {
-      alert("Não foi possível conectar ao servidor.");
-      console.error(err);
-      
-      // Redireciona mesmo com erro para teste
-      setTimeout(() => {
-        router.push('/home');
-      }, 1500);
+      console.error("Erro no login:", err);
+      Alert.alert("Erro", "Não foi possível realizar o login. Tente novamente.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -37,7 +49,7 @@ try {
     <ScrollView contentContainerStyle={styles.container}>
       {/* Logo com sua imagem */}
       <View style={styles.logoContainer}>
-        <Image 
+        <Image
           source={require('../../assets/images/logovetfarm.png')}
           style={styles.logoImage}
           resizeMode="contain"
@@ -48,7 +60,7 @@ try {
       {/* Formulário */}
       <View style={styles.formContainer}>
         <Text style={styles.formTitle}>Entrar na minha conta</Text>
-        
+
         <TextInput
           style={styles.input}
           placeholder="E-mail"
@@ -68,8 +80,14 @@ try {
           onChangeText={setPassword}
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Entrar</Text>
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? "Entrando..." : "Entrar"}
+          </Text>
         </TouchableOpacity>
 
         {/* Link para Esqueci Senha */}
@@ -151,6 +169,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
     marginBottom: 20,
+  },
+  buttonDisabled: {
+    backgroundColor: "#ccc",
   },
   buttonText: {
     color: "#fff",

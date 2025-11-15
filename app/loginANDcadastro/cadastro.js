@@ -1,30 +1,81 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, Dimensions } from "react-native";
 import { Link } from "expo-router";
+import { addUser, getUserByEmail } from '../database/asyncStorageDB';
 
 // Obtém a largura da tela
 const { width } = Dimensions.get('window');
+
 export default function Cadastro() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
-function handleCadastro() {
+  const [loading, setLoading] = useState(false);
+
+  async function handleCadastro() {
+    // Validações
+    if (!nome || !email || !telefone || !senha || !confirmarSenha) {
+      Alert.alert("Erro", "Por favor, preencha todos os campos!");
+      return;
+    }
+
     if (senha !== confirmarSenha) {
       Alert.alert("Erro", "As senhas não coincidem!");
       return;
     }
-    Alert.alert(
-      "Cadastro realizado!",
-      `Bem-vindo(a) ${nome}!\nEmail: ${email}\nTelefone: ${telefone}`
-    );
+
+    if (senha.length < 6) {
+      Alert.alert("Erro", "A senha deve ter pelo menos 6 caracteres!");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Verificar se email já existe
+      const usuarioExistente = await getUserByEmail(email);
+      if (usuarioExistente) {
+        Alert.alert("Erro", "Este email já está cadastrado!");
+        setLoading(false);
+        return;
+      }
+
+      // Cadastrar usuário
+      await addUser(nome, email, telefone, senha);
+
+      Alert.alert(
+        "Cadastro realizado!",
+        `Bem-vindo(a) ${nome}!\n\nSua conta foi criada com sucesso.`,
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              // Limpar campos
+              setNome("");
+              setEmail("");
+              setTelefone("");
+              setSenha("");
+              setConfirmarSenha("");
+            }
+          }
+        ]
+      );
+
+    } catch (error) {
+      console.error("Erro no cadastro:", error);
+      Alert.alert("Erro", "Não foi possível realizar o cadastro. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Cabeçalho com IMAGEM */}
       <View style={styles.header}>
-        <Image 
+        <Image
           source={require('../../assets/images/logovetfarm.png')}
           style={styles.logoImage}
           resizeMode="contain"
@@ -32,6 +83,7 @@ function handleCadastro() {
         <Text style={styles.title}>Criar conta</Text>
         <Text style={styles.subtitle}>Preencha seus dados abaixo</Text>
       </View>
+
       {/* Formulário */}
       <View style={styles.form}>
         <TextInput
@@ -78,8 +130,14 @@ function handleCadastro() {
           onChangeText={setConfirmarSenha}
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleCadastro}>
-          <Text style={styles.buttonText}>Criar conta</Text>
+        <TouchableOpacity
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleCadastro}
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? "Cadastrando..." : "Criar conta"}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -108,16 +166,16 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: "#fff",
     padding: 20,
-    paddingTop: 30, // Reduzi um pouco o padding top
+    paddingTop: 30,
   },
   header: {
     alignItems: "center",
-    marginBottom: 30, // Reduzi a margem inferior
+    marginBottom: 30,
   },
   logoImage: {
-    width: '100%',       // Ocupa 100% do container
-    height: 200,         // Altura fixa (ajuste conforme needed)
-    maxHeight: 250,      // Altura máxima
+    width: '100%',
+    height: 200,
+    maxHeight: 250,
     marginBottom: 10,
   },
   title: {
@@ -154,6 +212,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
   },
+  buttonDisabled: {
+    backgroundColor: "#ccc",
+  },
   buttonText: {
     color: "#fff",
     fontSize: 18,
@@ -169,7 +230,7 @@ const styles = StyleSheet.create({
     marginRight: 5,
   },
   loginLink: {
-    color: "#126b1a", // Mudei para verde para combinar
+    color: "#126b1a",
     fontWeight: "bold",
   },
   terms: {
@@ -180,6 +241,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   termsLink: {
-    color: "#126b1a", // Mudei para verde para combinar
+    color: "#126b1a",
   },
 });
