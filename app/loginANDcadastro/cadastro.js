@@ -185,7 +185,7 @@ export default function Cadastro() {
 
       <View style={styles.loginContainer}>
         <Text style={styles.loginText}>Já possui uma conta?</Text>
-        <Link href="/loginANDcadastro/index" asChild>
+        <Link href="/loginANDcadastro/" asChild>
           <TouchableOpacity>
             <Text style={styles.loginLink}>Fazer login</Text>
           </TouchableOpacity>
