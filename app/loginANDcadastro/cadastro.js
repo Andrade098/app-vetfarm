@@ -1,82 +1,114 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, Dimensions } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  Image,
+  Dimensions
+} from "react-native";
 import { Link } from "expo-router";
 
-
-// Obtém a largura da tela
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 export default function Cadastro() {
   const [nome, setNome] = useState("");
+  const [sobrenome, setSobrenome] = useState("");
+  const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
+  const [dataNascimento, setDataNascimento] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleCadastro() {
-    // Validações
-    if (!nome || !email || !telefone || !senha || !confirmarSenha) {
-      Alert.alert("Erro", "Por favor, preencha todos os campos!");
-      return;
-    }
-
-    if (senha !== confirmarSenha) {
-      Alert.alert("Erro", "As senhas não coincidem!");
-      return;
-    }
-
-    if (senha.length < 6) {
-      Alert.alert("Erro", "A senha deve ter pelo menos 6 caracteres!");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // Verificar se email já existe
-      const usuarioExistente = await (email);
-      if (usuarioExistente) {
-        Alert.alert("Erro", "Este email já está cadastrado!");
-        setLoading(false);
-        return;
-      }
-
-      // Cadastrar usuário
-      await (nome, email, telefone, senha);
-
-      Alert.alert(
-        "Cadastro realizado!",
-        `Bem-vindo(a) ${nome}!\n\nSua conta foi criada com sucesso.`,
-        [
-          {
-            text: "OK",
-            onPress: () => {
-              // Limpar campos
-              setNome("");
-              setEmail("");
-              setTelefone("");
-              setSenha("");
-              setConfirmarSenha("");
-            }
-          }
-        ]
-      );
-
-    } catch (error) {
-      console.error("Erro no cadastro:", error);
-      Alert.alert("Erro", "Não foi possível realizar o cadastro. Tente novamente.");
-    } finally {
-      setLoading(false);
-    }
+  if (
+    !nome ||
+    !sobrenome ||
+    !cpf ||
+    !email ||
+    !telefone ||
+    !dataNascimento ||
+    !senha ||
+    !confirmarSenha
+  ) {
+    Alert.alert("Erro", "Por favor, preencha todos os campos!");
+    return;
   }
+
+  if (senha !== confirmarSenha) {
+    Alert.alert("Erro", "As senhas não coincidem!");
+    return;
+  }
+
+  if (senha.length < 6) {
+    Alert.alert("Erro", "A senha deve ter pelo menos 6 caracteres!");
+    return;
+  }
+
+  const partes = dataNascimento.split("/");
+  if (partes.length !== 3) {
+    Alert.alert("Erro", "Data inválida! Use o formato DD/MM/AAAA");
+    return;
+  }
+  const dataFormatada = `${partes[2]}-${partes[1]}-${partes[0]}`;
+
+  setLoading(true);
+
+  try {
+    const response = await fetch("http://192.168.0.3:3000/api/clientes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        nome,
+        sobrenome,
+        cpf,
+        telefone,
+        email,
+        data_nascimento: dataFormatada,
+        senha
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      Alert.alert("Erro", data.error || "Falha no cadastro.");
+      setLoading(false);
+      return;
+    }
+
+    Alert.alert("Sucesso", "Cadastro realizado com sucesso!");
+
+    setNome("");
+    setSobrenome("");
+    setCpf("");
+    setTelefone("");
+    setEmail("");
+    setDataNascimento("");
+    setSenha("");
+    setConfirmarSenha("");
+
+  } catch (error) {
+    console.error("Erro no cadastro:", error);
+    Alert.alert("Erro", "Não foi possível conectar ao servidor.");
+  } finally {
+    setLoading(false);
+  }
+}
+
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Cabeçalho com IMAGEM */}
       <View style={styles.header}>
         <Image
-          source={require('../../assets/images/logovetfarm.png')}
+          source={require("../../assets/images/logovetfarm.png")}
           style={styles.logoImage}
           resizeMode="contain"
         />
@@ -84,52 +116,62 @@ export default function Cadastro() {
         <Text style={styles.subtitle}>Preencha seus dados abaixo</Text>
       </View>
 
-      {/* Formulário */}
       <View style={styles.form}>
         <TextInput
           style={styles.input}
-          placeholder="Nome completo"
-          placeholderTextColor="#999"
+          placeholder="Nome"
           value={nome}
           onChangeText={setNome}
         />
         <TextInput
           style={styles.input}
+          placeholder="Sobrenome"
+          value={sobrenome}
+          onChangeText={setSobrenome}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="CPF"
+          value={cpf}
+          onChangeText={setCpf}
+          keyboardType="numeric"
+        />
+        <TextInput
+          style={styles.input}
           placeholder="E-mail"
-          placeholderTextColor="#999"
           value={email}
           onChangeText={setEmail}
-          keyboardType="email-address"
           autoCapitalize="none"
+          keyboardType="email-address"
         />
-
         <TextInput
           style={styles.input}
           placeholder="Telefone"
-          placeholderTextColor="#999"
           value={telefone}
           onChangeText={setTelefone}
           keyboardType="phone-pad"
         />
-
+        <TextInput
+          style={styles.input}
+          placeholder="Data de nascimento (DD/MM/AAAA)"
+          value={dataNascimento}
+          onChangeText={setDataNascimento}
+          keyboardType="numeric"
+        />
         <TextInput
           style={styles.input}
           placeholder="Senha"
-          placeholderTextColor="#999"
           secureTextEntry
           value={senha}
           onChangeText={setSenha}
         />
-
         <TextInput
           style={styles.input}
           placeholder="Confirmar senha"
-          placeholderTextColor="#999"
           secureTextEntry
           value={confirmarSenha}
           onChangeText={setConfirmarSenha}
         />
-
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleCadastro}
@@ -141,22 +183,14 @@ export default function Cadastro() {
         </TouchableOpacity>
       </View>
 
-      {/* Link para login */}
       <View style={styles.loginContainer}>
         <Text style={styles.loginText}>Já possui uma conta?</Text>
-        <Link href="/loginANDcadastro/login" asChild>
+        <Link href="/loginANDcadastro/index" asChild>
           <TouchableOpacity>
             <Text style={styles.loginLink}>Fazer login</Text>
           </TouchableOpacity>
         </Link>
       </View>
-
-      {/* Termos */}
-      <Text style={styles.terms}>
-        Ao criar uma conta, você concorda com nossos{' '}
-        <Text style={styles.termsLink}>Termos de Serviço</Text> e{' '}
-        <Text style={styles.termsLink}>Política de Privacidade</Text>
-      </Text>
     </ScrollView>
   );
 }
@@ -166,32 +200,30 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: "#fff",
     padding: 20,
-    paddingTop: 30,
+    paddingTop: 30
   },
   header: {
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: 30
   },
   logoImage: {
-    width: '100%',
+    width: "100%",
     height: 200,
-    maxHeight: 250,
-    marginBottom: 10,
+    marginBottom: 10
   },
   title: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#126b1a",
-    marginBottom: 5,
+    marginBottom: 5
   },
   subtitle: {
     fontSize: 16,
-    color: "#666",
-    textAlign: "center",
+    color: "#666"
   },
   form: {
     width: "100%",
-    marginBottom: 25,
+    marginBottom: 25
   },
   input: {
     width: "100%",
@@ -201,46 +233,33 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 15,
     paddingHorizontal: 15,
-    fontSize: 16,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#f9f9f9"
   },
   button: {
     backgroundColor: "#126b1a",
-    width: "100%",
     padding: 15,
     borderRadius: 10,
-    alignItems: "center",
-    marginTop: 10,
+    alignItems: "center"
   },
   buttonDisabled: {
-    backgroundColor: "#ccc",
+    backgroundColor: "#ccc"
   },
   buttonText: {
     color: "#fff",
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "bold"
   },
   loginContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginBottom: 20,
+    marginTop: 20
   },
   loginText: {
     color: "#666",
-    marginRight: 5,
+    marginRight: 5
   },
   loginLink: {
     color: "#126b1a",
-    fontWeight: "bold",
-  },
-  terms: {
-    textAlign: "center",
-    color: "#999",
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 10,
-  },
-  termsLink: {
-    color: "#126b1a",
-  },
+    fontWeight: "bold"
+  }
 });

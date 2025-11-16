@@ -2,50 +2,117 @@ const Cliente = require('../models/Cliente');
 const bcrypt = require('bcrypt');
 
 module.exports = {
-    async criarCliente(dados) {
-        const { nome, email, senha } = dados;
+  async criarCliente(dados) {
+    const {
+      nome,
+      sobrenome,
+      cpf,
+      telefone,
+      email,
+      senha,
+      confirmarSenha,
+      data_nascimento
+    } = dados;
 
-        // Verifica se já existe
-        const existe = await Cliente.findOne({ where: { email } });
-        if (existe) {
-            throw { status: 400, message: 'Email já cadastrado' };
-        }
+    if (!nome || !sobrenome || !cpf || !telefone || !email || !senha || !confirmarSenha || !data_nascimento) {
+      throw { status: 400, message: "Preencha todos os campos!" };
+    }
 
-        // Criptografa senha
-        const senhaHash = await bcrypt.hash(senha, 10);
+    if (senha !== confirmarSenha) {
+      throw { status: 400, message: "As senhas não coincidem!" };
+    }
 
-        const novoCliente = await Cliente.create({
-            nome,
-            email,
-            senha: senhaHash
-        });
+    if (senha.length < 6) {
+      throw { status: 400, message: "A senha deve ter pelo menos 6 caracteres!" };
+    }
 
-        return novoCliente;
-    },
+    const emailExistente = await Cliente.findOne({ where: { email } });
+    if (emailExistente) {
+      throw { status: 400, message: "E-mail já cadastrado!" };
+    }
 
-    async listarClientes() {
-        return await Cliente.findAll();
-    },
+    const cpfExistente = await Cliente.findOne({ where: { cpf } });
+    if (cpfExistente) {
+      throw { status: 400, message: "CPF já cadastrado!" };
+    }
 
-    async buscarPorId(id) {
-        const cliente = await Cliente.findByPk(id);
-        if (!cliente) {
-            throw { status: 404, message: 'Cliente não encontrado' };
-        }
-        return cliente;
-    },
+    const senhaHash = await bcrypt.hash(senha, 10);
 
-    async atualizarCliente(id, dados) {
-        const cliente = await Cliente.findByPk(id);
-        if (!cliente) {
-            throw { status: 404, message: 'Cliente não encontrado' };
-        }
+    const novoCliente = await Cliente.create({
+      nome,
+      sobrenome,
+      cpf,
+      telefone,
+      email,
+      senha: senhaHash,
+      data_nascimento
+    });
 
-        if (dados.senha) {
-            dados.senha = await bcrypt.hash(dados.senha, 10);
-        }
+    return {
+      message: "Usuário cadastrado com sucesso!",
+      usuario: {
+        id: novoCliente.id,
+        nome: novoCliente.nome,
+        sobrenome: novoCliente.sobrenome,
+        email: novoCliente.email
+      }
+    };
+  },
 
-        await cliente.update(dados);
-        return cliente;
-    },
+  async buscarPorId(id) {
+    const cliente = await Cliente.findByPk(id);
+    if (!cliente) {
+      throw { status: 404, message: 'Cliente não encontrado' };
+    }
+    return cliente;
+  },
+
+  async atualizarCliente(id, dados) {
+    const cliente = await Cliente.findByPk(id);
+    if (!cliente) {
+      throw { status: 404, message: 'Cliente não encontrado' };
+    }
+
+    const {
+      nome,
+      sobrenome,
+      cpf,
+      telefone,
+      email,
+      senha,
+      data_nascimento
+    } = dados;
+
+    let senhaHash = cliente.senha;
+    if (senha) {
+      if (senha.length < 6) {
+        throw { status: 400, message: "A senha deve ter pelo menos 6 caracteres!" };
+      }
+      senhaHash = await bcrypt.hash(senha, 10);
+    }
+
+    await cliente.update({
+      nome: nome ?? cliente.nome,
+      sobrenome: sobrenome ?? cliente.sobrenome,
+      cpf: cpf ?? cliente.cpf,
+      telefone: telefone ?? cliente.telefone,
+      email: email ?? cliente.email,
+      senha: senha ? senhaHash : cliente.senha,
+      data_nascimento: data_nascimento ?? cliente.data_nascimento
+    });
+
+    return {
+      message: "Dados atualizados com sucesso!",
+      usuario: {
+        id: cliente.id,
+        nome: cliente.nome,
+        sobrenome: cliente.sobrenome,
+        email: cliente.email
+      }
+    };
+  },
+
+  async listarTodos() {
+    return await Cliente.findAll();
+  }
 };

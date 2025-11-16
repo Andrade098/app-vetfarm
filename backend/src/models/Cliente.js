@@ -1,5 +1,5 @@
-const { DataTypes, Sequelize } = require ('sequelize');
-const  db = require ('../config/db'); // ajuste conforme o caminho do seu arquivo db.ts
+const { DataTypes } = require('sequelize');
+const db = require('../config/db'); // ajuste conforme seu caminho
 
 const Cliente = db.define('Cliente', {
   id: {
@@ -8,7 +8,6 @@ const Cliente = db.define('Cliente', {
     autoIncrement: true,
     unique: true,
     primaryKey: true
-    
   },
   nome: {
     type: DataTypes.STRING,
@@ -16,6 +15,18 @@ const Cliente = db.define('Cliente', {
   },
   sobrenome: {
     type: DataTypes.STRING,
+    allowNull: false,
+  },
+  cpf: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+    validate: {
+      is: /^\d{3}\.\d{3}\.\d{3}\-\d{2}$/, // formato 000.000.000-00
+    }
+  },
+  telefone: {
+    type: DataTypes.STRING(20),
     allowNull: false,
   },
   email: {
@@ -27,22 +38,13 @@ const Cliente = db.define('Cliente', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  cpf:  {
-    type: DataTypes.STRING,
-    allowNull: false,
-    validate: {
-      is:  /^\d{3}\.\d{3}\.\d{3}\-\d{2}$/, 
-    }
-  },
-  telefone: {
-    type: DataTypes.STRING(20),
-    allowNull: false,
-  },
   data_nascimento: {
-    type: DataTypes.DATE,
+    type: DataTypes.DATEONLY,
     allowNull: false,
   },
-
+}, {
+  tableName: 'clientes',
+  timestamps: false,
 });
 
 module.exports = Cliente;
