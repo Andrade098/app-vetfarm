@@ -140,9 +140,8 @@ export default function AdminPanel() {
                 <Text style={styles.statLabel}>Editar Parceiro</Text>
               </View>
             </TouchableOpacity>
-          </View>
 
-          <View style={styles.statsContainer}>
+            <View style={styles.statsContainer}>
             {/* Botão Excluir Parceiro */}
             <TouchableOpacity style={styles.statCard} onPress={() => router.push('/adm/excluirParceiro')}>
               <View style={styles.actionContent}>
@@ -152,6 +151,9 @@ export default function AdminPanel() {
             </TouchableOpacity>
             <View style={styles.emptyCard} />
           </View>
+          </View>
+
+          
         </View>
       </ScrollView>
     </View>

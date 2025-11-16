@@ -1,21 +1,18 @@
 {
-  "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
     "jsx": "react-native",
     "target": "esnext",
-    "lib": ["es6", "dom", "esnext"],
-    "module": "esnext",
-    "moduleResolution": "node",
+    "module": "Node16",
+    "moduleResolution": "node16",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "forceConsistentCasingInFileNames": true,
-    "noEmit": true,
-    "isolatedModules": true,
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     }
   },
   "include": [
@@ -23,12 +20,10 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-  ],
+, "backend/src/models/Carrinho.js", "backend/src/models/Categoria.js", "backend/src/models/Cliente.js", "backend/src/models/Compra.js", "backend/src/models/Endereco.js", "backend/src/models/Farmacia.js", "backend/src/models/FarmaciaProduto.js", "backend/src/models/Favorito.js", "backend/src/models/FormaPagamento.js", "backend/src/models/ItemCompra.js", "backend/src/models/PontosFidelidadeRegra.js", "backend/src/models/Produto.js", "backend/src/models/ProdutoCategoria.js"  ],
   "exclude": [
     "node_modules",
-    "dist",
-    "babel.config.js",
-    "metro.config.js",
-    "jest.config.js"
-  ]
+    "dist"
+  ],
+  "extends": "expo/tsconfig.base"
 }

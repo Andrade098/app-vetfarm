@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, Dimensions } from "react-native";
 import { Link } from "expo-router";
-import { addUser, getUserByEmail } from '../database/asyncStorageDB';
+
 
 // Obtém a largura da tela
 const { width } = Dimensions.get('window');
@@ -35,7 +35,7 @@ export default function Cadastro() {
 
     try {
       // Verificar se email já existe
-      const usuarioExistente = await getUserByEmail(email);
+      const usuarioExistente = await (email);
       if (usuarioExistente) {
         Alert.alert("Erro", "Este email já está cadastrado!");
         setLoading(false);
@@ -43,7 +43,7 @@ export default function Cadastro() {
       }
 
       // Cadastrar usuário
-      await addUser(nome, email, telefone, senha);
+      await (nome, email, telefone, senha);
 
       Alert.alert(
         "Cadastro realizado!",

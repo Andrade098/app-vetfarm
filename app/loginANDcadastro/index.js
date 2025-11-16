@@ -1,55 +1,61 @@
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Alert } from "react-native";
-import { loginUser } from '../database/asyncStorageDB';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+const [email, setEmail] = useState("");
+const [password, setPassword] = useState("");
+const router = useRouter();
 
-  async function handleLogin() {
-    // Validação básica
+async function handleLogin() {
+   console.log('handleLogin chamado'); 
+  try {
     if (!email || !password) {
-      Alert.alert('Erro', 'Por favor, preencha email e senha');
+      alert('Por favor, preencha email e senha');
       return;
     }
 
-    setLoading(true);
+    const response = await fetch('http://192.168.0.3:3000/api/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, senha: password }),
+    });
 
-    try {
-      const user = await loginUser(email, password);
+    const data = await response.json();
+  console.log('Resposta da API:', data);
 
-      if (user) {
-        Alert.alert(
-          'Login realizado!',
-          `Bem-vindo de volta, ${user.nome}!`,
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                router.push('/home');
-              }
-            }
-          ]
-        );
-      } else {
-        Alert.alert("Erro", "Email ou senha incorretos!");
-      }
-    } catch (err) {
-      console.error("Erro no login:", err);
-      Alert.alert("Erro", "Não foi possível realizar o login. Tente novamente.");
-    } finally {
-      setLoading(false);
+
+    if (!response.ok) {
+      alert(data.error || 'Erro no login');
+      return;
     }
-  }
 
+    // Salva o token para usar nas próximas requisições
+    await AsyncStorage.setItem('token', data.token);
+
+    // Redireciona conforme o tipo do usuário
+    if (data.tipo === 'matriz') {
+      console.log('Redirecionando para /adm');
+      router.push('/adm');
+    } else {
+      console.log('Redirecionando para /home');
+      router.push('/home');
+    }
+
+  } catch (err) {
+    alert('Não foi possível conectar ao servidor.');
+    console.error(err);
+  }
+}
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Logo com sua imagem */}
       <View style={styles.logoContainer}>
-        <Image
+        <Image 
           source={require('../../assets/images/logovetfarm.png')}
           style={styles.logoImage}
           resizeMode="contain"
@@ -57,10 +63,18 @@ export default function Login() {
         <Text style={styles.subtitle}>Seu delivery favorito</Text>
       </View>
 
+      <TouchableOpacity
+  style={[styles.button, { backgroundColor: 'red' }]}
+  onPress={() => console.log('Botão de teste clicado')}
+>
+  <Text style={styles.buttonText}>Botão Teste</Text>
+</TouchableOpacity>
+
+
       {/* Formulário */}
       <View style={styles.formContainer}>
         <Text style={styles.formTitle}>Entrar na minha conta</Text>
-
+        
         <TextInput
           style={styles.input}
           placeholder="E-mail"
@@ -81,14 +95,15 @@ export default function Login() {
         />
 
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          <Text style={styles.buttonText}>
-            {loading ? "Entrando..." : "Entrar"}
-          </Text>
-        </TouchableOpacity>
+  style={styles.button}
+  onPress={() => {
+    console.log('Botão clicado!');
+    handleLogin();
+  }}
+>
+  <Text style={styles.buttonText}>Entrar</Text>
+</TouchableOpacity>
+
 
         {/* Link para Esqueci Senha */}
         <Link href="/loginANDcadastro/esqueciSenha" asChild>
@@ -169,9 +184,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
     marginBottom: 20,
-  },
-  buttonDisabled: {
-    backgroundColor: "#ccc",
   },
   buttonText: {
     color: "#fff",

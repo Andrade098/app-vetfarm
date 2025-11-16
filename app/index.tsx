@@ -106,7 +106,7 @@ export default function WelcomeScreen() {
 
         {/* Botões */}
         <View style={styles.buttonsContainer}>
-          <Link href="/loginANDcadastro/login" asChild>
+          <Link href="/loginANDcadastro/" asChild>
             <TouchableOpacity style={styles.primaryButton}>
               <Text style={styles.primaryButtonText}>🚀 Fazer Login</Text>
             </TouchableOpacity>

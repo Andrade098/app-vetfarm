@@ -23,7 +23,7 @@ export default function RootLayout() {
           
           {/* TELAS DE LOGIN - SEM HEADER */}
           <Stack.Screen 
-            name="loginANDcadastro/index" 
+            name="loginANDcadastro" 
             options={{ 
               headerShown: false
             }}
