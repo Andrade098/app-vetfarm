@@ -1,6 +1,7 @@
 console.log('✅ clienteController.js carregado com sucesso!');
 
 const clienteService = require('../services/clienteService');
+const { Op } = require('sequelize'); // ⭐⭐ IMPORTE O OP PARA COMPARAÇÕES
 
 exports.criar = async (req, res) => {
   try {
@@ -64,6 +65,83 @@ exports.criar = async (req, res) => {
     res.status(error.status || 500).json({
       success: false,
       error: error.message || 'Erro interno do servidor'
+    });
+  }
+};
+
+// ⭐⭐ NOVO MÉTODO: ATUALIZAR MEUS DADOS ⭐⭐
+exports.atualizarMeusDados = async (req, res) => {
+  try {
+    const userId = req.user.id; // Pegando do token JWT
+    const { nome, sobrenome, email, telefone, data_nascimento } = req.body;
+
+    console.log('✏️ CONTROLLER - Atualizando dados do usuário ID:', userId);
+    console.log('📦 DADOS PARA ATUALIZAR:', req.body);
+
+    // Validações básicas
+    if (!nome || !email) {
+      return res.status(400).json({
+        success: false,
+        error: "Nome e e-mail são obrigatórios!"
+      });
+    }
+
+    // Busca o cliente
+    const Cliente = require('../models/Cliente'); // ⭐⭐ IMPORTE O MODEL
+    const cliente = await Cliente.findByPk(userId);
+    if (!cliente) {
+      return res.status(404).json({
+        success: false,
+        error: "Cliente não encontrado!"
+      });
+    }
+
+    // Verifica se email já existe (em outro usuário)
+    if (email !== cliente.email) {
+      const emailExistente = await Cliente.findOne({
+        where: {
+          email,
+          id: { [Op.ne]: userId } // ID diferente do usuário atual
+        }
+      });
+
+      if (emailExistente) {
+        return res.status(400).json({
+          success: false,
+          error: "Este e-mail já está em uso por outro usuário!"
+        });
+      }
+    }
+
+    // Atualiza os dados
+    await cliente.update({
+      nome,
+      sobrenome,
+      email,
+      telefone,
+      data_nascimento
+    });
+
+    console.log('✅ Dados atualizados com sucesso para o usuário:', userId);
+
+    res.json({
+      success: true,
+      message: "Dados atualizados com sucesso!",
+      usuario: {
+        id: cliente.id,
+        nome: cliente.nome,
+        sobrenome: cliente.sobrenome,
+        email: cliente.email,
+        telefone: cliente.telefone,
+        data_nascimento: cliente.data_nascimento
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ ERRO AO ATUALIZAR DADOS:', error);
+    res.status(500).json({
+      success: false,
+      error: "Erro interno do servidor"
     });
   }
 };

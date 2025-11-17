@@ -39,15 +39,17 @@ export default function Login() {
         login({
           id: data.id.toString(),
           nome: data.nome || 'Usuário',
+          sobrenome: data.sobrenome || '', // ⭐⭐ ADICIONADO
           email: data.email,
-          telefone: data.telefone || '',      // ⭐⭐ ADICIONADO
-          cpf: data.cpf || '',                // ⭐⭐ ADICIONADO
-          data_nascimento: data.data_nascimento || '', // ⭐⭐ ADICIONADO
+          telefone: data.telefone || '',
+          cpf: data.cpf || '',
+          data_nascimento: data.data_nascimento || '',
           tipo: data.tipo || 'cliente'
         });
         console.log('✅ Dados do usuário salvos no AuthContext:', {
           id: data.id,
           nome: data.nome,
+          sobrenome: data.sobrenome,
           email: data.email,
           telefone: data.telefone,
           cpf: data.cpf,

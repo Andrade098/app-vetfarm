@@ -4,6 +4,7 @@ const router = express.Router();
 console.log('✅ clienteRoutes.js CARREGADO!');
 
 const clienteController = require('../controllers/clienteController');
+const authMiddleware = require('../middlewares/authMiddleware'); // ⭐⭐ IMPORTE O MIDDLEWARE
 
 // ⭐⭐ ROTA DE TESTE (APENAS PARA DEBUG) ⭐⭐
 router.post('/teste', (req, res) => {
@@ -21,6 +22,9 @@ router.post('/', (req, res) => {
   console.log('💾 Salvando no banco de dados...');
   clienteController.criar(req, res);
 });
+
+// ⭐⭐ ROTA PARA ATUALIZAR DADOS DO USUÁRIO LOGADO ⭐⭐
+router.put('/meus-dados', authMiddleware, clienteController.atualizarMeusDados);
 
 // ⭐⭐ ROTAS ADICIONAIS ⭐⭐
 router.get('/', clienteController.listar);

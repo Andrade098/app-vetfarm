@@ -3,10 +3,11 @@ import React, { createContext, useState, useContext, ReactNode } from 'react';
 interface User {
   id: string;
   nome: string;
+  sobrenome: string; // ⭐⭐ ADICIONADO
   email: string;
-  telefone: string;    // ⭐⭐ ADICIONADO
-  cpf: string;         // ⭐⭐ ADICIONADO
-  data_nascimento: string; // ⭐⭐ ADICIONADO
+  telefone: string;
+  cpf: string;
+  data_nascimento: string;
   tipo: string;
 }
 

@@ -38,6 +38,7 @@ class LoginService {
         id: user.id,
         tipo: tipo,
         nome: user.nome,
+        sobrenome: user.sobrenome, // ⭐⭐ ADICIONADO
         telefone: user.telefone,
         cpf: user.cpf,
         data_nascimento: user.data_nascimento,
@@ -82,10 +83,11 @@ class LoginService {
         tipo,
         token,
         nome: user.nome,
+        sobrenome: user.sobrenome, // ⭐⭐ ADICIONADO
         email: user.email,
-        telefone: user.telefone,      // ⭐⭐ ADICIONADO
-        cpf: user.cpf,                // ⭐⭐ ADICIONADO
-        data_nascimento: user.data_nascimento // ⭐⭐ ADICIONADO
+        telefone: user.telefone,
+        cpf: user.cpf,
+        data_nascimento: user.data_nascimento
       };
 
     } catch (error) {

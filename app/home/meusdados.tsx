@@ -2,35 +2,163 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../contexts/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function MeusDadosScreen() {
-const router = useRouter();
-  // Estado dos dados do usuário
+  const router = useRouter();
+  const { user, login } = useAuth();
+
+  // Estado dos dados do usuário - COM DADOS REAIS DO AUTHCONTEXT
   const [userData, setUserData] = useState({
-    nome: 'João',
-    sobrenome: 'Pedro',
-    email: 'contato.jp@gmail.com',
-    cpf: '123.456.789-00',
-    celular: '(11) 99999-9999',
-    dataNascimento: '15/05/1990',
+    nome: user?.nome || 'Usuário',
+    sobrenome: user?.sobrenome || 'Não informado',
+    email: user?.email || 'email@exemplo.com',
+    cpf: user?.cpf || 'Não informado',
+    celular: user?.telefone || 'Não informado',
+    dataNascimento: user?.data_nascimento || 'Não informada',
   });
 
   const [isEditing, setIsEditing] = useState(false);
-  const handleSave = () => {
-    // Aqui você pode adicionar a lógica para salvar os dados
-    Alert.alert('Sucesso', 'Dados salvos com sucesso!');
-    setIsEditing(false);
+  const [dadosEditados, setDadosEditados] = useState({ ...userData });
+  const [loading, setLoading] = useState(false);
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+
+      // Validações básicas
+      if (!dadosEditados.nome || !dadosEditados.email) {
+        Alert.alert('Erro', 'Nome e e-mail são obrigatórios.');
+        return;
+      }
+
+      // Validação de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(dadosEditados.email)) {
+        Alert.alert('Erro', 'Por favor, insira um e-mail válido.');
+        return;
+      }
+
+      // Busca o token
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        Alert.alert('Erro', 'Sessão expirada. Faça login novamente.');
+        router.push('/loginANDcadastro');
+        return;
+      }
+
+      // Faz a requisição para atualizar no backend
+      const response = await fetch('http://192.168.0.6:3000/api/clientes/meus-dados', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          nome: dadosEditados.nome,
+          sobrenome: dadosEditados.sobrenome,
+          email: dadosEditados.email,
+          telefone: dadosEditados.celular,
+          data_nascimento: dadosEditados.dataNascimento
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao atualizar dados');
+      }
+
+      if (data.success) {
+        // Atualiza os dados locais
+        setUserData({ ...dadosEditados });
+
+        // Atualiza o AuthContext com os novos dados
+        login({
+          id: user?.id || '',
+          nome: dadosEditados.nome,
+          sobrenome: dadosEditados.sobrenome,
+          email: dadosEditados.email,
+          telefone: dadosEditados.celular,
+          cpf: user?.cpf || '',
+          data_nascimento: dadosEditados.dataNascimento,
+          tipo: user?.tipo || 'cliente'
+        });
+
+        setIsEditing(false);
+        Alert.alert('Sucesso', 'Dados atualizados com sucesso!');
+      } else {
+        throw new Error(data.error || 'Erro ao atualizar dados');
+      }
+
+    } catch (error) {
+      console.error('Erro ao salvar dados:', error);
+      Alert.alert('Erro', error.message || 'Não foi possível salvar os dados. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancelEdit = () => {
+    setDadosEditados({ ...userData });
     setIsEditing(false);
-    // Aqui você pode resetar os dados se necessário
   };
+
+  const handleInputChange = (campo: string, valor: string) => {
+    setDadosEditados(prev => ({
+      ...prev,
+      [campo]: valor
+    }));
+  };
+
+  // Formatação para exibição
+  const formatarTelefone = (telefone: string) => {
+    if (!telefone) return telefone;
+
+    // Remove tudo que não é número
+    const numeros = telefone.replace(/\D/g, '');
+
+    // Formata (11) 99999-9999
+    if (numeros.length === 11) {
+      return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7)}`;
+    }
+
+    return telefone;
+  };
+
+  const formatarCPF = (cpf: string) => {
+    if (!cpf) return cpf;
+
+    // Remove tudo que não é número
+    const numeros = cpf.replace(/\D/g, '');
+
+    // Formata 123.456.789-00
+    if (numeros.length === 11) {
+      return `${numeros.slice(0, 3)}.${numeros.slice(3, 6)}.${numeros.slice(6, 9)}-${numeros.slice(9)}`;
+    }
+
+    return cpf;
+  };
+
+  const formatarData = (data: string) => {
+    if (!data) return data;
+
+    // Remove tudo que não é número
+    const numeros = data.replace(/\D/g, '');
+
+    // Formata DD/MM/AAAA
+    if (numeros.length === 8) {
+      return `${numeros.slice(0, 2)}/${numeros.slice(2, 4)}/${numeros.slice(4)}`;
+    }
+
+    return data;
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Cabeçalho */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
@@ -39,10 +167,10 @@ const router = useRouter();
         <Text style={styles.headerTitle}>Meus Dados</Text>
         <View style={styles.headerRight} />
       </View>
+
       <ScrollView style={styles.content}>
-        {/* Formulário de Dados */}
         <View style={styles.formContainer}>
-          <Text style={styles.sectionTitle}>Informações Pessoais</Text>         
+          <Text style={styles.sectionTitle}>Informações Pessoais</Text>
 
           {/* Nome */}
           <View style={styles.inputGroup}>
@@ -50,8 +178,8 @@ const router = useRouter();
             {isEditing ? (
               <TextInput
                 style={styles.input}
-                value={userData.nome}
-                onChangeText={(text) => setUserData({...userData, nome: text})}
+                value={dadosEditados.nome}
+                onChangeText={(text) => handleInputChange('nome', text)}
                 placeholder="Digite seu nome"
               />
             ) : (
@@ -65,8 +193,8 @@ const router = useRouter();
             {isEditing ? (
               <TextInput
                 style={styles.input}
-                value={userData.sobrenome}
-                onChangeText={(text) => setUserData({...userData, sobrenome: text})}
+                value={dadosEditados.sobrenome}
+                onChangeText={(text) => handleInputChange('sobrenome', text)}
                 placeholder="Digite seu sobrenome"
               />
             ) : (
@@ -80,8 +208,8 @@ const router = useRouter();
             {isEditing ? (
               <TextInput
                 style={styles.input}
-                value={userData.email}
-                onChangeText={(text) => setUserData({...userData, email: text})}
+                value={dadosEditados.email}
+                onChangeText={(text) => handleInputChange('email', text)}
                 placeholder="Digite seu email"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -91,31 +219,13 @@ const router = useRouter();
             )}
           </View>
 
-          {/* Senha */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Senha</Text>
-            <TouchableOpacity 
-              style={styles.passwordButton}
-              onPress={() => router.push('/home/alterar-senha')}
-            >
-              <Text style={styles.passwordButtonText}>ALTERAR SENHA</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* CPF */}
+          {/* CPF (não editável) */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>CPF***</Text>
-            {isEditing ? (
-              <TextInput
-                style={styles.input}
-                value={userData.cpf}
-                onChangeText={(text) => setUserData({...userData, cpf: text})}
-                placeholder="Digite seu CPF"
-                keyboardType="numeric"
-              />
-            ) : (
-              <Text style={styles.valueText}>{userData.cpf}</Text>
-            )}
+            <Text style={[styles.valueText, styles.nonEditable]}>
+              {formatarCPF(userData.cpf)}
+            </Text>
+            <Text style={styles.cpfWarning}>CPF não pode ser alterado</Text>
           </View>
 
           {/* Celular */}
@@ -124,13 +234,13 @@ const router = useRouter();
             {isEditing ? (
               <TextInput
                 style={styles.input}
-                value={userData.celular}
-                onChangeText={(text) => setUserData({...userData, celular: text})}
-                placeholder="Digite seu celular"
+                value={dadosEditados.celular}
+                onChangeText={(text) => handleInputChange('celular', text)}
+                placeholder="(11) 99999-9999"
                 keyboardType="phone-pad"
               />
             ) : (
-              <Text style={styles.valueText}>{userData.celular}</Text>
+              <Text style={styles.valueText}>{formatarTelefone(userData.celular)}</Text>
             )}
           </View>
 
@@ -140,13 +250,13 @@ const router = useRouter();
             {isEditing ? (
               <TextInput
                 style={styles.input}
-                value={userData.dataNascimento}
-                onChangeText={(text) => setUserData({...userData, dataNascimento: text})}
+                value={dadosEditados.dataNascimento}
+                onChangeText={(text) => handleInputChange('dataNascimento', text)}
                 placeholder="DD/MM/AAAA"
                 keyboardType="numeric"
               />
             ) : (
-              <Text style={styles.valueText}>{userData.dataNascimento}</Text>
+              <Text style={styles.valueText}>{formatarData(userData.dataNascimento)}</Text>
             )}
           </View>
 
@@ -154,21 +264,27 @@ const router = useRouter();
           <View style={styles.buttonsContainer}>
             {isEditing ? (
               <>
-                <TouchableOpacity 
-                  style={[styles.button, styles.saveButton]}
+                <TouchableOpacity
+                  style={[styles.button, styles.saveButton, loading && styles.disabledButton]}
                   onPress={handleSave}
+                  disabled={loading}
                 >
-                  <Text style={styles.buttonText}>SALVAR DADOS</Text>
+                  {loading ? (
+                    <Text style={styles.buttonText}>SALVANDO...</Text>
+                  ) : (
+                    <Text style={styles.buttonText}>SALVAR DADOS</Text>
+                  )}
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.button, styles.cancelButton]}
                   onPress={handleCancelEdit}
+                  disabled={loading}
                 >
                   <Text style={[styles.buttonText, styles.cancelButtonText]}>CANCELAR</Text>
                 </TouchableOpacity>
               </>
             ) : (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.button, styles.editButton]}
                 onPress={() => setIsEditing(true)}
               >
@@ -266,16 +382,15 @@ const styles = StyleSheet.create({
     color: '#126b1a',
     fontWeight: '500',
   },
-  passwordButton: {
-    backgroundColor: '#126b1a',
-    padding: 12,
-    borderRadius: 5,
-    alignItems: 'center',
+  nonEditable: {
+    backgroundColor: '#f0f0f0',
+    color: '#666',
   },
-  passwordButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 14,
+  cpfWarning: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   buttonsContainer: {
     marginTop: 10,
@@ -298,6 +413,10 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     backgroundColor: '#f0f0f0',
+  },
+  disabledButton: {
+    backgroundColor: '#95a5a6',
+    opacity: 0.6,
   },
   buttonText: {
     color: 'white',
