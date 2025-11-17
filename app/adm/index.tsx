@@ -58,32 +58,7 @@ export default function AdminPanel() {
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.tabContent}>
-          <Text style={styles.tabTitle}>Visão Geral</Text>
 
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.totalProducts}</Text>
-              <Text style={styles.statLabel}>Produtos</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.activeCategories}</Text>
-              <Text style={styles.statLabel}>Categorias Ativas</Text>
-            </View>
-
-            {/* Mensagem de atenção acima dos cards de parceiros */}
-            <View style={styles.fullWidthWarning}>
-              <Text style={styles.warningText}>ATENÇÃO! Estes dois cards abaixo (Parceiros e Parceiros ativos) só deve aparecer para a nossa farmacia, farmacias parceiras NAO DEVEM VER ISSO</Text>
-            </View>
-
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.totalPartners}</Text>
-              <Text style={styles.statLabel}>Parceiros</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.activePartners}</Text>
-              <Text style={styles.statLabel}>Parceiros Ativos</Text>
-            </View>
-          </View>
 
           {/* Seção Gerenciar Produtos */}
           <Text style={[styles.tabTitle, { marginTop: 20 }]}>Gerenciar Produtos</Text>
