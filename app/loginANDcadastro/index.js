@@ -2,60 +2,85 @@ import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function Login() {
-const [email, setEmail] = useState("");
-const [password, setPassword] = useState("");
-const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const router = useRouter();
+  const { login } = useAuth();
 
-async function handleLogin() {
-   console.log('handleLogin chamado'); 
-  try {
-    if (!email || !password) {
-      alert('Por favor, preencha email e senha');
-      return;
+  async function handleLogin() {
+    console.log('handleLogin chamado');
+    try {
+      if (!email || !password) {
+        alert('Por favor, preencha email e senha');
+        return;
+      }
+
+      const response = await fetch('http://192.168.0.6:3000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, senha: password }),
+      });
+
+      const data = await response.json();
+      console.log('Resposta da API:', data);
+
+      if (!response.ok) {
+        alert(data.error || 'Erro no login');
+        return;
+      }
+
+      // ⭐⭐ SALVA TODOS OS DADOS DO USUÁRIO NO AUTH CONTEXT
+      if (data.id && data.email) {
+        login({
+          id: data.id.toString(),
+          nome: data.nome || 'Usuário',
+          email: data.email,
+          telefone: data.telefone || '',      // ⭐⭐ ADICIONADO
+          cpf: data.cpf || '',                // ⭐⭐ ADICIONADO
+          data_nascimento: data.data_nascimento || '', // ⭐⭐ ADICIONADO
+          tipo: data.tipo || 'cliente'
+        });
+        console.log('✅ Dados do usuário salvos no AuthContext:', {
+          id: data.id,
+          nome: data.nome,
+          email: data.email,
+          telefone: data.telefone,
+          cpf: data.cpf,
+          data_nascimento: data.data_nascimento,
+          tipo: data.tipo
+        });
+      } else {
+        console.log('⚠️ Dados do usuário incompletos na resposta:', data);
+      }
+
+      // Salva o token para usar nas próximas requisições
+      await AsyncStorage.setItem('token', data.token);
+
+      // Redireciona conforme o tipo do usuário
+      if (data.tipo === 'matriz') {
+        console.log('Redirecionando para /adm');
+        router.push('/adm');
+      } else {
+        console.log('Redirecionando para /home');
+        router.push('/home');
+      }
+
+    } catch (err) {
+      alert('Não foi possível conectar ao servidor.');
+      console.error(err);
     }
-
-    const response = await fetch('http://192.168.0.6:3000/api/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, senha: password }),
-    });
-
-    const data = await response.json();
-  console.log('Resposta da API:', data);
-
-
-    if (!response.ok) {
-      alert(data.error || 'Erro no login');
-      return;
-    }
-
-    // Salva o token para usar nas próximas requisições
-    await AsyncStorage.setItem('token', data.token);
-
-    // Redireciona conforme o tipo do usuário
-    if (data.tipo === 'matriz') {
-      console.log('Redirecionando para /adm');
-      router.push('/adm');
-    } else {
-      console.log('Redirecionando para /home');
-      router.push('/home');
-    }
-
-  } catch (err) {
-    alert('Não foi possível conectar ao servidor.');
-    console.error(err);
   }
-}
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       {/* Logo com sua imagem */}
       <View style={styles.logoContainer}>
-        <Image 
+        <Image
           source={require('../../assets/images/logovetfarm.png')}
           style={styles.logoImage}
           resizeMode="contain"
@@ -64,17 +89,16 @@ async function handleLogin() {
       </View>
 
       <TouchableOpacity
-  style={[styles.button, { backgroundColor: 'red' }]}
-  onPress={() => console.log('Botão de teste clicado')}
->
-  <Text style={styles.buttonText}>Botão Teste</Text>
-</TouchableOpacity>
-
+        style={[styles.button, { backgroundColor: 'red' }]}
+        onPress={() => console.log('Botão de teste clicado')}
+      >
+        <Text style={styles.buttonText}>Botão Teste</Text>
+      </TouchableOpacity>
 
       {/* Formulário */}
       <View style={styles.formContainer}>
         <Text style={styles.formTitle}>Entrar na minha conta</Text>
-        
+
         <TextInput
           style={styles.input}
           placeholder="E-mail"
@@ -95,15 +119,14 @@ async function handleLogin() {
         />
 
         <TouchableOpacity
-  style={styles.button}
-  onPress={() => {
-    console.log('Botão clicado!');
-    handleLogin();
-  }}
->
-  <Text style={styles.buttonText}>Entrar</Text>
-</TouchableOpacity>
-
+          style={styles.button}
+          onPress={() => {
+            console.log('Botão clicado!');
+            handleLogin();
+          }}
+        >
+          <Text style={styles.buttonText}>Entrar</Text>
+        </TouchableOpacity>
 
         {/* Link para Esqueci Senha */}
         <Link href="/loginANDcadastro/esqueciSenha" asChild>

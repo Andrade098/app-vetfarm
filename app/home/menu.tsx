@@ -2,9 +2,12 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../contexts/AuthContext'; // ⭐⭐ IMPORTE O AUTH CONTEXT
 
 export default function MenuScreen() {
   const router = useRouter();
+  const { user, logout } = useAuth(); // ⭐⭐ USE OS DADOS DO USUÁRIO
+
   const menuItems = [
     { id: '1', title: 'Resumo da conta', icon: 'person-outline', screen: 'resumoconta' },
     { id: '2', title: 'Meus pedidos', icon: 'cart-outline', screen: 'meuspedidos' },
@@ -17,16 +20,34 @@ export default function MenuScreen() {
 
   const handleMenuItemPress = (screen: string) => {
     if (screen === 'logout') {
-    router.replace('/');
-  } else {
-    router.push(`/home/${screen}`);
+      Alert.alert(
+        'Sair',
+        'Tem certeza que deseja sair?',
+        [
+          {
+            text: 'Cancelar',
+            style: 'cancel',
+          },
+          {
+            text: 'Sair',
+            style: 'destructive',
+            onPress: () => {
+              logout(); // ⭐⭐ CHAMA A FUNÇÃO DE LOGOUT
+              router.replace('/');
+            },
+          },
+        ]
+      );
+    } else {
+      router.push(`/home/${screen}`);
     }
   };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Cabeçalho */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
@@ -35,16 +56,24 @@ export default function MenuScreen() {
         <Text style={styles.headerTitle}>Menu</Text>
         <View style={styles.headerRight} />
       </View>
+
       <ScrollView style={styles.content}>
-        {/* Perfil do usuário */}
+        {/* Perfil do usuário - AGORA COM DADOS REAIS */}
         <View style={styles.profileSection}>
-          <Image 
-            source={require('../../assets/images/logovetfarm.png')} 
+          <Image
+            source={require('../../assets/images/logovetfarm.png')}
             style={styles.profileImage}
           />
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>João Pedro</Text>
-            <Text style={styles.profileEmail}>joao@email.com</Text>
+            <Text style={styles.profileName}>
+              {user?.nome || 'Usuário'} {/* ⭐⭐ NOME REAL */}
+            </Text>
+            <Text style={styles.profileEmail}>
+              {user?.email || 'email@exemplo.com'} {/* ⭐⭐ EMAIL REAL */}
+            </Text>
+            <Text style={styles.profileType}>
+              {user?.tipo === 'cliente' ? 'Cliente' : user?.tipo || 'Tipo de usuário'}
+            </Text>
           </View>
         </View>
 
@@ -60,10 +89,10 @@ export default function MenuScreen() {
               onPress={() => handleMenuItemPress(item.screen)}
             >
               <View style={styles.menuItemLeft}>
-                <Ionicons 
-                  name={item.icon as any} 
-                  size={22} 
-                  color={item.isDestructive ? '#ff3b30' : '#126b1a'} 
+                <Ionicons
+                  name={item.icon as any}
+                  size={22}
+                  color={item.isDestructive ? '#ff3b30' : '#126b1a'}
                 />
                 <Text style={[
                   styles.menuItemText,
@@ -72,14 +101,15 @@ export default function MenuScreen() {
                   {item.title}
                 </Text>
               </View>
-              <Ionicons 
-                name="chevron-forward" 
-                size={20} 
-                color={item.isDestructive ? '#ff3b30' : '#666'} 
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={item.isDestructive ? '#ff3b30' : '#666'}
               />
             </TouchableOpacity>
           ))}
         </View>
+
         {/* Informações do app */}
         <View style={styles.appInfo}>
           <Text style={styles.appVersion}>VetFarm v1.0.0</Text>
@@ -89,7 +119,7 @@ export default function MenuScreen() {
     </SafeAreaView>
   );
 }
-// ... os estilos permanecem os mesmos ...
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -145,6 +175,12 @@ const styles = StyleSheet.create({
   profileEmail: {
     fontSize: 14,
     color: '#666',
+    marginBottom: 2,
+  },
+  profileType: {
+    fontSize: 12,
+    color: '#126b1a',
+    fontWeight: '500',
   },
   menuList: {
     backgroundColor: '#fff',

@@ -1,7 +1,7 @@
 const Cliente = require('../models/Cliente');
 const Farmacia = require('../models/Farmacia');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt'); // ⭐⭐ IMPORTE O BCRYPT ⭐⭐
+const bcrypt = require('bcrypt');
 
 console.log('✅ LoginService.js carregado!');
 
@@ -38,10 +38,13 @@ class LoginService {
         id: user.id,
         tipo: tipo,
         nome: user.nome,
+        telefone: user.telefone,
+        cpf: user.cpf,
+        data_nascimento: user.data_nascimento,
         temHash: user.senha.startsWith('$2b$') ? 'SIM (bcrypt)' : 'NÃO (texto)'
       });
 
-      // 4. ⭐⭐ VALIDA SENHA CORRETAMENTE ⭐⭐
+      // 4. VALIDA SENHA CORRETAMENTE
       console.log('🔐 Validando senha...');
 
       let senhaValida = false;
@@ -79,7 +82,10 @@ class LoginService {
         tipo,
         token,
         nome: user.nome,
-        email: user.email
+        email: user.email,
+        telefone: user.telefone,      // ⭐⭐ ADICIONADO
+        cpf: user.cpf,                // ⭐⭐ ADICIONADO
+        data_nascimento: user.data_nascimento // ⭐⭐ ADICIONADO
       };
 
     } catch (error) {

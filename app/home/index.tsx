@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, FlatList, Dimensions, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../contexts/AuthContext'; // ⭐⭐ IMPORTE O AUTH CONTEXT
 
 // Dados de exemplo para categorias
 const categories = [
@@ -55,6 +56,7 @@ const notificationsData = [
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { user } = useAuth(); // ⭐⭐ USE OS DADOS DO USUÁRIO
   const [showNotifications, setShowNotifications] = useState(false);
   const [showCart, setShowCart] = useState(false);
   const [notifications, setNotifications] = useState(notificationsData);
@@ -73,7 +75,7 @@ export default function HomeScreen() {
   }
 
   function handleNotificationPress(notification: any) {
-    setNotifications(notifications.map(n => 
+    setNotifications(notifications.map(n =>
       n.id === notification.id ? { ...n, read: true } : n
     ));
     setShowNotifications(false);
@@ -83,17 +85,17 @@ export default function HomeScreen() {
   // Função para adicionar produto ao carrinho
   function handleAddToCart(product: any) {
     const existingItem = cartItems.find(item => item.id === product.id);
-    
+
     if (existingItem) {
       setCartItems(cartItems.map(item =>
-        item.id === product.id 
+        item.id === product.id
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
     } else {
       setCartItems([...cartItems, { ...product, quantity: 1 }]);
     }
-    
+
     alert(`${product.name} adicionado ao carrinho!`);
   }
 
@@ -105,7 +107,7 @@ export default function HomeScreen() {
   // Função para aumentar quantidade
   function handleIncreaseQuantity(productId: string) {
     setCartItems(cartItems.map(item =>
-      item.id === productId 
+      item.id === productId
         ? { ...item, quantity: item.quantity + 1 }
         : item
     ));
@@ -132,9 +134,9 @@ export default function HomeScreen() {
   function handleCategoryPress(categoryId: string, categoryName: string) {
     router.push({
       pathname: '/home/categoriaAnimal',
-      params: { 
+      params: {
         categoriaId: categoryId,
-        categoriaNome: categoryName 
+        categoriaNome: categoryName
       }
     });
   }
@@ -173,7 +175,7 @@ export default function HomeScreen() {
         <Text style={styles.productCategory}>{item.category}</Text>
         <Text style={styles.productName}>{item.name}</Text>
         <Text style={styles.productPrice}>{item.price}</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.addButton}
           onPress={() => handleAddToCart(item)}
         >
@@ -197,22 +199,22 @@ export default function HomeScreen() {
           <Text style={styles.cartProductEmoji}>📦</Text>
         )}
       </View>
-      
+
       <View style={styles.cartItemDetails}>
         <Text style={styles.cartItemName} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.cartItemPrice}>{item.price}</Text>
-        
+
         <View style={styles.quantityContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.quantityButton}
             onPress={() => handleDecreaseQuantity(item.id)}
           >
             <Text style={styles.quantityButtonText}>-</Text>
           </TouchableOpacity>
-          
+
           <Text style={styles.quantityText}>{item.quantity}</Text>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.quantityButton}
             onPress={() => handleIncreaseQuantity(item.id)}
           >
@@ -220,8 +222,8 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </View>
-      
-      <TouchableOpacity 
+
+      <TouchableOpacity
         style={styles.removeButton}
         onPress={() => handleRemoveFromCart(item.id)}
       >
@@ -274,7 +276,7 @@ export default function HomeScreen() {
         animationType="fade"
         onRequestClose={() => setShowNotifications(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setShowNotifications(false)}
@@ -287,7 +289,7 @@ export default function HomeScreen() {
               </Text>
             </View>
 
-            <ScrollView 
+            <ScrollView
               style={styles.notificationsList}
               showsVerticalScrollIndicator={true}
             >
@@ -314,7 +316,7 @@ export default function HomeScreen() {
               ))}
             </ScrollView>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.seeAllButton}
               onPress={() => setShowNotifications(false)}
             >
@@ -331,7 +333,7 @@ export default function HomeScreen() {
         animationType="fade"
         onRequestClose={() => setShowCart(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setShowCart(false)}
@@ -340,7 +342,7 @@ export default function HomeScreen() {
             <View style={styles.dropdownHeader}>
               <View style={styles.headerTop}>
                 <Text style={styles.dropdownTitle}>Meu Carrinho</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.closeButton}
                   onPress={() => setShowCart(false)}
                 >
@@ -357,7 +359,7 @@ export default function HomeScreen() {
                 <Ionicons name="cart-outline" size={60} color="#ccc" />
                 <Text style={styles.emptyCartText}>Carrinho vazio</Text>
                 <Text style={styles.emptyCartSubtext}>Adicione produtos ao carrinho</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.fecharButton}
                   onPress={() => setShowCart(false)}
                 >
@@ -373,29 +375,29 @@ export default function HomeScreen() {
                   style={styles.cartList}
                   showsVerticalScrollIndicator={true}
                 />
-                
+
                 <View style={styles.cartFooter}>
                   <View style={styles.totalContainer}>
                     <Text style={styles.totalLabel}>Total:</Text>
                     <Text style={styles.totalPrice}>R$ {calculateTotal()}</Text>
                   </View>
-                  
-                  <TouchableOpacity 
+
+                  <TouchableOpacity
                     style={styles.checkoutButton}
                     onPress={handleCheckout}
                   >
                     <Text style={styles.checkoutButtonText}>Finalizar Compra</Text>
                   </TouchableOpacity>
-                  
+
                   <View style={styles.cartActions}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.clearCartButton}
                       onPress={() => setCartItems([])}
                     >
                       <Text style={styles.clearCartText}>Limpar </Text>
                     </TouchableOpacity>
-                    
-                    <TouchableOpacity 
+
+                    <TouchableOpacity
                       style={styles.fecharButton}
                       onPress={() => setShowCart(false)}
                     >
@@ -411,13 +413,19 @@ export default function HomeScreen() {
 
       {/* CONTEÚDO */}
       <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
-        {/* BANNER */}
+        {/* BANNER - COM MENSAGEM PERSONALIZADA */}
         <View style={styles.bannerContainer}>
           <Image
             source={require('../../assets/images/bemvindos.png')}
             style={styles.bannerImage}
             resizeMode="contain"
           />
+          {/* ⭐⭐ MENSAGEM DE BOAS-VINDAS PERSONALIZADA ⭐⭐ */}
+          {user && (
+            <View style={styles.welcomeMessage}>
+              <Text style={styles.welcomeText}>Bem-vindo, {user.nome}! 👋</Text>
+            </View>
+          )}
         </View>
 
         {/* CATEGORIAS */}
@@ -431,8 +439,8 @@ export default function HomeScreen() {
 
           <View style={styles.categoriesGrid}>
             {categories.map((category) => (
-              <TouchableOpacity 
-                key={category.id} 
+              <TouchableOpacity
+                key={category.id}
                 style={styles.categoryCard}
                 onPress={() => handleCategoryPress(category.id, category.name)}
               >
@@ -513,11 +521,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 2,
     backgroundColor: '#fff',
+    position: 'relative', // ⭐⭐ PARA POSICIONAR A MENSAGEM
   },
   bannerImage: {
     width: '100%',
     height: 150,
     maxHeight: 200,
+  },
+  // ⭐⭐ NOVOS ESTILOS PARA A MENSAGEM DE BOAS-VINDAS ⭐⭐
+  welcomeMessage: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  welcomeText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#126b1a',
   },
   section: {
     padding: 15,

@@ -1,57 +1,50 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, TextInput, Alert, Modal, FlatList } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Modal, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../contexts/AuthContext';
 
-// Função para calcular pontos baseada no valor da compra - NOVA ESCALA
+// Função para calcular pontos baseada no valor da compra
 const calcularPontos = (valor: number) => {
   if (valor >= 500) return 50;
   if (valor >= 350) return 35;
   if (valor >= 250) return 20;
   if (valor >= 100) return 10;
-  return Math.floor(valor / 10); // 1 ponto a cada R$ 10 para compras abaixo de R$ 100
+  return Math.floor(valor / 10);
 };
 
 export default function ResumoContaScreen() {
   const router = useRouter();
+  const { user } = useAuth();
 
-  // Estado dos dados do usuário - agora editável
+  // Estado dos dados do usuário - COM DADOS REAIS DO AUTHCONTEXT
   const [userData, setUserData] = useState({
-    nome: 'João Pedro Ferreira de Souza',
-    email: 'contato.joaopedro@gmail.com',
-    telefone: '(11) 99999-9999',
-    cpf: '123.456.789-00',
-    dataNascimento: '15/05/1990',
+    nome: user?.nome || 'Usuário',
+    email: user?.email || 'email@exemplo.com',
+    telefone: user?.telefone || 'Não informado',
+    cpf: user?.cpf || 'Não informado',
+    dataNascimento: user?.data_nascimento || 'Não informada',
   });
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [dadosEditados, setDadosEditados] = useState({ ...userData });
   const [showHistorico, setShowHistorico] = useState(false);
-
-  // Estatísticas (pode vir de uma API no futuro)
-  const estatisticas = [
-    { id: '1', label: 'Pedidos Realizados', valor: '15', icon: 'cart' },
-    { id: '2', label: 'Favoritos', valor: '8', icon: 'heart' },
-    { id: '3', label: 'Endereços', valor: '2', icon: 'location' },
-  ];
 
   // Dados do programa de fidelidade
   const [pontosData, setPontosData] = useState({
-    pontos: 245, // Atualizado para nova escala
+    pontos: 245,
     meta: 1000,
     nivel: 'Prata',
     consultasGratis: 0,
     expiracao: '15/12/2025'
   });
 
-  // Histórico de pontos COM NOVA ESCALA DE PONTOS
+  // Histórico de pontos
   const [historicoPontos, setHistoricoPontos] = useState([
     {
       id: '1',
       data: '15/03/2024',
       descricao: 'Compra - Vermífugo Bovino',
       valor: 45.90,
-      pontos: calcularPontos(45.90), // 4 pontos (R$ 45,90 / 10)
+      pontos: calcularPontos(45.90),
       tipo: 'ganho'
     },
     {
@@ -59,7 +52,7 @@ export default function ResumoContaScreen() {
       data: '10/03/2024',
       descricao: 'Compra - Cela Equina',
       valor: 289.90,
-      pontos: calcularPontos(289.90), // 20 pontos (acima de R$ 250)
+      pontos: calcularPontos(289.90),
       tipo: 'ganho'
     },
     {
@@ -67,7 +60,7 @@ export default function ResumoContaScreen() {
       data: '05/03/2024',
       descricao: 'Compra - Vacina Febre Aftosa',
       valor: 89.90,
-      pontos: calcularPontos(89.90), // 8 pontos (R$ 89,90 / 10)
+      pontos: calcularPontos(89.90),
       tipo: 'ganho'
     },
     {
@@ -75,7 +68,7 @@ export default function ResumoContaScreen() {
       data: '28/02/2024',
       descricao: 'Compra - Suplemento Animais',
       valor: 149.90,
-      pontos: calcularPontos(149.90), // 10 pontos (acima de R$ 100)
+      pontos: calcularPontos(149.90),
       tipo: 'ganho'
     },
     {
@@ -83,76 +76,10 @@ export default function ResumoContaScreen() {
       data: '20/02/2024',
       descricao: 'Bônus - Primeira Compra',
       valor: 0,
-      pontos: 25, // Bônus reduzido para nova escala
+      pontos: 25,
       tipo: 'bonus'
     },
-    {
-      id: '6',
-      data: '15/02/2024',
-      descricao: 'Compra - Ração Premium',
-      valor: 98.90,
-      pontos: calcularPontos(98.90), // 9 pontos (R$ 98,90 / 10)
-      tipo: 'ganho'
-    },
-    {
-      id: '7',
-      data: '10/02/2024',
-      descricao: 'Compra - Medicamentos',
-      valor: 420.00,
-      pontos: calcularPontos(420.00), // 35 pontos (acima de R$ 350)
-      tipo: 'ganho'
-    },
-    {
-      id: '8',
-      data: '05/02/2024',
-      descricao: 'Compra - Acessórios',
-      valor: 550.00,
-      pontos: calcularPontos(550.00), // 50 pontos (acima de R$ 500)
-      tipo: 'ganho'
-    },
-    {
-      id: '9',
-      data: '01/02/2024',
-      descricao: 'Compra - Kit Emergência',
-      valor: 320.00,
-      pontos: calcularPontos(320.00), // 20 pontos (acima de R$ 250)
-      tipo: 'ganho'
-    },
-    {
-      id: '10',
-      data: '25/01/2024',
-      descricao: 'Compra - Vitaminas',
-      valor: 75.00,
-      pontos: calcularPontos(75.00), // 7 pontos (R$ 75,00 / 10)
-      tipo: 'ganho'
-    },
   ]);
-
-  const handleSalvarAlteracoes = () => {
-    // Validações básicas
-    if (!dadosEditados.nome || !dadosEditados.email) {
-      Alert.alert('Erro', 'Nome e e-mail são obrigatórios.');
-      return;
-    }
-
-    // Atualiza os dados
-    setUserData({ ...dadosEditados });
-    setIsEditing(false);
-    
-    Alert.alert('Sucesso', 'Dados atualizados com sucesso!');
-  };
-
-  const handleCancelarEdicao = () => {
-    setDadosEditados({ ...userData });
-    setIsEditing(false);
-  };
-
-  const handleInputChange = (campo: string, valor: string) => {
-    setDadosEditados(prev => ({
-      ...prev,
-      [campo]: valor
-    }));
-  };
 
   const calcularProgresso = () => {
     return (pontosData.pontos / pontosData.meta) * 100;
@@ -173,10 +100,10 @@ export default function ResumoContaScreen() {
   const renderItemHistorico = ({ item }) => (
     <View style={styles.historicoItem}>
       <View style={styles.historicoIcon}>
-        <Ionicons 
-          name={item.tipo === 'bonus' ? "gift" : "cart"} 
-          size={20} 
-          color={item.tipo === 'bonus' ? "#FF6B35" : "#126b1a"} 
+        <Ionicons
+          name={item.tipo === 'bonus' ? "gift" : "cart"}
+          size={20}
+          color={item.tipo === 'bonus' ? "#FF6B35" : "#126b1a"}
         />
       </View>
       <View style={styles.historicoInfo}>
@@ -207,7 +134,7 @@ export default function ResumoContaScreen() {
     <SafeAreaView style={styles.container}>
       {/* Cabeçalho */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
@@ -218,146 +145,48 @@ export default function ResumoContaScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Saudação */}
+        {/* Saudação - COM DADOS REAIS */}
         <View style={styles.saudacaoContainer}>
           <Text style={styles.saudacao}>Olá,</Text>
           <Text style={styles.nomeUsuario}>{userData.nome}</Text>
+          <Text style={styles.emailUsuario}>{userData.email}</Text>
         </View>
 
-        {/* Estatísticas */}
-        <View style={styles.estatisticasContainer}>
-          <Text style={styles.sectionTitle}>Sua Atividade</Text>
-          <View style={styles.estatisticasGrid}>
-            {estatisticas.map((item) => (
-              <View key={item.id} style={styles.estatisticaCard}>
-                <Ionicons name={item.icon as any} size={24} color="#126b1a" />
-                <Text style={styles.estatisticaValor}>{item.valor}</Text>
-                <Text style={styles.estatisticaLabel}>{item.label}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Dados da Conta */}
+        {/* Dados da Conta - SEM BOTÃO ALTERAR */}
         <View style={styles.dadosContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Dados da conta</Text>
-            {!isEditing ? (
-              <TouchableOpacity onPress={() => setIsEditing(true)}>
-                <Text style={styles.alterarTexto}>alterar</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity onPress={handleCancelarEdicao}>
-                <Text style={styles.cancelarTexto}>cancelar</Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           <View style={styles.infoCard}>
-  {!isEditing ? (
-    // MODO VISUALIZAÇÃO
-    <>
-      <View style={styles.infoItem}>
-        <Text style={styles.infoLabel}>Nome completo</Text>
-        <Text style={styles.infoValue}>{userData.nome}</Text>
-      </View>
-      <View style={styles.infoItem}>
-        <Text style={styles.infoLabel}>E-mail</Text>
-        <Text style={styles.infoValue}>{userData.email}</Text>
-      </View>
-      <View style={styles.infoItem}>
-        <Text style={styles.infoLabel}>Telefone</Text>
-        <Text style={styles.infoValue}>{userData.telefone}</Text>
-      </View>
-      <View style={styles.infoItem}>
-        <Text style={styles.infoLabel}>CPF</Text>
-        <Text style={styles.infoValue}>{userData.cpf}</Text>
-      </View>
-      <View style={styles.infoItem}>
-        <Text style={styles.infoLabel}>Data de nascimento</Text>
-        <Text style={styles.infoValue}>{userData.dataNascimento}</Text>
-      </View>
-    </>
-  ) : (
-    // MODO EDIÇÃO
-    <>
-      <View style={styles.infoItem}>
-        <Text style={styles.infoLabel}>Nome completo</Text>
-        <TextInput
-          style={styles.input}
-          value={dadosEditados.nome}
-          onChangeText={(text) => handleInputChange('nome', text)}
-          placeholder="Digite seu nome completo"
-        />
-      </View>
-      <View style={styles.infoItem}>
-        <Text style={styles.infoLabel}>E-mail</Text>
-        <TextInput
-          style={styles.input}
-          value={dadosEditados.email}
-          onChangeText={(text) => handleInputChange('email', text)}
-          placeholder="Digite seu e-mail"
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-      </View>
-      <View style={styles.infoItem}>
-        <Text style={styles.infoLabel}>Telefone</Text>
-        <TextInput
-          style={styles.input}
-          value={dadosEditados.telefone}
-          onChangeText={(text) => handleInputChange('telefone', text)}
-          placeholder="Digite seu telefone"
-          keyboardType="phone-pad"
-        />
-      </View>
-      <View style={styles.infoItem}>
-        <Text style={styles.infoLabel}>CPF</Text>
-        <TextInput
-          style={styles.input}
-          value={dadosEditados.cpf}
-          onChangeText={(text) => handleInputChange('cpf', text)}
-          placeholder="Digite seu CPF"
-          keyboardType="numeric"
-        />
-      </View>
-      <View style={styles.infoItem}>
-        <Text style={styles.infoLabel}>Data de nascimento</Text>
-        <TextInput
-          style={styles.input}
-          value={dadosEditados.dataNascimento}
-          onChangeText={(text) => handleInputChange('dataNascimento', text)}
-          placeholder="DD/MM/AAAA"
-        />
-      </View>
-      
-      {/* Botão Salvar */}
-      <TouchableOpacity 
-        style={styles.salvarButton}
-        onPress={handleSalvarAlteracoes}
-      >
-        <Text style={styles.salvarButtonText}>Salvar Alterações</Text>
-      </TouchableOpacity>
-    </>
-  )}
-</View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Nome completo</Text>
+              <Text style={styles.infoValue}>{userData.nome}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>E-mail</Text>
+              <Text style={styles.infoValue}>{userData.email}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Telefone</Text>
+              <Text style={styles.infoValue}>{userData.telefone}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>CPF</Text>
+              <Text style={styles.infoValue}>{userData.cpf}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Data de nascimento</Text>
+              <Text style={styles.infoValue}>{userData.dataNascimento}</Text>
+            </View>
+          </View>
         </View>
-
-        {/* Alterar Senha */}
-        <TouchableOpacity 
-          style={styles.alterarSenhaButton}
-          onPress={() => router.push('/home/alterarsenha')}
-        >
-          <Ionicons name="lock-closed" size={20} color="#126b1a" />
-          <Text style={styles.alterarSenhaText}>Alterar senha</Text>
-          <Ionicons name="chevron-forward" size={20} color="#666" />
-        </TouchableOpacity>
 
         {/* Programa de Fidelidade */}
         <View style={styles.fidelidadeContainer}>
           <Text style={styles.sectionTitle}>Seus Pontos de Fidelidade</Text>
-          
-          {/* Card de Tabela de Pontos - ATUALIZADO */}
+
+          {/* Card de Tabela de Pontos */}
           <View style={styles.tabelaPontosCard}>
             <Text style={styles.tabelaTitulo}>Como Ganhar Pontos</Text>
             <View style={styles.tabelaLinha}>
@@ -397,11 +226,11 @@ export default function ResumoContaScreen() {
             {/* Barra de progresso */}
             <View style={styles.progressoContainer}>
               <View style={styles.progressoBar}>
-                <View 
+                <View
                   style={[
-                    styles.progressoPreenchido, 
+                    styles.progressoPreenchido,
                     { width: `${calcularProgresso()}%` }
-                  ]} 
+                  ]}
                 />
               </View>
               <Text style={styles.progressoTexto}>
@@ -413,7 +242,7 @@ export default function ResumoContaScreen() {
               Pontos expiram em: {pontosData.expiracao}
             </Text>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.verDetalhesButton}
               onPress={() => setShowHistorico(true)}
             >
@@ -447,7 +276,7 @@ export default function ResumoContaScreen() {
             {/* Header do Modal */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Histórico de Pontos</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => setShowHistorico(false)}
               >
@@ -484,7 +313,7 @@ export default function ResumoContaScreen() {
             />
 
             {/* Botão Fechar */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.fecharModalButton}
               onPress={() => setShowHistorico(false)}
             >
@@ -498,7 +327,6 @@ export default function ResumoContaScreen() {
 }
 
 const styles = StyleSheet.create({
-  // ... (todos os estilos permanecem iguais do código anterior)
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
@@ -547,8 +375,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+    marginBottom: 5,
   },
-  estatisticasContainer: {
+  emailUsuario: {
+    fontSize: 14,
+    color: '#666',
+  },
+  dadosContainer: {
     marginBottom: 20,
   },
   sectionTitle: {
@@ -557,50 +390,11 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 15,
   },
-  estatisticasGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  estatisticaCard: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    flex: 1,
-    marginHorizontal: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  estatisticaValor: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#126b1a',
-    marginVertical: 5,
-  },
-  estatisticaLabel: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
-  dadosContainer: {
-    marginBottom: 20,
-  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
-  },
-  alterarTexto: {
-    color: '#126b1a',
-    fontWeight: '500',
-  },
-  cancelarTexto: {
-    color: '#F44336',
-    fontWeight: '500',
   },
   infoCard: {
     backgroundColor: '#fff',
@@ -621,46 +415,6 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   infoValue: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#f9f9f9',
-  },
-  salvarButton: {
-    backgroundColor: '#126b1a',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  salvarButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  alterarSenhaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  alterarSenhaText: {
-    flex: 1,
-    marginLeft: 10,
     fontSize: 16,
     color: '#333',
     fontWeight: '500',
