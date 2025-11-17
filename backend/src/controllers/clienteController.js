@@ -1,43 +1,136 @@
+console.log('✅ clienteController.js carregado com sucesso!');
+
 const clienteService = require('../services/clienteService');
 
-module.exports = {
-  async criar(req, res) {
-    try {
-      const novoCliente = await clienteService.criarCliente(req.body);
-      return res.status(201).json(novoCliente);
-    } catch (err) {
-      console.error(err);
-      return res.status(err.status || 500).json({ error: err.message });
-    }
-  },
+exports.criar = async (req, res) => {
+  try {
+    console.log('🎯🎯🎯 CHEGOU NO CONTROLLER CRIAR! 🎯🎯🎯');
+    console.log('📦 BODY COMPLETO RECEBIDO:', JSON.stringify(req.body, null, 2));
 
-  async buscar(req, res) {
-    try {
-      const cliente = await clienteService.buscarPorId(req.params.id);
-      return res.json(cliente);
-    } catch (err) {
-      console.error(err);
-      return res.status(err.status || 500).json({ error: err.message });
-    }
-  },
+    const { nome, sobrenome, cpf, telefone, email, data_nascimento, senha } = req.body;
 
-  async atualizar(req, res) {
-    try {
-      const clienteAtualizado = await clienteService.atualizarCliente(req.params.id, req.body);
-      return res.json(clienteAtualizado);
-    } catch (err) {
-      console.error(err);
-      return res.status(err.status || 500).json({ error: err.message });
-    }
-  },
+    console.log('🔍 DADOS RECEBIDOS NO CONTROLLER:');
+    console.log('  - nome:', nome);
+    console.log('  - sobrenome:', sobrenome);
+    console.log('  - cpf:', cpf);
+    console.log('  - telefone:', telefone);
+    console.log('  - email:', email);
+    console.log('  - data_nascimento:', data_nascimento);
+    console.log('  - senha:', senha ? '***' : 'FALTANDO');
 
-  async listar(req, res) {
-    try {
-      const clientes = await clienteService.listarTodos();
-      return res.json(clientes);
-    } catch (err) {
-      console.error(err);
-      return res.status(500).json({ error: "Erro ao listar clientes" });
+    // Validação básica no controller
+    if (!nome || !sobrenome || !cpf || !telefone || !email || !data_nascimento || !senha) {
+      console.log('❌ CAMPOS OBRIGATÓRIOS FALTANDO NO CONTROLLER!');
+      return res.status(400).json({
+        success: false,
+        error: "Preencha todos os campos obrigatórios!"
+      });
     }
+
+    if (senha.length < 6) {
+      console.log('❌ SENHA MUITO CURTA NO CONTROLLER!');
+      return res.status(400).json({
+        success: false,
+        error: "A senha deve ter pelo menos 6 caracteres!"
+      });
+    }
+
+    // ⭐⭐ CHAME O SERVICE CORRETAMENTE ⭐⭐
+    console.log('🚀 Chamando clienteService.criarCliente...');
+    const resultado = await clienteService.criarCliente({
+      nome,
+      sobrenome,
+      cpf,
+      telefone,
+      email,
+      senha,
+      data_nascimento
+    });
+
+    console.log('✅ SERVICE RETORNOU SUCESSO:', resultado);
+
+    res.status(201).json({
+      success: true,
+      message: resultado.message,
+      cliente: resultado.usuario
+    });
+
+  } catch (error) {
+    console.error('❌ ERRO NO CONTROLLER:');
+    console.error('  - Status:', error.status);
+    console.error('  - Mensagem:', error.message);
+    console.error('  - Stack:', error.stack);
+
+    res.status(error.status || 500).json({
+      success: false,
+      error: error.message || 'Erro interno do servidor'
+    });
+  }
+};
+
+// ⭐⭐ FUNÇÕES ADICIONAIS ⭐⭐
+exports.listar = async (req, res) => {
+  try {
+    console.log('📋 CONTROLLER - Listando todos os clientes');
+    const clientes = await clienteService.listarTodos();
+
+    console.log(`✅ Retornando ${clientes.length} clientes`);
+    res.json({
+      success: true,
+      data: clientes
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao listar clientes:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno do servidor'
+    });
+  }
+};
+
+exports.buscar = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`🔍 CONTROLLER - Buscando cliente ID: ${id}`);
+
+    const cliente = await clienteService.buscarPorId(id);
+
+    console.log('✅ Cliente encontrado:', cliente ? 'SIM' : 'NÃO');
+    res.json({
+      success: true,
+      data: cliente
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao buscar cliente:', error);
+    res.status(error.status || 500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+exports.atualizar = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`✏️ CONTROLLER - Atualizando cliente ID: ${id}`);
+    console.log('📦 DADOS PARA ATUALIZAR:', req.body);
+
+    const resultado = await clienteService.atualizarCliente(id, req.body);
+
+    console.log('✅ Cliente atualizado com sucesso');
+    res.json({
+      success: true,
+      message: resultado.message,
+      data: resultado.usuario
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao atualizar cliente:', error);
+    res.status(error.status || 500).json({
+      success: false,
+      error: error.message
+    });
   }
 };

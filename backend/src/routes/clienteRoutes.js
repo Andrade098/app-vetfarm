@@ -1,9 +1,29 @@
 const express = require('express');
 const router = express.Router();
+
+console.log('✅ clienteRoutes.js CARREGADO!');
+
 const clienteController = require('../controllers/clienteController');
 
+// ⭐⭐ ROTA DE TESTE (APENAS PARA DEBUG) ⭐⭐
+router.post('/teste', (req, res) => {
+  console.log('🎯 ROTA /teste ACIONADA! Body:', req.body);
+  res.json({
+    success: true,
+    message: 'ROTA TESTE FUNCIONANDO!',
+    body: req.body
+  });
+});
+
+// ⭐⭐ ROTA REAL DE CRIAÇÃO ⭐⭐
+router.post('/', (req, res) => {
+  console.log('🚀🚀🚀 ROTA DE CRIAÇÃO REAL ACIONADA! 🚀🚀🚀');
+  console.log('💾 Salvando no banco de dados...');
+  clienteController.criar(req, res);
+});
+
+// ⭐⭐ ROTAS ADICIONAIS ⭐⭐
 router.get('/', clienteController.listar);
-router.post('/', clienteController.criar);
 router.get('/:id', clienteController.buscar);
 router.put('/:id', clienteController.atualizar);
 

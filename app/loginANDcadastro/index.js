@@ -17,7 +17,7 @@ async function handleLogin() {
       return;
     }
 
-    const response = await fetch('http://192.168.0.3:3000/api/login', {
+    const response = await fetch('http://192.168.0.6:3000/api/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

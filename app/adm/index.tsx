@@ -69,12 +69,12 @@ export default function AdminPanel() {
               <Text style={styles.statNumber}>{stats.activeCategories}</Text>
               <Text style={styles.statLabel}>Categorias Ativas</Text>
             </View>
-            
+
             {/* Mensagem de atenção acima dos cards de parceiros */}
             <View style={styles.fullWidthWarning}>
               <Text style={styles.warningText}>ATENÇÃO! Estes dois cards abaixo (Parceiros e Parceiros ativos) só deve aparecer para a nossa farmacia, farmacias parceiras NAO DEVEM VER ISSO</Text>
             </View>
-            
+
             <View style={styles.statCard}>
               <Text style={styles.statNumber}>{stats.totalPartners}</Text>
               <Text style={styles.statLabel}>Parceiros</Text>
