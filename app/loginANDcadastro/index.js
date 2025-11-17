@@ -18,7 +18,10 @@ export default function Login() {
         return;
       }
 
-      const response = await fetch('http://192.168.0.6:3000/api/login', {
+      // ⭐⭐ IP DO SERVIDOR - MESMO EM TODOS OS LUGARES ⭐⭐
+      const API_URL = 'http://192.168.0.6:3000';
+
+      const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -34,19 +37,22 @@ export default function Login() {
         return;
       }
 
-      // ⭐⭐ SALVA TODOS OS DADOS DO USUÁRIO NO AUTH CONTEXT
-      if (data.id && data.email) {
-        login({
-          id: data.id.toString(),
-          nome: data.nome || 'Usuário',
-          sobrenome: data.sobrenome || '', // ⭐⭐ ADICIONADO
-          email: data.email,
-          telefone: data.telefone || '',
-          cpf: data.cpf || '',
-          data_nascimento: data.data_nascimento || '',
-          tipo: data.tipo || 'cliente'
-        });
-        console.log('✅ Dados do usuário salvos no AuthContext:', {
+      // ⭐⭐ CORREÇÃO: AGORA PASSANDO O TOKEN TAMBÉM!
+      if (data.id && data.email && data.token) {
+        login(
+          {
+            id: data.id.toString(),
+            nome: data.nome || 'Usuário',
+            sobrenome: data.sobrenome || '',
+            email: data.email,
+            telefone: data.telefone || '',
+            cpf: data.cpf || '',
+            data_nascimento: data.data_nascimento || '',
+            tipo: data.tipo || 'cliente'
+          },
+          data.token // ⭐⭐ TOKEN ADICIONADO AQUI!
+        );
+        console.log('✅ Dados do usuário e token salvos no AuthContext:', {
           id: data.id,
           nome: data.nome,
           sobrenome: data.sobrenome,
@@ -54,10 +60,13 @@ export default function Login() {
           telefone: data.telefone,
           cpf: data.cpf,
           data_nascimento: data.data_nascimento,
-          tipo: data.tipo
+          tipo: data.tipo,
+          token: data.token ? 'PRESENTE' : 'FALTANDO'
         });
       } else {
-        console.log('⚠️ Dados do usuário incompletos na resposta:', data);
+        console.log('⚠️ Dados do usuário ou token incompletos na resposta:', data);
+        alert('Erro: Dados de login incompletos');
+        return;
       }
 
       // Salva o token para usar nas próximas requisições
@@ -89,13 +98,6 @@ export default function Login() {
         />
         <Text style={styles.subtitle}>Seu delivery favorito</Text>
       </View>
-
-      <TouchableOpacity
-        style={[styles.button, { backgroundColor: 'red' }]}
-        onPress={() => console.log('Botão de teste clicado')}
-      >
-        <Text style={styles.buttonText}>Botão Teste</Text>
-      </TouchableOpacity>
 
       {/* Formulário */}
       <View style={styles.formContainer}>

@@ -2,7 +2,14 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 
-app.use(cors());
+// ⭐⭐ CORS CONFIGURADO PARA ANDROID ⭐⭐
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://192.168.0.6:3000', 'exp://192.168.0.6:8081', 'http://localhost:8081'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
+}));
+
 app.use(express.json());
 
 // ⭐⭐ MIDDLEWARE DE DEBUG DETALHADO ⭐⭐

@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, TextInput, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, TextInput, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function AlterarSenhaScreen() {
   const router = useRouter();
+  const { user, updatePassword } = useAuth();
+
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
@@ -13,42 +16,75 @@ export default function AlterarSenhaScreen() {
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
   const [mensagemSucesso, setMensagemSucesso] = useState('');
   const [mensagemErro, setMensagemErro] = useState('');
+  const [carregando, setCarregando] = useState(false);
 
-  const handleAlterarSenha = () => {
+  const handleAlterarSenha = async () => {
+    console.log('🔐 Iniciando alteração de senha no Android...');
+    console.log('📱 Platform: Android');
+
     // Reset mensagens anteriores
     setMensagemErro('');
     setMensagemSucesso('');
+    setCarregando(true);
 
     // Validações
     if (!senhaAtual || !novaSenha || !confirmarSenha) {
       setMensagemErro('Por favor, preencha todos os campos.');
+      setCarregando(false);
       return;
     }
 
     if (novaSenha.length < 6) {
       setMensagemErro('A nova senha deve ter pelo menos 6 caracteres.');
+      setCarregando(false);
       return;
     }
 
     if (novaSenha !== confirmarSenha) {
       setMensagemErro('As senhas não coincidem.');
+      setCarregando(false);
       return;
     }
 
-    // Simulação de alteração bem-sucedida
-    setMensagemSucesso('Senha alterada com sucesso! Redirecionando para login...');
-    
-    // Redireciona após 2 segundos
-    setTimeout(() => {
-      router.replace('/'); // Redireciona para tela de login
-    }, 2000);
+    try {
+      // Chama a função de atualização de senha do contexto de autenticação
+      const resultado = await updatePassword(senhaAtual, novaSenha);
+
+      if (resultado.success) {
+        setMensagemSucesso('Senha alterada com sucesso!');
+
+        // Limpa os campos
+        setSenhaAtual('');
+        setNovaSenha('');
+        setConfirmarSenha('');
+
+        // Mostra alerta de sucesso
+        Alert.alert(
+          'Sucesso',
+          'Sua senha foi alterada com sucesso!',
+          [
+            {
+              text: 'OK',
+              onPress: () => router.back()
+            }
+          ]
+        );
+      } else {
+        setMensagemErro(resultado.message || 'Erro ao alterar senha.');
+      }
+    } catch (error) {
+      setMensagemErro('Erro ao conectar com o servidor. Tente novamente.');
+      console.error('Erro ao alterar senha:', error);
+    } finally {
+      setCarregando(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Cabeçalho */}
       <View style={styles.header}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
@@ -80,14 +116,14 @@ export default function AlterarSenhaScreen() {
                 secureTextEntry={!mostrarSenhaAtual}
                 autoCapitalize="none"
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.eyeButton}
                 onPress={() => setMostrarSenhaAtual(!mostrarSenhaAtual)}
               >
-                <Ionicons 
-                  name={mostrarSenhaAtual ? "eye-off" : "eye"} 
-                  size={20} 
-                  color="#666" 
+                <Ionicons
+                  name={mostrarSenhaAtual ? "eye-off" : "eye"}
+                  size={20}
+                  color="#666"
                 />
               </TouchableOpacity>
             </View>
@@ -105,14 +141,14 @@ export default function AlterarSenhaScreen() {
                 secureTextEntry={!mostrarNovaSenha}
                 autoCapitalize="none"
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.eyeButton}
                 onPress={() => setMostrarNovaSenha(!mostrarNovaSenha)}
               >
-                <Ionicons 
-                  name={mostrarNovaSenha ? "eye-off" : "eye"} 
-                  size={20} 
-                  color="#666" 
+                <Ionicons
+                  name={mostrarNovaSenha ? "eye-off" : "eye"}
+                  size={20}
+                  color="#666"
                 />
               </TouchableOpacity>
             </View>
@@ -131,14 +167,14 @@ export default function AlterarSenhaScreen() {
                 secureTextEntry={!mostrarConfirmarSenha}
                 autoCapitalize="none"
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.eyeButton}
                 onPress={() => setMostrarConfirmarSenha(!mostrarConfirmarSenha)}
               >
-                <Ionicons 
-                  name={mostrarConfirmarSenha ? "eye-off" : "eye"} 
-                  size={20} 
-                  color="#666" 
+                <Ionicons
+                  name={mostrarConfirmarSenha ? "eye-off" : "eye"}
+                  size={20}
+                  color="#666"
                 />
               </TouchableOpacity>
             </View>
@@ -160,11 +196,17 @@ export default function AlterarSenhaScreen() {
           ) : null}
 
           {/* Botão Salvar */}
-          <TouchableOpacity 
-            style={styles.saveButton}
+          <TouchableOpacity
+            style={[
+              styles.saveButton,
+              carregando && styles.saveButtonDisabled
+            ]}
             onPress={handleAlterarSenha}
+            disabled={carregando}
           >
-            <Text style={styles.saveButtonText}>Salvar Nova Senha</Text>
+            <Text style={styles.saveButtonText}>
+              {carregando ? 'Alterando...' : 'Salvar Nova Senha'}
+            </Text>
           </TouchableOpacity>
 
           {/* Dicas de Segurança */}
@@ -269,6 +311,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 10,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#9e9e9e',
+    opacity: 0.6,
   },
   saveButtonText: {
     color: 'white',
