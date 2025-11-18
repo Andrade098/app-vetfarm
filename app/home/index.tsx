@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, FlatList, Dimensions, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../contexts/AuthContext'; // ⭐⭐ IMPORTE O AUTH CONTEXT
+import { useAuth } from '../../contexts/AuthContext';
 
 // Dados de exemplo para categorias
 const categories = [
@@ -12,35 +12,261 @@ const categories = [
   { id: '4', name: 'Acessórios', icon: '🐎' },
 ];
 
-// Dados de exemplo para produtos
-const featuredProducts = [
+// ⭐⭐ TODOS OS PRODUTOS DE TODAS AS CATEGORIAS ⭐⭐
+const allProducts = [
+  // 🐄 BOVINOS
   {
     id: '1',
-    name: 'Vacina Febre Aftosa',
+    name: 'Vacina Brucelose B19',
     price: 'R$ 89,90',
     category: 'Vacinas',
-    image: require('../../assets/images/produtos/vacina.png'),
+    animal: 'Bovinos',
+    image: require('../../assets/images/produtos/vacina-brucelose.png'),
   },
   {
     id: '2',
-    name: 'Suplemento Animais',
-    price: 'R$ 149,90',
-    category: 'Suplementos',
-    image: require('../../assets/images/produtos/suplemento.png'),
+    name: 'Vacina Febre Aftosa',
+    price: 'R$ 67,50',
+    category: 'Vacinas',
+    animal: 'Bovinos',
+    image: require('../../assets/images/produtos/vacina.png'),
   },
   {
     id: '3',
-    name: 'Vermífugo Bovino',
-    price: 'R$ 45,90',
-    category: 'Medicamentos',
-    image: require('../../assets/images/produtos/vermifugo.png'),
+    name: 'Vacina Raiva',
+    price: 'R$ 95,00',
+    category: 'Vacinas',
+    animal: 'Bovinos',
+    image: require('../../assets/images/produtos/vacina-raiva.png'),
   },
   {
     id: '4',
-    name: 'Cela Equina',
-    price: 'R$ 289,90',
+    name: 'Vacina Clostridiose',
+    price: 'R$ 78,90',
+    category: 'Vacinas',
+    animal: 'Bovinos',
+    image: require('../../assets/images/produtos/vacina-clostridiose.png'),
+  },
+  {
+    id: '5',
+    name: 'Ivermectina 1%',
+    price: 'R$ 45,90',
+    category: 'Medicamentos',
+    animal: 'Bovinos',
+    image: require('../../assets/images/produtos/ivermectina.png'),
+  },
+  {
+    id: '6',
+    name: 'Albendazol 10%',
+    price: 'R$ 38,50',
+    category: 'Medicamentos',
+    animal: 'Bovinos',
+    image: require('../../assets/images/produtos/albendazol.png'),
+  },
+  {
+    id: '7',
+    name: 'Brinco de Identificação Bovino',
+    price: 'R$ 12,90',
     category: 'Acessórios',
-    image: require('../../assets/images/produtos/celaesquina.png'),
+    animal: 'Bovinos',
+    image: require('../../assets/images/produtos/brinco-bovino.png'),
+  },
+  {
+    id: '8',
+    name: 'Aplicador de Brincos',
+    price: 'R$ 89,00',
+    category: 'Acessórios',
+    animal: 'Bovinos',
+    image: require('../../assets/images/produtos/aplicador-brinco.png'),
+  },
+  {
+    id: '9',
+    name: 'Núcleo Mineral para Gado de Corte',
+    price: 'R$ 149,90',
+    category: 'Suplementos',
+    animal: 'Bovinos',
+    image: require('../../assets/images/produtos/suplemento-mineral.png'),
+  },
+  {
+    id: '10',
+    name: 'Vitamina A-D-E',
+    price: 'R$ 67,80',
+    category: 'Suplementos',
+    animal: 'Bovinos',
+    image: require('../../assets/images/produtos/vitamina-ade.png'),
+  },
+
+  // 🐑 OVINOS
+  {
+    id: '11',
+    name: 'Vacina Clostridial (Covexin 10)',
+    price: 'R$ 82,50',
+    category: 'Vacinas',
+    animal: 'Ovinos',
+    image: require('../../assets/images/produtos/vacina-clostridial.png'),
+  },
+  {
+    id: '12',
+    name: 'Albendazol 10%',
+    price: 'R$ 42,90',
+    category: 'Medicamentos',
+    animal: 'Ovinos',
+    image: require('../../assets/images/produtos/albendazol-ovino.png'),
+  },
+  {
+    id: '13',
+    name: 'Tesoura para Tosa de Lã',
+    price: 'R$ 35,00',
+    category: 'Acessórios',
+    animal: 'Ovinos',
+    image: require('../../assets/images/produtos/tesoura-tosa.png'),
+  },
+  {
+    id: '14',
+    name: 'Sal Mineral para Ovinos',
+    price: 'R$ 79,90',
+    category: 'Suplementos',
+    animal: 'Ovinos',
+    image: require('../../assets/images/produtos/sal-mineral-ovino.png'),
+  },
+
+  // 🐖 SUÍNOS
+  {
+    id: '15',
+    name: 'Vacina Peste Suína',
+    price: 'R$ 75,90',
+    category: 'Vacinas',
+    animal: 'Suínos',
+    image: require('../../assets/images/produtos/vacina-peste-suina.png'),
+  },
+  {
+    id: '16',
+    name: 'Vacina Rinite Atrófica',
+    price: 'R$ 82,50',
+    category: 'Vacinas',
+    animal: 'Suínos',
+    image: require('../../assets/images/produtos/vacina-rinite.png'),
+  },
+  {
+    id: '17',
+    name: 'Enrofloxacina 10%',
+    price: 'R$ 58,90',
+    category: 'Medicamentos',
+    animal: 'Suínos',
+    image: require('../../assets/images/produtos/enrofloxacina.png'),
+  },
+  {
+    id: '18',
+    name: 'Bebedouro Tipo Nipple',
+    price: 'R$ 24,90',
+    category: 'Acessórios',
+    animal: 'Suínos',
+    image: require('../../assets/images/produtos/bebedouro-nipple.png'),
+  },
+  {
+    id: '19',
+    name: 'Premix Vitamínico para Suínos',
+    price: 'R$ 129,90',
+    category: 'Suplementos',
+    animal: 'Suínos',
+    image: require('../../assets/images/produtos/premix-suino.png'),
+  },
+
+  // 🐎 EQUINOS
+  {
+    id: '20',
+    name: 'Vacina Antitetânica',
+    price: 'R$ 65,00',
+    category: 'Vacinas',
+    animal: 'Equinos',
+    image: require('../../assets/images/produtos/vacina-antitetanica.png'),
+  },
+  {
+    id: '21',
+    name: 'Pasta Vermífuga com Ivermectina',
+    price: 'R$ 52,90',
+    category: 'Medicamentos',
+    animal: 'Equinos',
+    image: require('../../assets/images/produtos/pasta-vermifuga.png'),
+  },
+  {
+    id: '22',
+    name: 'Cabeçada de Couro',
+    price: 'R$ 89,90',
+    category: 'Acessórios',
+    animal: 'Equinos',
+  },
+  {
+    id: '23',
+    name: 'Suplemento Vitamínico-Mineral',
+    price: 'R$ 139,90',
+    category: 'Suplementos',
+    animal: 'Equinos',
+    image: require('../../assets/images/produtos/suplemento-equino.png'),
+  },
+
+  // 🐔 AVES
+  {
+    id: '24',
+    name: 'Vacina contra Newcastle',
+    price: 'R$ 48,90',
+    category: 'Vacinas',
+    animal: 'Aves',
+    image: require('../../assets/images/produtos/vacina-newcastle.png'),
+  },
+  {
+    id: '25',
+    name: 'Oxitetraciclina Solúvel',
+    price: 'R$ 32,50',
+    category: 'Medicamentos',
+    animal: 'Aves',
+    image: require('../../assets/images/produtos/oxitetraciclina.png'),
+  },
+  {
+    id: '26',
+    name: 'Comedouro Automático para Aves',
+    price: 'R$ 45,00',
+    category: 'Acessórios',
+    animal: 'Aves',
+    image: require('../../assets/images/produtos/comedouro-aves.png'),
+  },
+  {
+    id: '27',
+    name: 'Complexo Vitamínico para Aves',
+    price: 'R$ 39,90',
+    category: 'Suplementos',
+    animal: 'Aves',
+    image: require('../../assets/images/produtos/vitaminas-aves.png'),
+  },
+
+  // 🐟 PEIXES
+  {
+    id: '28',
+    name: 'Vacina contra Streptococcus',
+    price: 'R$ 125,00',
+    category: 'Vacinas',
+    animal: 'Peixes',
+  },
+  {
+    id: '29',
+    name: 'Formalina',
+    price: 'R$ 28,90',
+    category: 'Medicamentos',
+    animal: 'Peixes',
+  },
+  {
+    id: '30',
+    name: 'Rede de Manejo para Peixes',
+    price: 'R$ 34,90',
+    category: 'Acessórios',
+    animal: 'Peixes',
+  },
+  {
+    id: '31',
+    name: 'Ração com Probióticos',
+    price: 'R$ 89,90',
+    category: 'Suplementos',
+    animal: 'Peixes',
   },
 ];
 
@@ -56,11 +282,13 @@ const notificationsData = [
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user } = useAuth(); // ⭐⭐ USE OS DADOS DO USUÁRIO
+  const { user } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showCart, setShowCart] = useState(false);
   const [notifications, setNotifications] = useState(notificationsData);
   const [cartItems, setCartItems] = useState([]);
+  // ⭐⭐ ESTADO DOS FAVORITOS
+  const [favoritos, setFavoritos] = useState<string[]>([]);
 
   function handleMenu() {
     router.push('/home/menu');
@@ -98,6 +326,17 @@ export default function HomeScreen() {
 
     alert(`${product.name} adicionado ao carrinho!`);
   }
+
+  // ⭐⭐ FUNÇÃO PARA ADICIONAR/REMOVER DOS FAVORITOS
+  const toggleFavorito = (productId: string) => {
+    setFavoritos(prev => {
+      if (prev.includes(productId)) {
+        return prev.filter(id => id !== productId);
+      } else {
+        return [...prev, productId];
+      }
+    });
+  };
 
   // Função para remover produto do carrinho
   function handleRemoveFromCart(productId: string) {
@@ -160,6 +399,18 @@ export default function HomeScreen() {
 
   const renderProduct = ({ item }) => (
     <TouchableOpacity style={styles.productCard}>
+      {/* ⭐⭐ BOTÃO FAVORITO NO CANTO SUPERIOR DIREITO */}
+      <TouchableOpacity
+        style={styles.favoritoButton}
+        onPress={() => toggleFavorito(item.id)}
+      >
+        <Ionicons
+          name={favoritos.includes(item.id) ? "heart" : "heart-outline"}
+          size={20}
+          color={favoritos.includes(item.id) ? "#ff3b30" : "#666"}
+        />
+      </TouchableOpacity>
+
       <View style={styles.productImagePlaceholder}>
         {item.image ? (
           <Image
@@ -168,11 +419,11 @@ export default function HomeScreen() {
             resizeMode="contain"
           />
         ) : (
-          <Text style={styles.productEmoji}>{item.emoji}</Text>
+          <Text style={styles.productEmoji}>📦</Text>
         )}
       </View>
       <View style={styles.productInfo}>
-        <Text style={styles.productCategory}>{item.category}</Text>
+        <Text style={styles.productCategory}>{item.category} - {item.animal}</Text>
         <Text style={styles.productName}>{item.name}</Text>
         <Text style={styles.productPrice}>{item.price}</Text>
         <TouchableOpacity
@@ -451,11 +702,12 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* PRODUTOS */}
+        {/* ⭐⭐ TODOS OS PRODUTOS - AGORA COM TODOS OS 31 PRODUTOS E BOTÃO DE FAVORITOS ⭐⭐ */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Produtos Recomendados</Text>
+          <Text style={styles.sectionTitle}>Nossos Produtos</Text>
+          <Text style={styles.productsCount}>{allProducts.length} produtos disponíveis</Text>
           <FlatList
-            data={featuredProducts}
+            data={allProducts}
             renderItem={renderProduct}
             keyExtractor={item => item.id}
             numColumns={2}
@@ -463,16 +715,6 @@ export default function HomeScreen() {
             contentContainerStyle={styles.productsList}
             scrollEnabled={false}
           />
-        </View>
-
-        {/* BOTÃO VER TODOS */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.exploreButton}
-            onPress={() => router.push('/home/produtos')}
-          >
-            <Text style={styles.exploreButtonText}>Ver Todos os Produtos</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -521,14 +763,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 2,
     backgroundColor: '#fff',
-    position: 'relative', // ⭐⭐ PARA POSICIONAR A MENSAGEM
+    position: 'relative',
   },
   bannerImage: {
     width: '100%',
     height: 150,
     maxHeight: 200,
   },
-  // ⭐⭐ NOVOS ESTILOS PARA A MENSAGEM DE BOAS-VINDAS ⭐⭐
   welcomeMessage: {
     position: 'absolute',
     top: 10,
@@ -557,6 +798,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+    marginBottom: 10,
+  },
+  productsCount: {
+    fontSize: 14,
+    color: '#666',
     marginBottom: 15,
   },
   categoriesGrid: {
@@ -606,6 +852,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
+    position: 'relative', // ⭐⭐ PARA POSICIONAR O BOTÃO DE FAVORITO
+  },
+  // ⭐⭐ ESTILOS PARA O BOTÃO DE FAVORITO NO CANTO
+  favoritoButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   productImagePlaceholder: {
     width: '100%',
@@ -634,13 +899,13 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   productName: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 5,
   },
   productPrice: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#126b1a',
     marginBottom: 8,
@@ -656,18 +921,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
-  exploreButton: {
-    backgroundColor: '#126b1a',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  exploreButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -679,7 +932,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#126b1a',
   },
-  // ESTILOS PARA NOTIFICAÇÕES
   notificationContainer: {
     position: 'relative',
   },
@@ -826,7 +1078,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
   },
-  // ESTILOS PARA CARRINHO
   emptyCart: {
     padding: 40,
     alignItems: 'center',

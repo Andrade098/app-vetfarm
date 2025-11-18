@@ -156,7 +156,6 @@ const produtosPorCategoria = {
       imagem: require('../../assets/images/produtos/vacina-rinite.png'),
       icone: '💉'
     },
-    
   ],
   'Medicamentos-Suínos': [
     {
@@ -279,6 +278,7 @@ const produtosPorCategoria = {
       nome: 'Vacina contra Streptococcus',
       preco: 'R$ 125,00',
       descricao: 'Proteção contra streptococcus em peixes',
+      imagem: require('../../assets/images/produtos/porcilis-strepsuis.png'),
       icone: '💉'
     },
   ],
@@ -288,6 +288,7 @@ const produtosPorCategoria = {
       nome: 'Formalina',
       preco: 'R$ 28,90',
       descricao: 'Tratamento antiparasitário para aquicultura',
+      imagem: require('../../assets/images/produtos/fornalina.png'),
       icone: '💊'
     },
   ],
@@ -297,6 +298,7 @@ const produtosPorCategoria = {
       nome: 'Rede de Manejo para Peixes',
       preco: 'R$ 34,90',
       descricao: 'Rede profissional para manejo de peixes',
+      imagem: require('../../assets/images/produtos/redeManejo.png'),
       icone: '🎣'
     },
   ],
@@ -306,6 +308,7 @@ const produtosPorCategoria = {
       nome: 'Ração com Probióticos',
       preco: 'R$ 89,90',
       descricao: 'Ração enriquecida para peixes',
+      imagem: require('../../assets/images/produtos/racaoProbioticos.png'),
       icone: '💊'
     },
   ],
@@ -314,16 +317,15 @@ const produtosPorCategoria = {
 export default function CategoriaProdutoScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  
+
   const categoriaId = params.categoriaId;
   const categoriaNome = params.categoriaNome;
   const animalNome = params.animalNome;
   const animalId = params.animalId;
 
-  // Estado do carrinho
   const [cart, setCart] = useState<string[]>([]);
+  const [favoritos, setFavoritos] = useState<string[]>([]);
 
-  // Função para adicionar/remover do carrinho
   const toggleCart = (productId: string) => {
     setCart(prev => {
       if (prev.includes(productId)) {
@@ -334,14 +336,33 @@ export default function CategoriaProdutoScreen() {
     });
   };
 
-  // Gera a chave para buscar os produtos
+  const toggleFavorito = (productId: string) => {
+    setFavoritos(prev => {
+      if (prev.includes(productId)) {
+        return prev.filter(id => id !== productId);
+      } else {
+        return [...prev, productId];
+      }
+    });
+  };
+
   const chaveProdutos = `${categoriaNome}-${animalNome}`;
   const produtos = produtosPorCategoria[chaveProdutos] || [];
 
   const renderProduto = ({ item }) => (
     <TouchableOpacity style={styles.produtoCard}>
+      <TouchableOpacity
+        style={styles.favoritoButton}
+        onPress={() => toggleFavorito(item.id)}
+      >
+        <Ionicons
+          name={favoritos.includes(item.id) ? "heart" : "heart-outline"}
+          size={20}
+          color={favoritos.includes(item.id) ? "#ff3b30" : "#666"}
+        />
+      </TouchableOpacity>
+
       <View style={styles.produtoImagemContainer}>
-        {/* IMAGEM DO PRODUTO - SÓ MOSTRA SE TIVER IMAGEM */}
         {item.imagem ? (
           <Image
             source={item.imagem}
@@ -349,20 +370,18 @@ export default function CategoriaProdutoScreen() {
             resizeMode="contain"
           />
         ) : (
-          // ÍCONE PARA PRODUTOS SEM IMAGEM
           <View style={styles.iconeContainer}>
             <Text style={styles.produtoIcone}>{item.icone}</Text>
           </View>
         )}
       </View>
-      
+
       <View style={styles.produtoInfo}>
         <Text style={styles.produtoNome}>{item.nome}</Text>
         <Text style={styles.produtoDescricao}>{item.descricao}</Text>
         <Text style={styles.produtoPreco}>{item.preco}</Text>
-        
-        {/* BOTÃO ADICIONAR AO CARRINHO - CORRIGIDO */}
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={[
             styles.adicionarButton,
             cart.includes(item.id) && styles.adicionarButtonAdded
@@ -382,18 +401,17 @@ export default function CategoriaProdutoScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen 
+      <Stack.Screen
         options={{
           title: `${categoriaNome} - ${animalNome}`,
           headerTitleStyle: {
             fontWeight: 'bold',
             fontSize: 18,
           },
-        }} 
+        }}
       />
-      
+
       <ScrollView style={styles.content}>
-        {/* Cabeçalho */}
         <View style={styles.header}>
           <Text style={styles.titulo}>
             {categoriaNome} para {animalNome}
@@ -403,7 +421,6 @@ export default function CategoriaProdutoScreen() {
           </Text>
         </View>
 
-        {/* Lista de Produtos */}
         {produtos.length > 0 ? (
           <FlatList
             data={produtos}
@@ -422,8 +439,7 @@ export default function CategoriaProdutoScreen() {
           </View>
         )}
 
-        {/* Botão Voltar */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.voltarButton}
           onPress={() => router.back()}
         >
@@ -477,6 +493,24 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
     flexDirection: 'row',
+    position: 'relative',
+  },
+  favoritoButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 20,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   produtoImagemContainer: {
     width: 100,
