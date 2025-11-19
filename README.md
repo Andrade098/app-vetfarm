@@ -9,15 +9,20 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    ```bash
    Vá ma pasta raiz do projeto
    npm install
-   ------
-   
-   
-   No Mysql:
-   root ,
-    SENHA: "senha-do-seu-banco",
-    host: "localhost",
 
-   depois de um: create database vetfarm
+   Posteriormenta vá na pasta backend
+   cd backend
+   npm install
+   ------
+   Crie um arquivo .env e coloque os dados de acordo com suas credenciais do SGBD
+   
+   JWT_SECRET= sua chave secreta
+   DB_HOST=localhost
+   DB_USER=root
+   DB_PASS='sua senha do root'
+   DB_NAME=vetfarm
+
+   Crie um schema diretamento no SGBD
    ```
 
 2. Start the app
