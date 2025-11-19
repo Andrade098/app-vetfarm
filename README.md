@@ -9,12 +9,19 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    ```bash
    npm install
    ------
-   npx expo install @react-native-async-storage/async-storage
+   No Mysql:
+   root ,
+    SENHA: "FJZB365FJB@#",
+    host: "localhost",
+
+   depois de um: create database vetfarm
    ```
 
 2. Start the app
 
    ```bash
+   cd backend
+   node server.js
    npx expo start
    ```
 
