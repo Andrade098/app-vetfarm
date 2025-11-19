@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Modal, ActivityIndicator } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ⭐⭐ CONSTANTE PARA IP DO SERVIDOR ⭐⭐
@@ -55,7 +54,6 @@ export default function EditPartnerScreen() {
   const [accessDenied, setAccessDenied] = useState(false);
 
   // Estados existentes
-  const [images, setImages] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     nome: '',
     descricao: '',
@@ -134,7 +132,7 @@ useEffect(() => {
     if (!partnerId) {
       console.log('❌ ID do parceiro não encontrado');
       Alert.alert('Erro', 'ID do parceiro não encontrado');
-      router.back();
+      router.push('/listarParceiro');
       return;
     }
 
@@ -143,9 +141,9 @@ useEffect(() => {
     const token = await AsyncStorage.getItem('userToken');
     console.log('🔐 Token:', token ? `Presente (${token.length} chars)` : 'Ausente');
 
-    // ✅ ENDPOINT CORRETO - farmacia (SINGULAR)
-    const endpoint = `${API_URL}/api/farmacia/${partnerId}`;
-    console.log('🌐 Endpoint:', endpoint);
+    // ✅✅✅ CORREÇÃO: Use o endpoint de listar parceiros para carregar os dados
+    const endpoint = `${API_URL}/api/farmacias/parceiros/todos`;
+    console.log('🌐 Endpoint para carregar dados:', endpoint);
 
     const response = await fetch(endpoint, {
       method: 'GET',
@@ -159,31 +157,38 @@ useEffect(() => {
     console.log('📡 OK:', response.ok);
 
     if (response.ok) {
-      const partnerData = await response.json();
-      console.log('✅ Dados recebidos:', partnerData);
+      const parceiros = await response.json();
+      console.log('✅ Lista de parceiros recebida:', parceiros);
       
-      setFormData({
-        nome: partnerData.nome || '',
-        descricao: partnerData.descricao || '',
-        endereco: partnerData.endereco || '',
-        bairro: partnerData.bairro || '',
-        cidade: partnerData.cidade || '',
-        estado: partnerData.estado || '',
-        cep: partnerData.cep || '',
-        telefone: partnerData.telefone || '',
-        email: partnerData.email || ''
-      });
+      // Encontrar o parceiro específico pelo ID
+      const partnerData = parceiros.find((p: any) => p.id === partnerId);
       
-      console.log('✅ Formulário preenchido com sucesso');
+      if (partnerData) {
+        console.log('✅ Dados do parceiro encontrado:', partnerData);
+        
+        setFormData({
+          nome: partnerData.nome || '',
+          descricao: partnerData.descricao || '',
+          endereco: partnerData.endereco || '',
+          bairro: partnerData.bairro || '',
+          cidade: partnerData.cidade || '',
+          estado: partnerData.estado || '',
+          cep: partnerData.cep || '',
+          telefone: partnerData.telefone || '',
+          email: partnerData.email || ''
+        });
+        
+        console.log('✅ Formulário preenchido com sucesso');
+      } else {
+        console.log('❌ Parceiro não encontrado na lista');
+        Alert.alert('Erro', 'Farmácia parceira não encontrada.');
+        router.push('/listarParceiro');
+      }
       
-    } else if (response.status === 404) {
-      console.log('❌ Farmácia não encontrada (404)');
-      Alert.alert('Erro', 'Farmácia parceira não encontrada.');
-      router.back();
     } else if (response.status === 403) {
       console.log('❌ Acesso negado (403)');
       setAccessDenied(true);
-      Alert.alert('Acesso Negado', 'Você não tem permissão para editar este parceiro.');
+      Alert.alert('Acesso Negado', 'Você não tem permissão para visualizar parceiros.');
     } else {
       const errorText = await response.text();
       console.log('❌ Erro desconhecido:', response.status, errorText);
@@ -194,49 +199,6 @@ useEffect(() => {
     Alert.alert('Erro', 'Falha ao conectar com o servidor.');
   }
 };
-
-  const pickImage = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Permissão necessária', 'Precisamos de acesso à sua galeria para adicionar imagens.');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setImages([...images, result.assets[0].uri]);
-      }
-    } catch (error) {
-      console.error('Erro ao selecionar imagem:', error);
-      Alert.alert('Erro', 'Não foi possível selecionar a imagem');
-    }
-  };
-
-  const removeImage = (index: number) => {
-    Alert.alert(
-      'Remover Imagem',
-      'Deseja remover esta imagem?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Remover', 
-          style: 'destructive',
-          onPress: () => {
-            const newImages = images.filter((_, i) => i !== index);
-            setImages(newImages);
-          }
-        }
-      ]
-    );
-  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -305,66 +267,147 @@ useEffect(() => {
   };
 
   const handleSubmit = () => {
-    if (!validateForm()) return;
+  console.log('🟡 [DEBUG] === BOTÃO SALVAR CLICADO ===');
+  console.log('🟡 [DEBUG] Validando formulário...');
+  
+  if (!validateForm()) {
+    console.log('❌ [DEBUG] Formulário inválido - validação falhou');
+    return;
+  }
 
-    Alert.alert(
-      'Confirmar Alterações',
-      'Deseja salvar as alterações nesta farmácia parceira?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salvar', onPress: submitChanges }
-      ]
-    );
-  };
+  console.log('✅ [DEBUG] Formulário válido - mostrando confirmação...');
+  
+console.log('🟡 [DEBUG] Chamando submitChanges diretamente (sem confirmação)...');
+  submitChanges();
+
+  /*
+  Alert.alert(
+    'Confirmar Alterações',
+    'Deseja salvar as alterações nesta farmácia parceira?',
+    [
+      { 
+        text: 'Cancelar', 
+        style: 'cancel',
+        onPress: () => console.log('❌ [DEBUG] Usuário cancelou a edição')
+      },
+      { 
+        text: 'Salvar', 
+        onPress: () => {
+          console.log('✅ [DEBUG] Usuário confirmou - chamando submitChanges()');
+          submitChanges();
+        }
+      }
+    ]
+  );*/
+};
 
   const submitChanges = async () => {
-    try {
-      setIsSaving(true);
-      
-      const token = await AsyncStorage.getItem('userToken');
-      
-      const partnerData = {
-        nome: formData.nome.trim(),
-        descricao: formData.descricao.trim(),
-        endereco: formData.endereco.trim(),
-        bairro: formData.bairro.trim(),
-        cidade: formData.cidade.trim(),
-        estado: formData.estado,
-        cep: formData.cep.replace(/\D/g, ''),
-        telefone: formData.telefone.replace(/\D/g, ''),
-        email: formData.email.trim().toLowerCase()
-      };
-
-      const response = await fetch(`${API_URL}/api/farmacia/parceiros/${partnerId}/editar`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(partnerData),
-      });
-
-      if (response.ok) {
-        Alert.alert(
-          'Sucesso', 
-          'Farmácia parceira atualizada com sucesso!',
-          [{ text: 'OK', onPress: () => router.back() }]
-        );
-      } else if (response.status === 403) {
-        Alert.alert('Acesso Negado', 'Você não tem permissão para editar parceiros.');
-        setAccessDenied(true);
-      } else {
-        const errorData = await response.json();
-        Alert.alert('Erro', errorData.error || 'Erro ao atualizar parceiro');
-      }
-    } catch (error) {
-      console.error('Erro ao atualizar parceiro:', error);
-      Alert.alert('Erro', 'Falha ao conectar com o servidor');
-    } finally {
-      setIsSaving(false);
+  try {
+    setIsSaving(true);
+    
+    console.log('🔍 [DEBUG] === INICIANDO SUBMIT CHANGES ===');
+    
+    const token = await AsyncStorage.getItem('userToken');
+    console.log('🔐 [DEBUG] Token:', token ? `Presente (${token.substring(0, 20)}...` : 'AUSENTE');
+    
+    if (!token) {
+      Alert.alert('Erro', 'Token de autenticação não encontrado');
+      return;
     }
-  };
 
+    const partnerData = {
+      nome: formData.nome.trim(),
+      descricao: formData.descricao.trim(),
+      endereco: formData.endereco.trim(),
+      bairro: formData.bairro.trim(),
+      cidade: formData.cidade.trim(),
+      estado: formData.estado,
+      cep: formData.cep.replace(/\D/g, ''),
+      telefone: formData.telefone.replace(/\D/g, ''),
+      email: formData.email.trim().toLowerCase()
+    };
+
+    console.log('📝 [DEBUG] Dados a serem enviados:', JSON.stringify(partnerData, null, 2));
+    console.log('🆔 [DEBUG] Partner ID:', partnerId);
+
+    // ✅ Endpoint correto baseado nas suas rotas
+    const endpoint = `${API_URL}/api/farmacias/parceiros/${partnerId}/editar`;
+    console.log('🌐 [DEBUG] Endpoint:', endpoint);
+
+    console.log('🟡 [DEBUG] Fazendo requisição PUT...');
+    
+    const response = await fetch(endpoint, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(partnerData),
+    });
+
+    console.log('📡 [DEBUG] Resposta recebida - Status:', response.status);
+    console.log('📡 [DEBUG] Resposta OK:', response.ok);
+
+    // Tentar ler a resposta independente do status
+    let responseBody;
+    try {
+      responseBody = await response.text();
+      console.log('📄 [DEBUG] Corpo da resposta:', responseBody);
+      
+      // Tentar parsear como JSON se possível
+      if (responseBody) {
+        try {
+          const jsonResponse = JSON.parse(responseBody);
+          console.log('📄 [DEBUG] Resposta JSON:', jsonResponse);
+        } catch (e) {
+          console.log('📄 [DEBUG] Resposta não é JSON');
+        }
+      }
+    } catch (e) {
+      console.log('❌ [DEBUG] Erro ao ler resposta:', e);
+    }
+
+    if (response.ok) {
+      console.log('✅ [DEBUG] ATUALIZAÇÃO BEM-SUCEDIDA!');
+      Alert.alert(
+        'Sucesso', 
+        'Farmácia parceira atualizada com sucesso!',
+        [{ text: 'OK', onPress: () => router.push('/listarParceiro') }] // ✅ ALTERADO
+      );
+      return;
+    }
+
+    // Tratamento de erros específicos
+    switch (response.status) {
+      case 400:
+        Alert.alert('Erro', 'Dados inválidos enviados para o servidor');
+        break;
+      case 401:
+        Alert.alert('Sessão Expirada', 'Por favor, faça login novamente');
+        router.push('/login');
+        break;
+      case 403:
+        Alert.alert('Acesso Negado', 'Você não tem permissão para editar parceiros');
+        setAccessDenied(true);
+        break;
+      case 404:
+        Alert.alert('Erro', 'Farmácia parceira não encontrada');
+        break;
+      case 500:
+        Alert.alert('Erro', 'Erro interno do servidor');
+        break;
+      default:
+        Alert.alert('Erro', `Erro ${response.status} ao atualizar parceiro`);
+    }
+
+  } catch (error) {
+    console.error('💥 [DEBUG] Erro na requisição:', error);
+    Alert.alert('Erro', 'Falha ao conectar com o servidor: ' + (error.message || 'Verifique sua conexão de internet'));
+  } finally {
+    console.log('🔍 [DEBUG] === FINALIZANDO SUBMIT CHANGES ===');
+    setIsSaving(false);
+  }
+};
   const getStateLabel = () => {
     const state = states.find(state => state.value === formData.estado);
     return state ? state.label : 'Selecione o estado';
@@ -391,7 +434,7 @@ useEffect(() => {
         </Text>
         <TouchableOpacity 
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => router.push('/listarParceiro')} // ✅ ALTERADO
         >
           <Text style={styles.backButtonText}>Voltar</Text>
         </TouchableOpacity>
@@ -416,37 +459,6 @@ useEffect(() => {
         <View style={styles.headerSection}>
           <Text style={styles.partnerId}>ID: #{partnerId}</Text>
           <Text style={styles.lastUpdate}>Editando farmácia parceira</Text>
-        </View>
-
-        {/* Seção de Imagens */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Imagens da Farmácia</Text>
-          <Text style={styles.sectionSubtitle}>Logo e fotos do estabelecimento (máx. 4)</Text>
-          
-          <ScrollView 
-            horizontal 
-            style={styles.imagesContainer}
-            showsHorizontalScrollIndicator={false}
-          >
-            {images.map((uri, index) => (
-              <View key={index} style={styles.imageWrapper}>
-                <Image source={{ uri }} style={styles.image} />
-                <TouchableOpacity 
-                  style={styles.removeImageButton}
-                  onPress={() => removeImage(index)}
-                >
-                  <Ionicons name="close" size={16} color="white" />
-                </TouchableOpacity>
-              </View>
-            ))}
-            
-            {images.length < 4 && (
-              <TouchableOpacity style={styles.addImageButton} onPress={pickImage}>
-                <Ionicons name="camera" size={32} color="#3498db" />
-                <Text style={styles.addImageText}>Adicionar Imagem</Text>
-              </TouchableOpacity>
-            )}
-          </ScrollView>
         </View>
 
         {/* Informações Básicas */}
@@ -606,7 +618,7 @@ useEffect(() => {
 
           <TouchableOpacity 
             style={styles.cancelButton}
-            onPress={() => router.back()}
+            onPress={() => router.push('/adm/listarParceiro')} // ✅ ALTERADO
             disabled={isSaving}
           >
             <Text style={styles.cancelButtonText}>Cancelar</Text>
@@ -649,6 +661,8 @@ useEffect(() => {
     </View>
   );
 }
+
+// ... (os estyles permanecem os mesmos)
 
 const styles = StyleSheet.create({
   container: {
@@ -705,55 +719,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2c3e50',
     marginBottom: 5,
-  },
-  sectionSubtitle: {
-    fontSize: 12,
-    color: '#7f8c8d',
-    marginBottom: 15,
-  },
-  imagesContainer: {
-    flexDirection: 'row',
-    marginBottom: 10,
-  },
-  imageWrapper: {
-    position: 'relative',
-    marginRight: 10,
-  },
-  image: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-    backgroundColor: '#ecf0f1',
-  },
-  removeImageButton: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: '#e74c3c',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-  addImageButton: {
-    width: 100,
-    height: 100,
-    borderWidth: 2,
-    borderColor: '#3498db',
-    borderStyle: 'dashed',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
-  addImageText: {
-    fontSize: 12,
-    color: '#3498db',
-    marginTop: 5,
-    textAlign: 'center',
   },
   inputGroup: {
     marginBottom: 15,

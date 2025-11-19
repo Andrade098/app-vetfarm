@@ -1,5 +1,5 @@
-const { DataTypes, Sequelize } = require ('sequelize');
-const  db = require ('../config/db'); // ajuste conforme o caminho do seu arquivo db.ts
+const { DataTypes } = require('sequelize');
+const db = require('../config/db');
 
 const Produto = db.define('Produto', {
   id: {
@@ -8,32 +8,47 @@ const Produto = db.define('Produto', {
     autoIncrement: true,
     unique: true,
     primaryKey: true
-    
-  },
-   farmacia_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
   },
   categoria_id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.INTEGER.UNSIGNED,
+    allowNull: false,
+  },
+  subcategoria_id: {
+    type: DataTypes.INTEGER.UNSIGNED,
     allowNull: false,
   },
   nome: {
     type: DataTypes.STRING,
     allowNull: false,
+    validate: {
+      notEmpty: true
+    }
   },
   descricao: {
     type: DataTypes.STRING,
     allowNull: false,
+    validate: {
+      notEmpty: true
+    }
   },
-  preco: {
-    type: DataTypes.INTEGER,
+  // ❌ REMOVER preco - vai para FarmaciaProduto
+  // ❌ REMOVER estoque - vai para FarmaciaProduto  
+  // ❌ REMOVER farmacia_id - vai para FarmaciaProduto
+  imagens: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: []
+  },
+  ativo: { // ✅ ADICIONAR campo para ativar/desativar produto
+    type: DataTypes.BOOLEAN,
     allowNull: false,
-  },
-  estoque: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
+    defaultValue: true
+  }
+}, {
+  tableName: 'produtos',
+  timestamps: true,
+  createdAt: 'criado_em',
+  updatedAt: 'atualizado_em'
 });
 
 module.exports = Produto;

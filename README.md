@@ -4,15 +4,18 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
 ## Get started
 
-1. Install dependencies
+1. instale as dependências
 
    ```bash
-   Vá ma pasta raiz do projeto
+   Vá na pasta raiz do projeto e digite:
    npm install
 
    Posteriormenta vá na pasta backend
    cd backend
    npm install
+
+   ```
+
    ------
    Crie um arquivo .env e coloque os dados de acordo com suas credenciais do SGBD
    
@@ -23,7 +26,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    DB_NAME=vetfarm
 
    Crie um schema diretamento no SGBD
-   ```
+
 
 2. Start the app
 
@@ -31,6 +34,22 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    cd backend
    node server.js
    abra um novo terminal e digite: npx expo start
+
+
+   Depois de iniciar tudo:
+
+   Crie um arquivo .env na raiz da pasta backend e coloque os dados de acordo com suas credenciais do SGBD
+   
+   JWT_SECRET= sua chave secreta
+   DB_HOST=localhost
+   DB_USER=root
+   DB_PASS='sua senha'
+   DB_NAME=vetfarm
+
+   Crie um schema diretamento no SGBD com o nome vetfarm
+   e posteriormente insere o comando a seguir:
+
+   
    ```
 
 In the output, you'll find options to open the app in a

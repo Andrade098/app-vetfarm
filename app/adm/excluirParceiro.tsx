@@ -20,110 +20,65 @@ export default function DeletePartnerScreen() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPartner, setSelectedPartner] = useState<number | null>(null);
   const [partners, setPartners] = useState<any[]>([]);
-  
-  
-  // 🔍 🔍 🔍 DEBUG TEMPORÁRIO - ADICIONE ESTAS LINHAS 🔍 🔍 🔍
-useEffect(() => {
-  const checkToken = async () => {
-    const token = await AsyncStorage.getItem('userToken');
-    const userData = await AsyncStorage.getItem('userData');
-    console.log('🔍 [DELETE] Debug - Token:', token);
-    console.log('🔍 [DELETE] Debug - UserData:', userData);
-  };
-  checkToken();
-}, []);
-// 🔍 🔍 🔍 FIM DO DEBUG 🔍 🔍 🔍
 
   // VERIFICAR SE É MATRIZ E CARREGAR PARCEIROS
   useEffect(() => {
     checkUserPermissions();
   }, []);
 
- const checkUserPermissions = async () => {
-  try {
-    setIsLoading(true);
-    
-    const token = await AsyncStorage.getItem('userToken');
-    console.log('🔐 [DELETE] Token:', token ? `Presente (${token.length} chars)` : 'Ausente');
-    
-    if (!token) {
-      Alert.alert('Sessão Expirada', 'Por favor, faça login novamente.');
-      setAccessDenied(true);
-      return;
-    }
+  const checkUserPermissions = async () => {
+    try {
+      setIsLoading(true);
+      
+      const token = await AsyncStorage.getItem('userToken');
+      const userDataString = await AsyncStorage.getItem('userData');
+      
+      console.log('🔐 [DELETE] Token:', token ? `Presente (${token.length} chars)` : 'Ausente');
+      console.log('👤 [DELETE] UserData:', userDataString);
 
-    // Tente diferentes endpoints
-    const endpoints = [
-      `${API_URL}/api/farmacia/auth/tipo`,
-      `${API_URL}/api/farmacia/tipo`,
-      `${API_URL}/api/auth/tipo`
-    ];
-
-    let response = null;
-    let lastError = null;
-
-    for (const endpoint of endpoints) {
-      try {
-        console.log('🔄 [DELETE] Tentando endpoint:', endpoint);
-        response = await fetch(endpoint, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (response.ok) break;
-        
-        lastError = `Endpoint ${endpoint}: Status ${response.status}`;
-        console.log(`❌ [DELETE] ${lastError}`);
-      } catch (error) {
-        lastError = `Endpoint ${endpoint}: ${error.message}`;
-        console.log(`❌ [DELETE] ${lastError}`);
+      if (!token || !userDataString) {
+        Alert.alert('Sessão Expirada', 'Por favor, faça login novamente.');
+        setAccessDenied(true);
+        return;
       }
-    }
 
-    if (response && response.ok) {
-      const data = await response.json();
-      console.log('✅ [DELETE] Resposta da API:', data);
+      // ✅ USA OS DADOS DO USERDATA - NÃO PRECISA DA API
+      const userData = JSON.parse(userDataString);
+      console.log('✅ [DELETE] Tipo do usuário:', userData.tipo);
       
-      const userType = data.tipo || data.userType || data.role;
-      console.log('👤 [DELETE] Tipo identificado:', userType);
+      const isUserMatriz = userData.tipo === 'matriz';
+      setIsMatriz(isUserMatriz);
       
-      setIsMatriz(userType === 'matriz');
-      
-      if (userType !== 'matriz') {
+      if (!isUserMatriz) {
+        console.log('❌ [DELETE] Usuário não é matriz');
         Alert.alert('Acesso Negado', 'Somente farmácias matriz podem excluir parceiros.');
         setAccessDenied(true);
       } else {
-        await loadPartners(); // ⚠️ MANTENHA esta linha se existir
+        console.log('✅ [DELETE] Usuário é matriz, carregando parceiros...');
+        await loadPartners();
       }
-    } else {
-      throw new Error(lastError || 'Falha em todos os endpoints');
-    }
 
-  } catch (error) {
-    console.error('💥 [DELETE] Erro crítico:', error);
-    
-    // Fallback para desenvolvimento
-    if (__DEV__) {
-      console.log('🔧 [DELETE] Modo desenvolvimento: Permitindo acesso');
-      setIsMatriz(true);
-      await loadPartners(); // ⚠️ MANTENHA se existir
-    } else {
+    } catch (error) {
+      console.error('💥 [DELETE] Erro ao verificar permissões:', error);
       Alert.alert('Erro', 'Não foi possível verificar suas permissões.');
       setAccessDenied(true);
+    } finally {
+      setIsLoading(false);
     }
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   // CARREGAR PARCEIROS DA API
   const loadPartners = async () => {
     try {
+      console.log('🟡 [DELETE] Carregando parceiros...');
+      
       const token = await AsyncStorage.getItem('userToken');
-      const response = await fetch(`${API_URL}/api/farmacias/parceiros/todos`, {
+      console.log('🔐 Token para carregar parceiros:', token ? `Presente (${token.length} chars)` : 'Ausente');
+
+      const endpoint = `${API_URL}/api/farmacias/parceiros/todos`;
+      console.log('🌐 Endpoint:', endpoint);
+
+      const response = await fetch(endpoint, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -131,57 +86,131 @@ useEffect(() => {
         },
       });
 
+      console.log('📡 Status da resposta:', response.status);
+      console.log('📡 OK:', response.ok);
+
       if (response.ok) {
         const partnersData = await response.json();
+        console.log('✅ Parceiros carregados:', partnersData.length);
         setPartners(partnersData);
       } else if (response.status === 403) {
+        console.log('❌ Acesso negado (403)');
         setAccessDenied(true);
         Alert.alert('Acesso Negado', 'Você não tem permissão para visualizar parceiros.');
       } else {
+        const errorText = await response.text();
+        console.log('❌ Erro ao carregar parceiros:', response.status, errorText);
         Alert.alert('Erro', 'Falha ao carregar parceiros.');
       }
     } catch (error) {
-      console.error('Erro ao carregar parceiros:', error);
+      console.error('💥 Erro ao carregar parceiros:', error);
       Alert.alert('Erro', 'Falha ao conectar com o servidor.');
     }
   };
 
   // EXCLUIR PARCEIRO
-  const deletePartner = async (partnerId: number) => {
-    try {
-      setIsDeleting(true);
-      
-      const token = await AsyncStorage.getItem('userToken');
-      const response = await fetch(`${API_URL}/api/farmacias/parceiros/${partnerId}/excluir`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        // Remove da lista local
-        setPartners(partners.filter(partner => partner.id !== partnerId));
-        setSelectedPartner(null);
-        
-        Alert.alert('Sucesso', 'Farmácia parceira excluída com sucesso!');
-      } else if (response.status === 403) {
-        Alert.alert('Acesso Negado', 'Você não tem permissão para excluir parceiros.');
-        setAccessDenied(true);
-      } else if (response.status === 404) {
-        Alert.alert('Erro', 'Farmácia parceira não encontrada.');
-      } else {
-        const errorData = await response.json();
-        Alert.alert('Erro', errorData.error || 'Erro ao excluir parceiro');
-      }
-    } catch (error) {
-      console.error('Erro ao excluir parceiro:', error);
-      Alert.alert('Erro', 'Falha ao conectar com o servidor');
-    } finally {
-      setIsDeleting(false);
+  // EXCLUIR PARCEIRO - VERSÃO COM DEBUG COMPLETO
+const deletePartner = async (partnerId: number) => {
+  try {
+    setIsDeleting(true);
+    
+    console.log('🔍 [DELETE] === INICIANDO EXCLUSÃO ===');
+    console.log('🆔 [DELETE] Partner ID:', partnerId);
+    console.log('📋 [DELETE] Tipo do ID:', typeof partnerId);
+    
+    const token = await AsyncStorage.getItem('userToken');
+    console.log('🔐 [DELETE] Token:', token ? `Presente (${token.substring(0, 20)}...` : 'AUSENTE');
+    
+    if (!token) {
+      Alert.alert('Erro', 'Token de autenticação não encontrado');
+      return;
     }
-  };
+
+    // ✅ Endpoint correto baseado nas suas rotas
+    const endpoint = `${API_URL}/api/farmacias/parceiros/${partnerId}/excluir`;
+    console.log('🌐 [DELETE] Endpoint COMPLETO:', endpoint);
+
+    console.log('🟡 [DELETE] Fazendo requisição DELETE...');
+    
+    const response = await fetch(endpoint, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log('📡 [DELETE] Resposta recebida - Status:', response.status);
+    console.log('📡 [DELETE] Resposta OK:', response.ok);
+
+    // Tentar ler a resposta independente do status
+    let responseBody;
+    try {
+      responseBody = await response.text();
+      console.log('📄 [DELETE] Corpo da resposta:', responseBody);
+      
+      // Tentar parsear como JSON se possível
+      if (responseBody) {
+        try {
+          const jsonResponse = JSON.parse(responseBody);
+          console.log('📄 [DELETE] Resposta JSON:', jsonResponse);
+        } catch (e) {
+          console.log('📄 [DELETE] Resposta não é JSON');
+        }
+      }
+    } catch (e) {
+      console.log('❌ [DELETE] Erro ao ler resposta:', e);
+    }
+
+    if (response.ok) {
+      console.log('✅ [DELETE] EXCLUSÃO BEM-SUCEDIDA!');
+      
+      // Remove da lista local
+      const updatedPartners = partners.filter(partner => partner.id !== partnerId);
+      console.log('🔄 [DELETE] Lista atualizada:', updatedPartners.length, 'parceiros');
+      
+      setPartners(updatedPartners);
+      setSelectedPartner(null);
+      
+      Alert.alert(
+        'Sucesso', 
+        'Farmácia parceira excluída com sucesso!',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Tratamento de erros específicos
+    switch (response.status) {
+      case 400:
+        Alert.alert('Erro', 'Dados inválidos enviados para o servidor');
+        break;
+      case 401:
+        Alert.alert('Sessão Expirada', 'Por favor, faça login novamente');
+        router.push('/login');
+        break;
+      case 403:
+        Alert.alert('Acesso Negado', 'Você não tem permissão para excluir parceiros');
+        setAccessDenied(true);
+        break;
+      case 404:
+        Alert.alert('Erro', 'Farmácia parceira não encontrada');
+        break;
+      case 500:
+        Alert.alert('Erro', 'Erro interno do servidor');
+        break;
+      default:
+        Alert.alert('Erro', `Erro ${response.status} ao excluir parceiro`);
+    }
+
+  } catch (error) {
+    console.error('💥 [DELETE] Erro na requisição:', error);
+    Alert.alert('Erro', 'Falha ao conectar com o servidor: ' + (error.message || 'Verifique sua conexão de internet'));
+  } finally {
+    console.log('🔍 [DELETE] === FINALIZANDO EXCLUSÃO ===');
+    setIsDeleting(false);
+  }
+};
 
   const filteredPartners = partners.filter(partner =>
     partner.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -198,55 +227,23 @@ useEffect(() => {
   };
 
   const confirmDelete = () => {
-    if (!selectedPartner) {
-      Alert.alert('Atenção', 'Selecione uma farmácia parceira para excluir');
-      return;
-    }
+  if (!selectedPartner) {
+    Alert.alert('Atenção', 'Selecione uma farmácia parceira para excluir');
+    return;
+  }
 
-    const partner = partners.find(p => p.id === selectedPartner);
-    
-    Alert.alert(
-      'Confirmar Exclusão',
-      `Tem certeza que deseja excluir permanentemente a farmácia parceira "${partner?.nome}"?\n\n⚠️  Esta ação não pode ser desfeita.\n📦 Todos os produtos associados serão removidos.\n🚫 O acesso ao sistema será revogado.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Excluir Permanentemente', 
-          style: 'destructive',
-          onPress: () => deletePartner(selectedPartner)
-        }
-      ]
-    );
-  };
+  const partner = partners.find(p => p.id === selectedPartner);
+  
+  console.log('🟡 [DELETE] Chamando deletePartner DIRETAMENTE (sem confirmação)');
+  console.log('🟡 [DELETE] Parceiro:', partner?.nome);
+  console.log('🟡 [DELETE] ID:', selectedPartner);
+  
+  // ⚠️ TESTE DIRETO - REMOVA O ALERT TEMPORARIAMENTE
+  deletePartner(selectedPartner);
+};
 
   const getSelectedPartner = () => {
     return partners.find(partner => partner.id === selectedPartner);
-  };
-
-  const renderStars = (rating: number) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
-
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(<Ionicons key={i} name="star" size={16} color="#FFD700" />);
-    }
-
-    if (hasHalfStar) {
-      stars.push(<Ionicons key="half" name="star-half" size={16} color="#FFD700" />);
-    }
-
-    const emptyStars = 5 - stars.length;
-    for (let i = 0; i < emptyStars; i++) {
-      stars.push(<Ionicons key={`empty-${i}`} name="star-outline" size={16} color="#FFD700" />);
-    }
-
-    return (
-      <View style={styles.ratingContainer}>
-        {stars}
-        <Text style={styles.ratingText}>({rating})</Text>
-      </View>
-    );
   };
 
   // TELA DE CARREGAMENTO
@@ -270,9 +267,9 @@ useEffect(() => {
         </Text>
         <TouchableOpacity 
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => router.push('/(tabs)')}
         >
-          <Text style={styles.backButtonText}>Voltar</Text>
+          <Text style={styles.backButtonText}>Voltar para Início</Text>
         </TouchableOpacity>
       </View>
     );
@@ -335,11 +332,9 @@ useEffect(() => {
                 onPress={() => selectPartner(partner.id)}
                 disabled={isDeleting}
               >
-                <Image 
-                  source={{ uri: partner.imagem || 'https://via.placeholder.com/100' }} 
-                  style={styles.partnerImage}
-                  defaultSource={{ uri: 'https://via.placeholder.com/100' }}
-                />
+                <View style={styles.partnerIcon}>
+                  <Ionicons name="business" size={32} color="#3498db" />
+                </View>
                 
                 <View style={styles.partnerInfo}>
                   <Text style={styles.partnerName} numberOfLines={1}>
@@ -347,12 +342,10 @@ useEffect(() => {
                   </Text>
                   <Text style={styles.partnerCategory}>{partner.categoria || 'Farmácia Parceira'}</Text>
                   
-                  {partner.rating && renderStars(partner.rating)}
-                  
                   <View style={styles.partnerContact}>
                     <Ionicons name="location" size={12} color="#7f8c8d" />
                     <Text style={styles.partnerAddress} numberOfLines={1}>
-                      {partner.endereco}, {partner.cidade}
+                      {partner.cidade}, {partner.estado}
                     </Text>
                   </View>
                   
@@ -366,9 +359,6 @@ useEffect(() => {
                   </Text>
                   
                   <View style={styles.partnerDetails}>
-                    <Text style={styles.productsCount}>
-                      {partner.produtosCount || 0} produtos
-                    </Text>
                     <Text style={styles.partnerEmail} numberOfLines={1}>
                       {partner.email}
                     </Text>
@@ -392,22 +382,18 @@ useEffect(() => {
           <View style={styles.selectedSection}>
             <Text style={styles.sectionTitle}>Farmácia Selecionada para Exclusão</Text>
             <View style={styles.selectedPartner}>
-              <Image 
-                source={{ uri: getSelectedPartner()?.imagem || 'https://via.placeholder.com/100' }} 
-                style={styles.selectedPartnerImage}
-                defaultSource={{ uri: 'https://via.placeholder.com/100' }}
-              />
+              <View style={styles.selectedPartnerIcon}>
+                <Ionicons name="business" size={40} color="#3498db" />
+              </View>
               
               <View style={styles.selectedPartnerInfo}>
                 <Text style={styles.selectedPartnerName}>{getSelectedPartner()?.nome}</Text>
                 <Text style={styles.selectedPartnerCategory}>{getSelectedPartner()?.categoria || 'Farmácia Parceira'}</Text>
                 
-                {getSelectedPartner()?.rating && renderStars(getSelectedPartner().rating)}
-                
                 <View style={styles.selectedPartnerContact}>
                   <Ionicons name="location" size={14} color="#7f8c8d" />
                   <Text style={styles.selectedPartnerAddress}>
-                    {getSelectedPartner()?.endereco}, {getSelectedPartner()?.cidade}
+                    {getSelectedPartner()?.cidade}, {getSelectedPartner()?.estado}
                   </Text>
                 </View>
                 
@@ -424,43 +410,44 @@ useEffect(() => {
                 <Text style={styles.selectedPartnerDescription}>
                   {getSelectedPartner()?.descricao}
                 </Text>
-                
-                <View style={styles.selectedPartnerDetails}>
-                  <Text style={styles.selectedProductsCount}>
-                    {getSelectedPartner()?.produtosCount || 0} produtos cadastrados
-                  </Text>
-                </View>
               </View>
             </View>
           </View>
         )}
 
         {/* Botão de Exclusão */}
-        <View style={styles.actionSection}>
-          <TouchableOpacity 
-            style={[
-              styles.deleteButton,
-              (!selectedPartner || isDeleting) && styles.deleteButtonDisabled
-            ]}
-            onPress={confirmDelete}
-            disabled={!selectedPartner || isDeleting}
-          >
-            {isDeleting ? (
-              <ActivityIndicator size="small" color="white" />
-            ) : (
-              <Ionicons name="trash" size={20} color="white" />
-            )}
-            <Text style={styles.deleteButtonText}>
-              {isDeleting ? 'Excluindo...' : 'Excluir Farmácia Parceira'}
-            </Text>
-          </TouchableOpacity>
+        {/* Botão de Exclusão - VERSÃO DEBUG */}
+<View style={styles.actionSection}>
+  <TouchableOpacity 
+    style={[
+      styles.deleteButton,
+      (!selectedPartner || isDeleting) && styles.deleteButtonDisabled
+    ]}
+    onPress={() => {
+      console.log('🎯 [DELETE] === BOTÃO EXCLUIR CLICADO ===');
+      console.log('🎯 [DELETE] selectedPartner:', selectedPartner);
+      console.log('🎯 [DELETE] isDeleting:', isDeleting);
+      console.log('🎯 [DELETE] Botão habilitado?', !(!selectedPartner || isDeleting));
+      confirmDelete();
+    }}
+    disabled={!selectedPartner || isDeleting}
+  >
+    {isDeleting ? (
+      <ActivityIndicator size="small" color="white" />
+    ) : (
+      <Ionicons name="trash" size={20} color="white" />
+    )}
+    <Text style={styles.deleteButtonText}>
+      {isDeleting ? 'Excluindo...' : `Excluir (${selectedPartner ? 'Habilitado' : 'Desabilitado'})`}
+    </Text>
+  </TouchableOpacity>
 
           <TouchableOpacity 
             style={[styles.cancelButton, isDeleting && styles.cancelButtonDisabled]}
-            onPress={() => router.back()}
+            onPress={() => router.push('/adm')}
             disabled={isDeleting}
           >
-            <Text style={styles.cancelButtonText}>Cancelar</Text>
+            <Text style={styles.cancelButtonText}>Voltar para Início</Text>
           </TouchableOpacity>
         </View>
 
@@ -470,8 +457,6 @@ useEffect(() => {
     </View>
   );
 }
-
-
 
 const styles = StyleSheet.create({
   container: {
@@ -543,11 +528,13 @@ const styles = StyleSheet.create({
     borderColor: '#3498db',
     backgroundColor: '#e8f4fd',
   },
-  partnerImage: {
+  partnerIcon: {
     width: 60,
     height: 60,
     borderRadius: 8,
     backgroundColor: '#ecf0f1',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   partnerInfo: {
     flex: 1,
@@ -563,16 +550,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#7f8c8d',
     marginBottom: 6,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  ratingText: {
-    fontSize: 12,
-    color: '#7f8c8d',
-    marginLeft: 5,
   },
   partnerContact: {
     flexDirection: 'row',
@@ -600,16 +577,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  productsCount: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#27ae60',
-  },
   partnerEmail: {
     fontSize: 11,
     color: '#7f8c8d',
     flex: 1,
-    marginLeft: 10,
   },
   selectionIndicator: {
     justifyContent: 'center',
@@ -628,11 +599,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#3498db',
   },
-  selectedPartnerImage: {
+  selectedPartnerIcon: {
     width: 80,
     height: 80,
     borderRadius: 8,
     backgroundColor: '#ecf0f1',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   selectedPartnerInfo: {
     flex: 1,
@@ -674,16 +647,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#7f8c8d',
     marginBottom: 8,
-  },
-  selectedPartnerDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  selectedProductsCount: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#27ae60',
   },
   actionSection: {
     backgroundColor: 'white',
@@ -760,5 +723,8 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  bottomSpacer: {
+    height: 20,
   },
 });

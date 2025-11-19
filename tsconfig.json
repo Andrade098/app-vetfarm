@@ -20,7 +20,7 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-, "backend/src/models/Carrinho.js", "backend/src/models/Categoria.js", "backend/src/models/Cliente.js", "backend/src/models/Compra.js", "backend/src/models/Endereco.js", "backend/src/models/Farmacia.js", "backend/src/models/FarmaciaProduto.js", "backend/src/models/Favorito.js", "backend/src/models/FormaPagamento.js", "backend/src/models/ItemCompra.js", "backend/src/models/PontosFidelidadeRegra.js", "backend/src/models/Produto.js", "backend/src/models/ProdutoCategoria.js"  ],
+, "backend/src/models/Carrinho.js", "backend/src/models/Categoria.js", "backend/src/models/Cliente.js", "backend/src/models/Compra.js", "backend/src/models/Endereco.js", "backend/src/models/Farmacia.js", "backend/src/models/FarmaciaProduto.js", "backend/src/models/Favorito.js", "backend/src/models/FormaPagamento.js", "backend/src/models/ItemCompra.js", "backend/src/models/PontosFidelidadeRegra.js", "backend/src/models/Produto.js", "backend/src/models/Subcategoria.js"  ],
   "exclude": [
     "node_modules",
     "dist"

@@ -1,24 +1,47 @@
 const jwt = require('jsonwebtoken');
 
+// ✅ MIDDLEWARE ÚNICO E CONSISTENTE
 const authMiddleware = (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
+    console.log('🔐 [AUTH] Token recebido:', token ? `Presente (${token.length} chars)` : 'AUSENTE');
+
     if (!token) {
+      console.log('❌ [AUTH] Token não fornecido');
       return res.status(401).json({
         success: false,
         error: 'Acesso negado. Token não fornecido.'
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'segredo');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'segredo_temporario');
+    console.log('✅ [AUTH] Token decodificado:', decoded);
+    
+    // ✅ PADRONIZAR: sempre usar req.user
     req.user = decoded;
+    req.farmaciaId = decoded.id; // ← manter compatibilidade
+    
     next();
   } catch (error) {
     console.error('❌ ERRO NO MIDDLEWARE DE AUTENTICAÇÃO:', error);
-    res.status(401).json({
+    
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        error: 'Token inválido.'
+      });
+    }
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false, 
+        error: 'Token expirado.'
+      });
+    }
+    
+    res.status(500).json({
       success: false,
-      error: 'Token inválido ou expirado.'
+      error: 'Erro na autenticação.'
     });
   }
 };
@@ -42,35 +65,8 @@ const isMatriz = (req, res, next) => {
   }
 };
 
-// MIDDLEWARE ESPECÍFICO PARA FARMÁCIAS
-const authFarmacia = (req, res, next) => {
-  try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        error: 'Acesso negado. Token não fornecido.'
-      });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'segredo');
-    
-    req.user = decoded;
-    req.farmacia = decoded;
-    
-    next();
-  } catch (error) {
-    console.error('❌ ERRO NA AUTENTICAÇÃO DA FARMÁCIA:', error);
-    res.status(401).json({
-      success: false,
-      error: 'Token inválido ou expirado.'
-    });
-  }
-};
-
 module.exports = { 
   authMiddleware, 
-  isMatriz, 
-  authFarmacia 
+  isMatriz
+  // ❌ REMOVER authFarmacia - usar apenas authMiddleware
 };

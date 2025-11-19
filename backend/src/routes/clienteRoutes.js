@@ -5,7 +5,11 @@ const bcrypt = require('bcrypt');
 console.log('✅ clienteRoutes.js CARREGADO!');
 
 const clienteController = require('../controllers/clienteController');
+const clienteAuthController = require('../controllers/clienteAuthController'); // ⭐⭐ ADICIONE ESTA LINHA ⭐⭐
 const { authMiddleware } = require('../middlewares/authMiddleware');
+
+// ⭐⭐ ROTA DE LOGIN DO CLIENTE ⭐⭐
+router.post('/login', clienteAuthController.login);
 
 // ⭐⭐ ROTA DE TESTE (APENAS PARA DEBUG) ⭐⭐
 router.post('/teste', (req, res) => {

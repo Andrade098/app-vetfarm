@@ -28,65 +28,81 @@ export default function ListarParceirosScreen() {
 
   // Buscar parceiros do banco de dados - APENAS FILIAIS
   const fetchPartners = async () => {
-    try {
-      console.log('🔍 Buscando farmácias filiais do banco de dados...');
-      
-      const userDataString = await AsyncStorage.getItem('userData');
-      if (!userDataString) {
-        throw new Error('Dados do usuário não encontrados');
-      }
-
-      const userData = JSON.parse(userDataString);
-      const token = userData.token;
-
-      const response = await fetch('http://localhost:3000/api/farmacias/parceiros/todos', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      console.log('📡 Status da resposta:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Erro da API:', errorText);
-        throw new Error(`Erro HTTP: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log('📊 Dados BRUTOS recebidos da API:', data);
-      
-      // ✅ MAPEAR CAMPOS - APENAS OS QUE EXISTEM
-      const filiaisMapeadas = data.map((farmacia: any) => {
-        return {
-          id: farmacia.id,
-          nome: farmacia.nome,
-          cidade: farmacia.cidade || '',
-          telefone: farmacia.telefone || '',
-          email: farmacia.email,
-          endereco: farmacia.endereco || '',
-          descricao: farmacia.descricao || '',
-          bairro: farmacia.bairro || '',
-          estado: farmacia.estado || '',
-          cep: farmacia.cep || '',
-          tipo: farmacia.tipo
-        };
-      });
-
-      console.log('✅ Farmácias mapeadas:', filiaisMapeadas.length);
-      setPartners(filiaisMapeadas);
-
-    } catch (error) {
-      console.error('❌ Erro ao buscar farmácias filiais:', error);
-      Alert.alert('Erro', 'Não foi possível carregar a lista de farmácias filiais');
-      setPartners([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  try {
+    console.log('🔍 Buscando farmácias filiais do banco de dados...');
+    
+    const userDataString = await AsyncStorage.getItem('userData');
+    console.log('📦 userData do AsyncStorage:', userDataString);
+    
+    if (!userDataString) {
+      throw new Error('Dados do usuário não encontrados');
     }
-  };
+
+    const userData = JSON.parse(userDataString);
+    const token = userData.token;
+    
+    console.log('🔑 Token encontrado:', token ? 'SIM' : 'NÃO');
+    console.log('👤 Tipo do usuário:', userData.tipo);
+    console.log('🏢 Farmácia logada é matriz?', userData.tipo === 'matriz');
+    
+    if (!token) {
+      throw new Error('Token não encontrado');
+    }
+
+    // ⭐⭐ CORREÇÃO: USE O IP DA REDE ⭐⭐
+    const response = await fetch('http://192.168.0.3:3000/api/farmacias/parceiros/todos', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log('📡 Status da resposta:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Erro da API:', errorText);
+      throw new Error(`Erro HTTP: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('📊 Dados BRUTOS recebidos da API:', data);
+    
+    // ✅ MAPEAR CAMPOS - APENAS OS QUE EXISTEM
+    const filiaisMapeadas = data.map((farmacia: any) => {
+      return {
+        id: farmacia.id,
+        nome: farmacia.nome,
+        cidade: farmacia.cidade || '',
+        telefone: farmacia.telefone || '',
+        email: farmacia.email,
+        endereco: farmacia.endereco || '',
+        descricao: farmacia.descricao || '',
+        bairro: farmacia.bairro || '',
+        estado: farmacia.estado || '',
+        cep: farmacia.cep || '',
+        tipo: farmacia.tipo
+      };
+    });
+
+    console.log('✅ Farmácias mapeadas:', filiaisMapeadas.length);
+    console.log('📋 Lista de filiais:', filiaisMapeadas);
+    
+    setPartners(filiaisMapeadas);
+    
+    // ⭐⭐ DEBUG: VERIFICAR ESTADO ATUALIZADO ⭐⭐
+    console.log('🔄 Estado partners atualizado:', filiaisMapeadas.length);
+
+  } catch (error) {
+    console.error('❌ Erro ao buscar farmácias filiais:', error);
+    Alert.alert('Erro', 'Não foi possível carregar a lista de farmácias filiais');
+    setPartners([]);
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
 
   // Carregar parceiros quando a tela abrir
   useEffect(() => {
@@ -114,14 +130,30 @@ export default function ListarParceirosScreen() {
   };
 
   const handleEditPartner = () => {
-    if (!selectedPartner) {
-      Alert.alert('Atenção', 'Selecione uma farmácia filial para editar');
-      return;
-    }
+  if (!selectedPartner) {
+    Alert.alert('Atenção', 'Selecione uma farmácia filial para editar');
+    return;
+  }
 
-    // Navega para a tela de edição passando o ID do parceiro
+  console.log('🔍 DEBUG COMPLETO:');
+  console.log('   - ID:', selectedPartner);
+  console.log('   - Tipo:', typeof selectedPartner);
+  console.log('   - Router disponível:', !!router);
+  
+  // ⭐⭐ TENTE TODAS AS OPÇÕES ⭐⭐
+  try {
+    console.log('🔄 Tentando router.push...');
     router.push(`/adm/editarParceiro?id=${selectedPartner}`);
-  };
+    
+    setTimeout(() => {
+      console.log('🔄 Tentando router.navigate...');
+      router.navigate(`/adm/editarParceiro?id=${selectedPartner}`);
+    }, 500);
+    
+  } catch (error) {
+    console.error('❌ Erro no router:', error);
+  }
+};
 
   const getSelectedPartner = () => {
     return partners.find(partner => partner.id === selectedPartner);
@@ -360,7 +392,7 @@ export default function ListarParceirosScreen() {
 
           <TouchableOpacity 
             style={styles.cancelButton}
-            onPress={() => router.back()}
+            onPress={() => router.push('/adm')}
           >
             <Text style={styles.cancelButtonText}>Voltar</Text>
           </TouchableOpacity>

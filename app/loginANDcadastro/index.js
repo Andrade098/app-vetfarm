@@ -2,119 +2,105 @@ import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Alert } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from '../../contexts/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loginType, setLoginType] = useState(null); // 'cliente' ou 'farmacia'
   const router = useRouter();
-  const { login } = useAuth();
 
-  async function handleLogin() {
-    console.log('🔐 INICIANDO LOGIN...');
+  async function handleLogin(tipo) {
+  try {
+    setLoading(true);
+    setLoginType(tipo);
+    
+    console.log(`🔐 FAZENDO LOGIN COMO: ${tipo}`);
     console.log('📧 Email:', email);
-    console.log('🔑 Senha:', password ? '***' : 'FALTANDO');
-
-    if (loading) return;
-
-    try {
-      setLoading(true);
-
-      if (!email || !password) {
-        Alert.alert('Atenção', 'Por favor, preencha email e senha');
-        return;
-      }
-
-      // ⭐⭐ IP DO SERVIDOR
-      const API_URL = 'http://192.168.0.3:3000';
-
-      console.log('🌐 ENVIANDO REQUEST PARA:', `${API_URL}/api/login`);
-      
-      const response = await fetch(`${API_URL}/api/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          email: email.trim().toLowerCase(), 
-          senha: password 
-        }),
-      });
-
-      console.log('📊 STATUS DA RESPOSTA:', response.status);
-      
-      const data = await response.json();
-      console.log('📦 RESPOSTA COMPLETA DA API:', data);
-
-      if (!response.ok) {
-        Alert.alert('Erro no Login', data.error || 'Credenciais inválidas');
-        return;
-      }
-
-      // ⭐⭐ CORREÇÃO PRINCIPAL: A API RETORNA data.farmacia E data.token
-      if (data.success && data.token && data.farmacia) {
-        console.log('✅ LOGIN BEM-SUCEDIDO');
-        console.log('🔑 TOKEN:', data.token ? 'PRESENTE' : 'FALTANDO');
-        console.log('👤 DADOS DA FARMÁCIA:', data.farmacia);
-
-        // ⭐⭐ CORREÇÃO: Usar data.farmacia que vem da API
-        const userData = {
-          id: data.farmacia.id.toString(),
-          nome: data.farmacia.nome || 'Farmácia',
-          email: data.farmacia.email,
-          tipo: data.farmacia.tipo || 'filial',
-          // Campos opcionais para farmácia
-          sobrenome: '',
-          telefone: data.farmacia.telefone || '',
-          cpf: '',
-          data_nascimento: ''
-        };
-
-        // ⭐⭐ CHAMAR LOGIN DO CONTEXT COM OS DADOS CORRETOS
-        login(userData, data.token);
-        
-        // ⭐⭐ SALVAR NO ASYNC STORAGE
-        await AsyncStorage.setItem('userToken', data.token);
-        await AsyncStorage.setItem('userData', JSON.stringify(userData));
-        await AsyncStorage.setItem('farmaciaTipo', data.farmacia.tipo); // ⭐⭐ IMPORTANTE para proteção
-
-        console.log('💾 DADOS SALVOS:', {
-          token: data.token ? 'SALVO' : 'FALTANDO',
-          tipo: data.farmacia.tipo,
-          nome: data.farmacia.nome
-        });
-
-        // ⭐⭐ REDIRECIONAMENTO CORRETO
-        // ⭐⭐ CORREÇÃO: Farmácias (matriz E filial) vão para /adm
-// Clientes vão para /home
-
-// Redireciona conforme o tipo do usuário
-if (data.tipo === 'cliente') {
-  console.log('Redirecionando CLIENTE para /home');
-  router.replace('/home');
-} else {
-  // ⭐⭐ Farmácias (matriz E filial) vão para o painel admin
-  console.log('Redirecionando FARMÁCIA para /adm');
-  router.replace('/adm');
-}
-
-      } else {
-        console.log('❌ DADOS INCOMPLETOS NA RESPOSTA:', data);
-        Alert.alert('Erro', 'Dados de login incompletos recebidos do servidor');
-      }
-
-    } catch (err) {
-      console.error('💥 ERRO NO LOGIN:', err);
-      Alert.alert('Erro', 'Não foi possível conectar ao servidor. Verifique sua conexão.');
-    } finally {
-      setLoading(false);
+    
+    if (!email || !password) {
+      Alert.alert('Erro', 'Preencha email e senha');
+      return;
     }
+
+    const url = tipo === 'farmacia' 
+      ? 'http://192.168.0.3:3000/api/farmacias/login'
+      : 'http://192.168.0.3:3000/api/clientes/login';
+
+    console.log('🌐 URL:', url);
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ 
+        email: email.trim(), 
+        senha: password 
+      })
+    });
+
+    console.log('📥 Status da resposta:', response.status);
+    
+    const responseText = await response.text();
+    console.log('📥 Resposta completa:', responseText);
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+      console.log('📥 Resposta JSON:', data);
+    } catch (e) {
+      console.log('❌ Resposta não é JSON:', responseText);
+      Alert.alert('Erro', 'Resposta inválida do servidor');
+      return;
+    }
+
+    // ✅ CORREÇÃO: Verificar se response.ok em vez de data.success
+    if (response.ok) {
+      console.log('✅ LOGIN BEM-SUCEDIDO!');
+      
+      if (tipo === 'farmacia') {
+        // ✅ SALVAR TOKEN SEPARADAMENTE
+        await AsyncStorage.setItem('userToken', data.token);
+        await AsyncStorage.setItem('userData', JSON.stringify(data.farmacia));
+        
+        console.log('🔑 Token salvo:', data.token);
+        console.log('👤 Dados farmácia:', data.farmacia);
+        
+        // ✅ VERIFICAR SE SALVOU
+        const savedToken = await AsyncStorage.getItem('userToken');
+        const savedUser = await AsyncStorage.getItem('userData');
+        console.log('💾 Token no AsyncStorage:', savedToken);
+        console.log('💾 UserData no AsyncStorage:', savedUser);
+        
+        console.log('📍 REDIRECIONANDO PARA ADMIN...');
+        router.replace('/adm/');
+        
+      } else {
+        // Para cliente
+        await AsyncStorage.setItem('userToken', data.token);
+        await AsyncStorage.setItem('userData', JSON.stringify(data.usuario));
+        console.log('📍 REDIRECIONANDO PARA HOME...');
+        router.replace('/home/');
+      }
+      
+    } else {
+      console.log('❌ ERRO NO LOGIN:', data);
+      Alert.alert('Erro', data.error || `Erro ${response.status}`);
+    }
+
+  } catch (error) {
+    console.error('💥 ERRO NO LOGIN:', error);
+    Alert.alert('Erro', 'Falha na conexão: ' + error.message);
+  } finally {
+    setLoading(false);
+    setLoginType(null);
   }
+}
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {/* Logo com sua imagem */}
+      {/* Logo */}
       <View style={styles.logoContainer}>
         <Image
           source={require('../../assets/images/logovetfarm.png')}
@@ -136,7 +122,6 @@ if (data.tipo === 'cliente') {
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
-          autoCorrect={false}
         />
 
         <TextInput
@@ -146,34 +131,42 @@ if (data.tipo === 'cliente') {
           secureTextEntry
           value={password}
           onChangeText={setPassword}
-          autoCorrect={false}
         />
 
+        {/* ⭐⭐ DOIS BOTÕES SEPARADOS ⭐⭐ */}
         <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={loading}
+          style={[styles.button, styles.clientButton, loading && loginType === 'cliente' && styles.buttonDisabled]}
+          onPress={() => handleLogin('cliente')}
+          disabled={loading && loginType === 'cliente'}
         >
           <Text style={styles.buttonText}>
-            {loading ? 'ENTRANDO...' : 'ENTRAR'}
+            {loading && loginType === 'cliente' ? 'ENTRANDO...' : 'ENTRAR COMO CLIENTE'}
           </Text>
         </TouchableOpacity>
 
-        {/* Link para Esqueci Senha */}
+        <TouchableOpacity
+          style={[styles.button, styles.farmacyButton, loading && loginType === 'farmacia' && styles.buttonDisabled]}
+          onPress={() => handleLogin('farmacia')}
+          disabled={loading && loginType === 'farmacia'}
+        >
+          <Text style={styles.buttonText}>
+            {loading && loginType === 'farmacia' ? 'ENTRANDO...' : 'ENTRAR COMO FARMÁCIA'}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Links */}
         <Link href="/loginANDcadastro/esqueciSenha" asChild>
           <TouchableOpacity>
             <Text style={styles.forgotPassword}>Esqueci minha senha</Text>
           </TouchableOpacity>
         </Link>
 
-        {/* Divisor */}
         <View style={styles.divider}>
           <View style={styles.dividerLine} />
           <Text style={styles.dividerText}>ou</Text>
           <View style={styles.dividerLine} />
         </View>
 
-        {/* Cadastro */}
         <View style={styles.signupContainer}>
           <Text style={styles.signupText}>Não tem uma conta?</Text>
           <Link href="/loginANDcadastro/cadastro" asChild>
@@ -231,31 +224,36 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9f9f9",
   },
   button: {
-    backgroundColor: "#126b1a",
     width: "100%",
     padding: 15,
     borderRadius: 10,
     alignItems: "center",
-    marginTop: 10,
-    marginBottom: 20,
+    marginBottom: 10,
+  },
+  clientButton: {
+    backgroundColor: "#126b1a", // Verde
+  },
+  farmacyButton: {
+    backgroundColor: "#3498db", // Azul
   },
   buttonDisabled: {
     backgroundColor: "#95a5a6",
   },
   buttonText: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
   },
   forgotPassword: {
     color: "#126b1a",
     textAlign: "center",
     fontSize: 14,
+    marginTop: 10,
   },
   divider: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 30,
+    marginVertical: 20,
   },
   dividerLine: {
     flex: 1,

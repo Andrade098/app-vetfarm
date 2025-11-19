@@ -123,6 +123,15 @@ module.exports = {
     return cliente;
   },
 
+  async buscarPorEmail(email) {
+    console.log('🔍 SERVICE - Buscando cliente por email:', email);
+    const cliente = await Cliente.findOne({ where: { email } });
+    if (!cliente) {
+      throw { status: 404, message: 'Cliente não encontrado' };
+    }
+    return cliente;
+  },
+
   async atualizarCliente(id, dados) {
     console.log('✏️ SERVICE - Atualizando cliente ID:', id);
     const cliente = await Cliente.findByPk(id);

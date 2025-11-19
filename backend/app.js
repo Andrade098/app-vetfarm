@@ -13,6 +13,7 @@ app.use(cors({
 app.use(express.json());
 
 // ⭐⭐ MIDDLEWARE DE DEBUG DETALHADO ⭐⭐
+/*
 app.use((req, res, next) => {
   console.log(`=== REQUISIÇÃO RECEBIDA ===`);
   console.log(`Método: ${req.method}`);
@@ -22,10 +23,14 @@ app.use((req, res, next) => {
   console.log(`=== FIM REQUISIÇÃO ===`);
   next();
 });
-
-// ROTAS
+*/
+// ROTAS - ⭐⭐ ATUALIZADAS ⭐⭐
 app.use('/api/clientes', require('./src/routes/clienteRoutes'));
-app.use('/api/login', require('./src/routes/loginRoutes'));
-app.use('/api/farmacia', require('./src/routes/farmaciaRoutes'));
+// ❌ REMOVER: app.use('/api/login', require('./src/routes/loginRoutes')); // ROTA OBSOLETA
+app.use('/api/farmacias', require('./src/routes/farmaciaRoutes')); // ⭐⭐ CORRIGIDO: farmaciaS (plural)
+
+// ✅✅✅ ADICIONAR AS NOVAS ROTAS DE PRODUTOS ✅✅✅
+//app.use('/api/produtos', require('./src/routes/produtoRoutes'));
+//app.use('/api/farmacia-produtos', require('./src/routes/farmaciaProdutoRoutes'));
 
 module.exports = app;

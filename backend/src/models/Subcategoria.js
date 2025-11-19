@@ -1,13 +1,17 @@
 const { DataTypes } = require('sequelize');
 const db = require('../config/db');
 
-const Categoria = db.define('Categoria', {
+const Subcategoria = db.define('Subcategoria', {
   id: {
     type: DataTypes.INTEGER.UNSIGNED,
     autoIncrement: true,
     primaryKey: true,
     allowNull: false,
     unique: true,
+  },
+  categoria_id: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    allowNull: false,
   },
   nome: {
     type: DataTypes.STRING(255),
@@ -18,8 +22,8 @@ const Categoria = db.define('Categoria', {
     allowNull: true,
   }
 }, {
-  tableName: 'categorias',
+  tableName: 'subcategorias',
   timestamps: true
 });
 
-module.exports = Categoria;
+module.exports = Subcategoria;
