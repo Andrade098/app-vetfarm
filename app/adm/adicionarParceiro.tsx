@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// ⭐⭐ CONSTANTE PARA IP DO SERVIDOR ⭐⭐
+const API_URL = 'http://192.168.0.3:3000';
 
 const states = [
   { label: 'Acre', value: 'AC' },
@@ -36,45 +40,96 @@ const states = [
 
 export default function AddPartnerScreen() {
   const router = useRouter();
+  
+  // ESTADOS PARA PROTEÇÃO
+  const [isLoading, setIsLoading] = useState(true);
+  // 🔍 Debug temporário - REMOVA depois
+useEffect(() => {
+  const checkToken = async () => {
+    const token = await AsyncStorage.getItem('userToken');
+    const userData = await AsyncStorage.getItem('userData');
+    console.log('🔍 Debug - Token:', token);
+    console.log('🔍 Debug - UserData:', userData);
+  };
+  checkToken();
+}, []);
+  const [isMatriz, setIsMatriz] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
+
+  // Estados existentes
   const [images, setImages] = useState<string[]>([]);
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    address: '',
-    neighborhood: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    phone: '',
+    nome: '',
+    descricao: '',
+    endereco: '',
+    bairro: '',
+    cidade: '',
+    estado: '',
+    cep: '',
+    telefone: '',
     email: '',
-    password: '',
+    senha: '',
     confirmPassword: ''
   });
   const [showStates, setShowStates] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const pickImage = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
-      });
+  // 🔍 🔍 🔍 DEBUG TEMPORÁRIO - ADICIONE ESTAS LINHAS 🔍 🔍 🔍
+useEffect(() => {
+  const checkToken = async () => {
+    const token = await AsyncStorage.getItem('userToken');
+    const userData = await AsyncStorage.getItem('userData');
+    console.log('🔍 [ADD] Debug - Token:', token);
+    console.log('🔍 [ADD] Debug - UserData:', userData);
+  };
+  checkToken();
+}, []);
+// 🔍 🔍 🔍 FIM DO DEBUG 🔍 🔍 🔍
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setImages([...images, result.assets[0].uri]);
-      }
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível selecionar a imagem');
+  // VERIFICAR SE É MATRIZ AO CARREGAR A TELA
+  useEffect(() => {
+    checkUserType();
+  }, []);
+
+  const checkUserType = async () => {
+  try {
+    setIsLoading(true);
+    
+    const token = await AsyncStorage.getItem('userToken');
+    const userDataString = await AsyncStorage.getItem('userData');
+    
+    console.log('🔐 Token:', token ? `Presente (${token.length} chars)` : 'Ausente');
+    console.log('👤 UserData:', userDataString);
+
+    if (!token || !userDataString) {
+      Alert.alert('Sessão Expirada', 'Por favor, faça login novamente.');
+      setAccessDenied(true);
+      return;
     }
-  };
 
-  const removeImage = (index: number) => {
-    const newImages = images.filter((_, i) => i !== index);
-    setImages(newImages);
-  };
+    // ✅ USA OS DADOS DO USERDATA - NÃO PRECISA DA API
+    const userData = JSON.parse(userDataString);
+    console.log('✅ Tipo do usuário:', userData.tipo);
+    
+    const isUserMatriz = userData.tipo === 'matriz';
+    setIsMatriz(isUserMatriz);
+    
+    if (!isUserMatriz) {
+      Alert.alert('Acesso Negado', 'Somente farmácias matriz podem adicionar parceiros.');
+      setAccessDenied(true);
+    }
+    // Se for matriz, o acesso é permitido automaticamente
+
+  } catch (error) {
+    console.error('💥 Erro ao verificar permissões:', error);
+    Alert.alert('Erro', 'Não foi possível verificar suas permissões.');
+    setAccessDenied(true);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -84,7 +139,7 @@ export default function AddPartnerScreen() {
   };
 
   const selectState = (value: string) => {
-    handleInputChange('state', value);
+    handleInputChange('estado', value);
     setShowStates(false);
   };
 
@@ -104,66 +159,133 @@ export default function AddPartnerScreen() {
 
   const handlePhoneChange = (text: string) => {
     const formatted = formatPhone(text);
-    handleInputChange('phone', formatted);
+    handleInputChange('telefone', formatted);
   };
 
   const handleZipCodeChange = (text: string) => {
     const formatted = formatZipCode(text);
-    handleInputChange('zipCode', formatted);
+    handleInputChange('cep', formatted);
   };
 
   const handleSubmit = () => {
-    // Validação básica
-    if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.phone || !formData.email || !formData.password) {
-      Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
-      return;
+  console.log('🟡 1. handleSubmit foi chamado');
+  
+  // Validações
+  if (!formData.nome || !formData.endereco || !formData.cidade || !formData.estado || !formData.telefone || !formData.email || !formData.senha) {
+    console.log('❌ Campos obrigatórios faltando');
+    console.log('📋 Campos:', {
+      nome: formData.nome,
+      endereco: formData.endereco,
+      cidade: formData.cidade,
+      estado: formData.estado,
+      telefone: formData.telefone,
+      email: formData.email,
+      senha: formData.senha ? 'preenchida' : 'vazia'
+    });
+    Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(formData.email)) {
+    console.log('❌ Email inválido:', formData.email);
+    Alert.alert('Erro', 'Digite um email válido');
+    return;
+  }
+
+  if (formData.senha.length < 6) {
+    console.log('❌ Senha muito curta:', formData.senha.length);
+    Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres');
+    return;
+  }
+
+  if (formData.senha !== formData.confirmPassword) {
+    console.log('❌ Senhas não coincidem');
+    Alert.alert('Erro', 'As senhas não coincidem');
+    return;
+  }
+
+  console.log('✅ 2. Todas as validações passaram');
+  console.log('📤 3. Chamando submitPartner...');
+
+  submitPartner();
+};
+
+ const submitPartner = async () => {
+  try {
+    console.log('🟡 4. submitPartner iniciado');
+    setIsLoading(true);
+    
+    const token = await AsyncStorage.getItem('userToken');
+    const { confirmPassword, ...partnerData } = formData;
+    
+    console.log('📤 5. Dados sendo enviados:', partnerData);
+    console.log('🔐 6. Token:', token ? `Presente (${token.length} chars)` : 'Ausente');
+
+    const response = await fetch(`${API_URL}/api/farmacia/parceiros/novo`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(partnerData),
+    });
+
+    console.log('📡 7. Status da resposta:', response.status);
+    console.log('📡 8. OK:', response.ok);
+
+    if (response.ok) {
+      console.log('✅ 9. Sucesso! Farmácia adicionada');
+      Alert.alert('Sucesso', 'Farmácia parceira adicionada com sucesso!');
+      router.back();
+    } else {
+      const errorText = await response.text();
+      console.log('❌ 10. Erro no servidor:', response.status, errorText);
+      Alert.alert('Erro', errorText || `Erro ${response.status} ao adicionar parceiro`);
     }
-
-    // Validação de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      Alert.alert('Erro', 'Digite um email válido');
-      return;
-    }
-
-    // Validação de senha
-    if (formData.password.length < 6) {
-      Alert.alert('Erro', 'A senha deve ter pelo menos 6 caracteres');
-      return;
-    }
-
-    // Validação de confirmação de senha
-    if (formData.password !== formData.confirmPassword) {
-      Alert.alert('Erro', 'As senhas não coincidem');
-      return;
-    }
-
-    if (images.length === 0) {
-      Alert.alert('Atenção', 'Deseja continuar sem adicionar imagens?', [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Continuar', onPress: submitPartner }
-      ]);
-      return;
-    }
-
-    submitPartner();
-  };
-
-  const submitPartner = () => {
-    // Aqui você faria a chamada para sua API
-    const partnerData = {
-      ...formData,
-      images
-    };
-
-    console.log('Parceiro a ser enviado:', partnerData);
-    Alert.alert('Sucesso', 'Farmácia parceira adicionada com sucesso!');
-    router.back();
-  };
+  } catch (error) {
+    console.error('💥 11. Erro catch:', error);
+    Alert.alert('Erro', `Falha ao conectar com o servidor: ${error.message}`);
+  } finally {
+    console.log('🟡 12. Finalizando submitPartner');
+    setIsLoading(false);
+  }
+};
 
   const getStateLabel = () => {
-    return states.find(state => state.value === formData.state)?.label || 'Selecione o estado';
+    return states.find(state => state.value === formData.estado)?.label || 'Selecione o estado';
   };
+
+  // TELA DE CARREGAMENTO
+
+// TELA DE CARREGAMENTO
+if (isLoading) {
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color="#3498db" />
+      <Text style={styles.loadingText}>Verificando permissões...</Text>
+    </View>
+  );
+}
+
+  // TELA DE ACESSO NEGADO
+  if (accessDenied) {
+    return (
+      <View style={styles.deniedContainer}>
+        <Ionicons name="lock-closed" size={64} color="#e74c3c" />
+        <Text style={styles.deniedTitle}>Acesso Negado</Text>
+        <Text style={styles.deniedText}>
+          Somente farmácias matriz podem acessar esta funcionalidade.
+        </Text>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>Voltar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -178,32 +300,8 @@ export default function AddPartnerScreen() {
       />
 
       <ScrollView style={styles.scrollView}>
-        {/* Seção de Imagens */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Imagens da Farmácia</Text>
-          <Text style={styles.sectionSubtitle}>Logo e fotos do estabelecimento (até 4 imagens)</Text>
-          
-          <ScrollView horizontal style={styles.imagesContainer}>
-            {images.map((uri, index) => (
-              <View key={index} style={styles.imageWrapper}>
-                <Image source={{ uri }} style={styles.image} />
-                <TouchableOpacity 
-                  style={styles.removeImageButton}
-                  onPress={() => removeImage(index)}
-                >
-                  <Ionicons name="close" size={20} color="white" />
-                </TouchableOpacity>
-              </View>
-            ))}
-            
-            {images.length < 4 && (
-              <TouchableOpacity style={styles.addImageButton} onPress={pickImage}>
-                <Ionicons name="camera" size={32} color="#3498db" />
-                <Text style={styles.addImageText}>Adicionar Imagem</Text>
-              </TouchableOpacity>
-            )}
-          </ScrollView>
-        </View>
+      
+    
 
         {/* Informações Básicas */}
         <View style={styles.section}>
@@ -213,8 +311,8 @@ export default function AddPartnerScreen() {
             <Text style={styles.label}>Nome da Farmácia *</Text>
             <TextInput
               style={styles.input}
-              value={formData.name}
-              onChangeText={(text) => handleInputChange('name', text)}
+              value={formData.nome}
+              onChangeText={(text) => handleInputChange('nome', text)}
               placeholder="Ex: Farmácia Veterinária Central"
             />
           </View>
@@ -223,8 +321,8 @@ export default function AddPartnerScreen() {
             <Text style={styles.label}>Descrição</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              value={formData.description}
-              onChangeText={(text) => handleInputChange('description', text)}
+              value={formData.descricao}
+              onChangeText={(text) => handleInputChange('descricao', text)}
               placeholder="Descreva os serviços e especialidades da farmácia..."
               multiline
               numberOfLines={3}
@@ -241,8 +339,8 @@ export default function AddPartnerScreen() {
             <Text style={styles.label}>Endereço *</Text>
             <TextInput
               style={styles.input}
-              value={formData.address}
-              onChangeText={(text) => handleInputChange('address', text)}
+              value={formData.endereco}
+              onChangeText={(text) => handleInputChange('endereco', text)}
               placeholder="Ex: Rua das Flores, 123"
             />
           </View>
@@ -252,8 +350,8 @@ export default function AddPartnerScreen() {
               <Text style={styles.label}>Bairro</Text>
               <TextInput
                 style={styles.input}
-                value={formData.neighborhood}
-                onChangeText={(text) => handleInputChange('neighborhood', text)}
+                value={formData.bairro}
+                onChangeText={(text) => handleInputChange('bairro', text)}
                 placeholder="Ex: Centro"
               />
             </View>
@@ -262,8 +360,8 @@ export default function AddPartnerScreen() {
               <Text style={styles.label}>Cidade *</Text>
               <TextInput
                 style={styles.input}
-                value={formData.city}
-                onChangeText={(text) => handleInputChange('city', text)}
+                value={formData.cidade}
+                onChangeText={(text) => handleInputChange('cidade', text)}
                 placeholder="Ex: São Paulo"
               />
             </View>
@@ -287,7 +385,7 @@ export default function AddPartnerScreen() {
               <Text style={styles.label}>CEP</Text>
               <TextInput
                 style={styles.input}
-                value={formData.zipCode}
+                value={formData.cep}
                 onChangeText={handleZipCodeChange}
                 placeholder="00000-000"
                 keyboardType="numeric"
@@ -306,7 +404,7 @@ export default function AddPartnerScreen() {
               <Text style={styles.label}>Telefone *</Text>
               <TextInput
                 style={styles.input}
-                value={formData.phone}
+                value={formData.telefone}
                 onChangeText={handlePhoneChange}
                 placeholder="(00) 00000-0000"
                 keyboardType="phone-pad"
@@ -349,8 +447,8 @@ export default function AddPartnerScreen() {
             <View style={styles.passwordContainer}>
               <TextInput
                 style={[styles.input, styles.passwordInput]}
-                value={formData.password}
-                onChangeText={(text) => handleInputChange('password', text)}
+                value={formData.senha}
+                onChangeText={(text) => handleInputChange('senha', text)}
                 placeholder="Digite sua senha"
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
@@ -395,9 +493,20 @@ export default function AddPartnerScreen() {
         </View>
 
         {/* Botão de Submit */}
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitButtonText}>Adicionar Farmácia Parceira</Text>
-        </TouchableOpacity>
+        <TouchableOpacity 
+  style={[styles.submitButton, isLoading && styles.submitButtonDisabled]} 
+  onPress={() => {
+    console.log('🟢 BOTÃO CLICADO!');
+    handleSubmit();
+  }}
+  disabled={isLoading}
+>
+  {isLoading ? (
+    <Text style={styles.submitButtonText}>Adicionando...</Text>
+  ) : (
+    <Text style={styles.submitButtonText}>Adicionar Farmácia Parceira</Text>
+  )}
+</TouchableOpacity>
       </ScrollView>
 
       {/* Modal para Estados */}
@@ -423,7 +532,7 @@ export default function AddPartnerScreen() {
                   onPress={() => selectState(state.value)}
                 >
                   <Text style={styles.modalOptionText}>{state.label}</Text>
-                  {formData.state === state.value && (
+                  {formData.estado === state.value && (
                     <Ionicons name="checkmark" size={20} color="#3498db" />
                   )}
                 </TouchableOpacity>
@@ -576,6 +685,9 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
+  submitButtonDisabled: {
+    backgroundColor: '#95a5a6',
+  },
   submitButtonText: {
     color: 'white',
     fontSize: 16,
@@ -616,5 +728,46 @@ const styles = StyleSheet.create({
   modalOptionText: {
     fontSize: 16,
     color: '#2c3e50',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#7f8c8d',
+  },
+  deniedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    padding: 20,
+  },
+  deniedTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#e74c3c',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  deniedText: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  backButton: {
+    backgroundColor: '#3498db',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

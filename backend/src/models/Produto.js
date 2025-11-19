@@ -14,6 +14,10 @@ const Produto = db.define('Produto', {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
+  categoria_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+  },
   nome: {
     type: DataTypes.STRING,
     allowNull: false,

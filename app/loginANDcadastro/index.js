@@ -1,89 +1,114 @@
 import { Link, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ScrollView, Alert } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { login } = useAuth();
 
   async function handleLogin() {
-    console.log('handleLogin chamado');
+    console.log('🔐 INICIANDO LOGIN...');
+    console.log('📧 Email:', email);
+    console.log('🔑 Senha:', password ? '***' : 'FALTANDO');
+
+    if (loading) return;
+
     try {
+      setLoading(true);
+
       if (!email || !password) {
-        alert('Por favor, preencha email e senha');
+        Alert.alert('Atenção', 'Por favor, preencha email e senha');
         return;
       }
 
-      // ⭐⭐ IP DO SERVIDOR - MESMO EM TODOS OS LUGARES ⭐⭐
-      const API_URL = 'http://192.168.0.6:3000';
+      // ⭐⭐ IP DO SERVIDOR
+      const API_URL = 'http://192.168.0.3:3000';
 
+      console.log('🌐 ENVIANDO REQUEST PARA:', `${API_URL}/api/login`);
+      
       const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, senha: password }),
+        body: JSON.stringify({ 
+          email: email.trim().toLowerCase(), 
+          senha: password 
+        }),
       });
 
+      console.log('📊 STATUS DA RESPOSTA:', response.status);
+      
       const data = await response.json();
-      console.log('Resposta da API:', data);
+      console.log('📦 RESPOSTA COMPLETA DA API:', data);
 
       if (!response.ok) {
-        alert(data.error || 'Erro no login');
+        Alert.alert('Erro no Login', data.error || 'Credenciais inválidas');
         return;
       }
 
-      // ⭐⭐ CORREÇÃO: AGORA PASSANDO O TOKEN TAMBÉM!
-      if (data.id && data.email && data.token) {
-        login(
-          {
-            id: data.id.toString(),
-            nome: data.nome || 'Usuário',
-            sobrenome: data.sobrenome || '',
-            email: data.email,
-            telefone: data.telefone || '',
-            cpf: data.cpf || '',
-            data_nascimento: data.data_nascimento || '',
-            tipo: data.tipo || 'cliente'
-          },
-          data.token // ⭐⭐ TOKEN ADICIONADO AQUI!
-        );
-        console.log('✅ Dados do usuário e token salvos no AuthContext:', {
-          id: data.id,
-          nome: data.nome,
-          sobrenome: data.sobrenome,
-          email: data.email,
-          telefone: data.telefone,
-          cpf: data.cpf,
-          data_nascimento: data.data_nascimento,
-          tipo: data.tipo,
-          token: data.token ? 'PRESENTE' : 'FALTANDO'
+      // ⭐⭐ CORREÇÃO PRINCIPAL: A API RETORNA data.farmacia E data.token
+      if (data.success && data.token && data.farmacia) {
+        console.log('✅ LOGIN BEM-SUCEDIDO');
+        console.log('🔑 TOKEN:', data.token ? 'PRESENTE' : 'FALTANDO');
+        console.log('👤 DADOS DA FARMÁCIA:', data.farmacia);
+
+        // ⭐⭐ CORREÇÃO: Usar data.farmacia que vem da API
+        const userData = {
+          id: data.farmacia.id.toString(),
+          nome: data.farmacia.nome || 'Farmácia',
+          email: data.farmacia.email,
+          tipo: data.farmacia.tipo || 'filial',
+          // Campos opcionais para farmácia
+          sobrenome: '',
+          telefone: data.farmacia.telefone || '',
+          cpf: '',
+          data_nascimento: ''
+        };
+
+        // ⭐⭐ CHAMAR LOGIN DO CONTEXT COM OS DADOS CORRETOS
+        login(userData, data.token);
+        
+        // ⭐⭐ SALVAR NO ASYNC STORAGE
+        await AsyncStorage.setItem('userToken', data.token);
+        await AsyncStorage.setItem('userData', JSON.stringify(userData));
+        await AsyncStorage.setItem('farmaciaTipo', data.farmacia.tipo); // ⭐⭐ IMPORTANTE para proteção
+
+        console.log('💾 DADOS SALVOS:', {
+          token: data.token ? 'SALVO' : 'FALTANDO',
+          tipo: data.farmacia.tipo,
+          nome: data.farmacia.nome
         });
-      } else {
-        console.log('⚠️ Dados do usuário ou token incompletos na resposta:', data);
-        alert('Erro: Dados de login incompletos');
-        return;
-      }
 
-      // Salva o token para usar nas próximas requisições
-      await AsyncStorage.setItem('token', data.token);
+        // ⭐⭐ REDIRECIONAMENTO CORRETO
+        // ⭐⭐ CORREÇÃO: Farmácias (matriz E filial) vão para /adm
+// Clientes vão para /home
 
-      // Redireciona conforme o tipo do usuário
-      if (data.tipo === 'matriz') {
-        console.log('Redirecionando para /adm');
-        router.push('/adm');
+// Redireciona conforme o tipo do usuário
+if (data.tipo === 'cliente') {
+  console.log('Redirecionando CLIENTE para /home');
+  router.replace('/home');
+} else {
+  // ⭐⭐ Farmácias (matriz E filial) vão para o painel admin
+  console.log('Redirecionando FARMÁCIA para /adm');
+  router.replace('/adm');
+}
+
       } else {
-        console.log('Redirecionando para /home');
-        router.push('/home');
+        console.log('❌ DADOS INCOMPLETOS NA RESPOSTA:', data);
+        Alert.alert('Erro', 'Dados de login incompletos recebidos do servidor');
       }
 
     } catch (err) {
-      alert('Não foi possível conectar ao servidor.');
-      console.error(err);
+      console.error('💥 ERRO NO LOGIN:', err);
+      Alert.alert('Erro', 'Não foi possível conectar ao servidor. Verifique sua conexão.');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -111,6 +136,7 @@ export default function Login() {
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
+          autoCorrect={false}
         />
 
         <TextInput
@@ -120,16 +146,17 @@ export default function Login() {
           secureTextEntry
           value={password}
           onChangeText={setPassword}
+          autoCorrect={false}
         />
 
         <TouchableOpacity
-          style={styles.button}
-          onPress={() => {
-            console.log('Botão clicado!');
-            handleLogin();
-          }}
+          style={[styles.button, loading && styles.buttonDisabled]}
+          onPress={handleLogin}
+          disabled={loading}
         >
-          <Text style={styles.buttonText}>Entrar</Text>
+          <Text style={styles.buttonText}>
+            {loading ? 'ENTRANDO...' : 'ENTRAR'}
+          </Text>
         </TouchableOpacity>
 
         {/* Link para Esqueci Senha */}
@@ -211,6 +238,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
     marginBottom: 20,
+  },
+  buttonDisabled: {
+    backgroundColor: "#95a5a6",
   },
   buttonText: {
     color: "#fff",

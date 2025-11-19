@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal, ActivityIndicator } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// ⭐⭐ CONSTANTE PARA IP DO SERVIDOR ⭐⭐
+const API_URL = 'http://192.168.0.3:3000';
 
 const states = [
   { label: 'Acre', value: 'AC' },
@@ -34,83 +38,184 @@ const states = [
   { label: 'Tocantins', value: 'TO' }
 ];
 
-// Dados simulados do parceiro (em uma aplicação real, viria da API)
-const mockPartnerData = {
-  id: 1,
-  name: 'Farmácia Veterinária Central',
-  description: 'Farmácia especializada em produtos veterinários com entrega rápida e atendimento 24h.',
-  address: 'Rua das Flores, 123',
-  neighborhood: 'Centro',
-  city: 'São Paulo',
-  state: 'SP',
-  zipCode: '01234-567',
-  phone: '(11) 9999-9999',
-  email: 'contato@farmaciacentral.com.br',
-  images: [
-    'https://via.placeholder.com/300?text=Logo+Farmácia',
-    'https://via.placeholder.com/300?text=Estabelecimento'
-  ]
-};
-
 export default function EditPartnerScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const partnerId = params.id ? parseInt(params.id as string) : 1;
+  const partnerId = params.id ? parseInt(params.id as string) : null;
 
+   // 🔍 DEBUG - Adicione estas linhas:
+  console.log('🔍 [EDIT] Params recebidos:', params);
+  console.log('🔍 [EDIT] partnerId:', partnerId);
+  console.log('🔍 [EDIT] Tipo do partnerId:', typeof partnerId);
+
+  // ESTADOS PARA PROTEÇÃO
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isMatriz, setIsMatriz] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
+
+  // Estados existentes
   const [images, setImages] = useState<string[]>([]);
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    address: '',
-    neighborhood: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    phone: '',
+    nome: '',
+    descricao: '',
+    endereco: '',
+    bairro: '',
+    cidade: '',
+    estado: '',
+    cep: '',
+    telefone: '',
     email: ''
   });
   const [showStates, setShowStates] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  
+  // 🔍 🔍 🔍 DEBUG TEMPORÁRIO - ADICIONE ESTAS LINHAS 🔍 🔍 🔍
+useEffect(() => {
+  const checkToken = async () => {
+    const token = await AsyncStorage.getItem('userToken');
+    const userData = await AsyncStorage.getItem('userData');
+    console.log('🔍 [EDIT] Debug - Token:', token);
+    console.log('🔍 [EDIT] Debug - UserData:', userData);
+  };
+  checkToken();
+}, []);
+// 🔍 🔍 🔍 FIM DO DEBUG 🔍 🔍 🔍
 
-  // Simular carregamento dos dados do parceiro
+  // VERIFICAR SE É MATRIZ E CARREGAR DADOS
   useEffect(() => {
-    const loadPartnerData = async () => {
-      setIsLoading(true);
-      // Simular delay de API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    checkUserPermissions();
+  }, []);
+
+  const checkUserPermissions = async () => {
+  try {
+    setIsLoading(true);
+    
+    const token = await AsyncStorage.getItem('userToken');
+    const userDataString = await AsyncStorage.getItem('userData');
+    
+    console.log('🔐 [EDIT] Token:', token ? `Presente (${token.length} chars)` : 'Ausente');
+    console.log('👤 [EDIT] UserData:', userDataString);
+
+    if (!token || !userDataString) {
+      Alert.alert('Sessão Expirada', 'Por favor, faça login novamente.');
+      setAccessDenied(true);
+      return;
+    }
+
+    // ✅ USA OS DADOS DO USERDATA - NÃO PRECISA DA API
+    const userData = JSON.parse(userDataString);
+    console.log('✅ [EDIT] Tipo do usuário:', userData.tipo);
+    
+    const isUserMatriz = userData.tipo === 'matriz';
+    setIsMatriz(isUserMatriz);
+    
+    if (!isUserMatriz) {
+      console.log('❌ [EDIT] Usuário não é matriz');
+      Alert.alert('Acesso Negado', 'Somente farmácias matriz podem editar parceiros.');
+      setAccessDenied(true);
+    } else {
+      console.log('✅ [EDIT] Usuário é matriz, carregando dados...');
+      await loadPartnerData();
+    }
+
+  } catch (error) {
+    console.error('💥 [EDIT] Erro ao verificar permissões:', error);
+    Alert.alert('Erro', 'Não foi possível verificar suas permissões.');
+    setAccessDenied(true);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+  // CARREGAR DADOS DO PARCEIRO
+ const loadPartnerData = async () => {
+  try {
+    if (!partnerId) {
+      console.log('❌ ID do parceiro não encontrado');
+      Alert.alert('Erro', 'ID do parceiro não encontrado');
+      router.back();
+      return;
+    }
+
+    console.log('🟡 Carregando dados do parceiro ID:', partnerId);
+
+    const token = await AsyncStorage.getItem('userToken');
+    console.log('🔐 Token:', token ? `Presente (${token.length} chars)` : 'Ausente');
+
+    // ✅ ENDPOINT CORRETO - farmacia (SINGULAR)
+    const endpoint = `${API_URL}/api/farmacia/${partnerId}`;
+    console.log('🌐 Endpoint:', endpoint);
+
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    console.log('📡 Status da resposta:', response.status);
+    console.log('📡 OK:', response.ok);
+
+    if (response.ok) {
+      const partnerData = await response.json();
+      console.log('✅ Dados recebidos:', partnerData);
       
       setFormData({
-        name: mockPartnerData.name,
-        description: mockPartnerData.description,
-        address: mockPartnerData.address,
-        neighborhood: mockPartnerData.neighborhood,
-        city: mockPartnerData.city,
-        state: mockPartnerData.state,
-        zipCode: mockPartnerData.zipCode,
-        phone: mockPartnerData.phone,
-        email: mockPartnerData.email
+        nome: partnerData.nome || '',
+        descricao: partnerData.descricao || '',
+        endereco: partnerData.endereco || '',
+        bairro: partnerData.bairro || '',
+        cidade: partnerData.cidade || '',
+        estado: partnerData.estado || '',
+        cep: partnerData.cep || '',
+        telefone: partnerData.telefone || '',
+        email: partnerData.email || ''
       });
       
-      setImages(mockPartnerData.images);
-      setIsLoading(false);
-    };
-
-    loadPartnerData();
-  }, [partnerId]);
+      console.log('✅ Formulário preenchido com sucesso');
+      
+    } else if (response.status === 404) {
+      console.log('❌ Farmácia não encontrada (404)');
+      Alert.alert('Erro', 'Farmácia parceira não encontrada.');
+      router.back();
+    } else if (response.status === 403) {
+      console.log('❌ Acesso negado (403)');
+      setAccessDenied(true);
+      Alert.alert('Acesso Negado', 'Você não tem permissão para editar este parceiro.');
+    } else {
+      const errorText = await response.text();
+      console.log('❌ Erro desconhecido:', response.status, errorText);
+      Alert.alert('Erro', `Falha ao carregar dados: ${response.status}`);
+    }
+  } catch (error) {
+    console.error('💥 Erro ao carregar dados:', error);
+    Alert.alert('Erro', 'Falha ao conectar com o servidor.');
+  }
+};
 
   const pickImage = async () => {
     try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permissão necessária', 'Precisamos de acesso à sua galeria para adicionar imagens.');
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 1,
+        quality: 0.8,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setImages([...images, result.assets[0].uri]);
       }
     } catch (error) {
+      console.error('Erro ao selecionar imagem:', error);
       Alert.alert('Erro', 'Não foi possível selecionar a imagem');
     }
   };
@@ -141,48 +246,66 @@ export default function EditPartnerScreen() {
   };
 
   const selectState = (value: string) => {
-    handleInputChange('state', value);
+    handleInputChange('estado', value);
     setShowStates(false);
   };
 
   const formatPhone = (text: string) => {
-    // Formatação simples do telefone
     const numbers = text.replace(/\D/g, '');
-    if (numbers.length <= 10) {
-      return numbers.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-    } else {
-      return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-    }
+    
+    if (numbers.length === 0) return '';
+    if (numbers.length <= 2) return `(${numbers}`;
+    if (numbers.length <= 6) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    if (numbers.length <= 10) return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
+    
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
   };
 
   const formatZipCode = (text: string) => {
     const numbers = text.replace(/\D/g, '');
-    return numbers.replace(/(\d{5})(\d{3})/, '$1-$2');
+    
+    if (numbers.length === 0) return '';
+    if (numbers.length <= 5) return numbers;
+    
+    return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
   };
 
   const handlePhoneChange = (text: string) => {
     const formatted = formatPhone(text);
-    handleInputChange('phone', formatted);
+    handleInputChange('telefone', formatted);
   };
 
   const handleZipCodeChange = (text: string) => {
     const formatted = formatZipCode(text);
-    handleInputChange('zipCode', formatted);
+    handleInputChange('cep', formatted);
   };
 
-  const handleSubmit = () => {
-    // Validação básica
-    if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.phone || !formData.email) {
-      Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
-      return;
+  const validateForm = () => {
+    const requiredFields = ['nome', 'endereco', 'cidade', 'estado', 'telefone', 'email'];
+    const emptyFields = requiredFields.filter(field => !formData[field as keyof typeof formData].trim());
+    
+    if (emptyFields.length > 0) {
+      Alert.alert('Erro', 'Preencha todos os campos obrigatórios (*)');
+      return false;
     }
 
-    // Validação de email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       Alert.alert('Erro', 'Digite um email válido');
-      return;
+      return false;
     }
+
+    const phoneNumbers = formData.telefone.replace(/\D/g, '');
+    if (phoneNumbers.length < 10) {
+      Alert.alert('Erro', 'Digite um telefone válido com DDD');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = () => {
+    if (!validateForm()) return;
 
     Alert.alert(
       'Confirmar Alterações',
@@ -194,39 +317,84 @@ export default function EditPartnerScreen() {
     );
   };
 
-  const submitChanges = () => {
-    // Aqui você faria a chamada para sua API para atualizar o parceiro
-    const partnerData = {
-      ...formData,
-      images,
-      id: partnerId
-    };
+  const submitChanges = async () => {
+    try {
+      setIsSaving(true);
+      
+      const token = await AsyncStorage.getItem('userToken');
+      
+      const partnerData = {
+        nome: formData.nome.trim(),
+        descricao: formData.descricao.trim(),
+        endereco: formData.endereco.trim(),
+        bairro: formData.bairro.trim(),
+        cidade: formData.cidade.trim(),
+        estado: formData.estado,
+        cep: formData.cep.replace(/\D/g, ''),
+        telefone: formData.telefone.replace(/\D/g, ''),
+        email: formData.email.trim().toLowerCase()
+      };
 
-    console.log('Parceiro atualizado:', partnerData);
-    Alert.alert('Sucesso', 'Farmácia parceira atualizada com sucesso!');
-    router.back();
+      const response = await fetch(`${API_URL}/api/farmacia/parceiros/${partnerId}/editar`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(partnerData),
+      });
+
+      if (response.ok) {
+        Alert.alert(
+          'Sucesso', 
+          'Farmácia parceira atualizada com sucesso!',
+          [{ text: 'OK', onPress: () => router.back() }]
+        );
+      } else if (response.status === 403) {
+        Alert.alert('Acesso Negado', 'Você não tem permissão para editar parceiros.');
+        setAccessDenied(true);
+      } else {
+        const errorData = await response.json();
+        Alert.alert('Erro', errorData.error || 'Erro ao atualizar parceiro');
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar parceiro:', error);
+      Alert.alert('Erro', 'Falha ao conectar com o servidor');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getStateLabel = () => {
-    return states.find(state => state.value === formData.state)?.label || 'Selecione o estado';
+    const state = states.find(state => state.value === formData.estado);
+    return state ? state.label : 'Selecione o estado';
   };
 
+  // TELA DE CARREGAMENTO
   if (isLoading) {
     return (
-      <View style={styles.container}>
-        <Stack.Screen 
-          options={{
-            title: 'Editar Parceiro',
-            headerTitleStyle: {
-              fontWeight: 'bold',
-              fontSize: 20,
-            },
-          }} 
-        />
-        <View style={styles.loadingContainer}>
-          <Ionicons name="refresh" size={40} color="#3498db" />
-          <Text style={styles.loadingText}>Carregando dados da farmácia...</Text>
-        </View>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3498db" />
+        <Text style={styles.loadingText}>Carregando dados...</Text>
+      </View>
+    );
+  }
+
+  // TELA DE ACESSO NEGADO
+  if (accessDenied) {
+    return (
+      <View style={styles.deniedContainer}>
+        <Ionicons name="lock-closed" size={64} color="#e74c3c" />
+        <Text style={styles.deniedTitle}>Acesso Negado</Text>
+        <Text style={styles.deniedText}>
+          Somente farmácias matriz podem editar parceiros.
+        </Text>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>Voltar</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -243,19 +411,23 @@ export default function EditPartnerScreen() {
         }} 
       />
 
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Cabeçalho com ID do parceiro */}
         <View style={styles.headerSection}>
           <Text style={styles.partnerId}>ID: #{partnerId}</Text>
-          <Text style={styles.lastUpdate}>Última atualização: 15/12/2023</Text>
+          <Text style={styles.lastUpdate}>Editando farmácia parceira</Text>
         </View>
 
         {/* Seção de Imagens */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Imagens da Farmácia</Text>
-          <Text style={styles.sectionSubtitle}>Logo e fotos do estabelecimento</Text>
+          <Text style={styles.sectionSubtitle}>Logo e fotos do estabelecimento (máx. 4)</Text>
           
-          <ScrollView horizontal style={styles.imagesContainer}>
+          <ScrollView 
+            horizontal 
+            style={styles.imagesContainer}
+            showsHorizontalScrollIndicator={false}
+          >
             {images.map((uri, index) => (
               <View key={index} style={styles.imageWrapper}>
                 <Image source={{ uri }} style={styles.image} />
@@ -263,7 +435,7 @@ export default function EditPartnerScreen() {
                   style={styles.removeImageButton}
                   onPress={() => removeImage(index)}
                 >
-                  <Ionicons name="close" size={20} color="white" />
+                  <Ionicons name="close" size={16} color="white" />
                 </TouchableOpacity>
               </View>
             ))}
@@ -285,9 +457,10 @@ export default function EditPartnerScreen() {
             <Text style={styles.label}>Nome da Farmácia *</Text>
             <TextInput
               style={styles.input}
-              value={formData.name}
-              onChangeText={(text) => handleInputChange('name', text)}
+              value={formData.nome}
+              onChangeText={(text) => handleInputChange('nome', text)}
               placeholder="Ex: Farmácia Veterinária Central"
+              placeholderTextColor="#999"
             />
           </View>
 
@@ -295,9 +468,10 @@ export default function EditPartnerScreen() {
             <Text style={styles.label}>Descrição</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              value={formData.description}
-              onChangeText={(text) => handleInputChange('description', text)}
+              value={formData.descricao}
+              onChangeText={(text) => handleInputChange('descricao', text)}
               placeholder="Descreva os serviços e especialidades da farmácia..."
+              placeholderTextColor="#999"
               multiline
               numberOfLines={3}
               textAlignVertical="top"
@@ -313,9 +487,10 @@ export default function EditPartnerScreen() {
             <Text style={styles.label}>Endereço *</Text>
             <TextInput
               style={styles.input}
-              value={formData.address}
-              onChangeText={(text) => handleInputChange('address', text)}
+              value={formData.endereco}
+              onChangeText={(text) => handleInputChange('endereco', text)}
               placeholder="Ex: Rua das Flores, 123"
+              placeholderTextColor="#999"
             />
           </View>
 
@@ -324,9 +499,10 @@ export default function EditPartnerScreen() {
               <Text style={styles.label}>Bairro</Text>
               <TextInput
                 style={styles.input}
-                value={formData.neighborhood}
-                onChangeText={(text) => handleInputChange('neighborhood', text)}
+                value={formData.bairro}
+                onChangeText={(text) => handleInputChange('bairro', text)}
                 placeholder="Ex: Centro"
+                placeholderTextColor="#999"
               />
             </View>
 
@@ -334,9 +510,10 @@ export default function EditPartnerScreen() {
               <Text style={styles.label}>Cidade *</Text>
               <TextInput
                 style={styles.input}
-                value={formData.city}
-                onChangeText={(text) => handleInputChange('city', text)}
+                value={formData.cidade}
+                onChangeText={(text) => handleInputChange('cidade', text)}
                 placeholder="Ex: São Paulo"
+                placeholderTextColor="#999"
               />
             </View>
           </View>
@@ -348,7 +525,10 @@ export default function EditPartnerScreen() {
                 style={styles.selectContainer}
                 onPress={() => setShowStates(true)}
               >
-                <Text style={styles.selectText}>
+                <Text style={[
+                  styles.selectText,
+                  !formData.estado && { color: '#999' }
+                ]}>
                   {getStateLabel()}
                 </Text>
                 <Ionicons name="chevron-down" size={20} color="#7f8c8d" />
@@ -359,9 +539,10 @@ export default function EditPartnerScreen() {
               <Text style={styles.label}>CEP</Text>
               <TextInput
                 style={styles.input}
-                value={formData.zipCode}
+                value={formData.cep}
                 onChangeText={handleZipCodeChange}
                 placeholder="00000-000"
+                placeholderTextColor="#999"
                 keyboardType="numeric"
                 maxLength={9}
               />
@@ -378,10 +559,12 @@ export default function EditPartnerScreen() {
               <Text style={styles.label}>Telefone *</Text>
               <TextInput
                 style={styles.input}
-                value={formData.phone}
+                value={formData.telefone}
                 onChangeText={handlePhoneChange}
                 placeholder="(00) 00000-0000"
+                placeholderTextColor="#999"
                 keyboardType="phone-pad"
+                maxLength={15}
               />
             </View>
 
@@ -392,8 +575,10 @@ export default function EditPartnerScreen() {
                 value={formData.email}
                 onChangeText={(text) => handleInputChange('email', text)}
                 placeholder="contato@exemplo.com"
+                placeholderTextColor="#999"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoCorrect={false}
               />
             </View>
           </View>
@@ -401,14 +586,28 @@ export default function EditPartnerScreen() {
 
         {/* Botões de Ação */}
         <View style={styles.actionSection}>
-          <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
-            <Ionicons name="save" size={20} color="white" />
-            <Text style={styles.saveButtonText}>Salvar Alterações</Text>
+          <TouchableOpacity 
+            style={[
+              styles.saveButton, 
+              (isSaving || !formData.nome || !formData.endereco || !formData.cidade || !formData.estado || !formData.telefone || !formData.email) && styles.saveButtonDisabled
+            ]} 
+            onPress={handleSubmit}
+            disabled={isSaving || !formData.nome || !formData.endereco || !formData.cidade || !formData.estado || !formData.telefone || !formData.email}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Ionicons name="save" size={20} color="white" />
+            )}
+            <Text style={styles.saveButtonText}>
+              {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={styles.cancelButton}
             onPress={() => router.back()}
+            disabled={isSaving}
           >
             <Text style={styles.cancelButtonText}>Cancelar</Text>
           </TouchableOpacity>
@@ -430,7 +629,7 @@ export default function EditPartnerScreen() {
                 <Ionicons name="close" size={24} color="#7f8c8d" />
               </TouchableOpacity>
             </View>
-            <ScrollView>
+            <ScrollView style={styles.modalScrollView}>
               {states.map((state) => (
                 <TouchableOpacity
                   key={state.value}
@@ -438,7 +637,7 @@ export default function EditPartnerScreen() {
                   onPress={() => selectState(state.value)}
                 >
                   <Text style={styles.modalOptionText}>{state.label}</Text>
-                  {formData.state === state.value && (
+                  {formData.estado === state.value && (
                     <Ionicons name="checkmark" size={20} color="#3498db" />
                   )}
                 </TouchableOpacity>
@@ -460,6 +659,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#f8f9fa',
   },
   loadingText: {
     marginTop: 16,
@@ -490,7 +690,9 @@ const styles = StyleSheet.create({
   section: {
     backgroundColor: 'white',
     padding: 20,
-    marginBottom: 15,
+    marginTop: 10,
+    marginHorizontal: 10,
+    marginBottom: 10,
     borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -525,14 +727,16 @@ const styles = StyleSheet.create({
   },
   removeImageButton: {
     position: 'absolute',
-    top: -5,
-    right: -5,
+    top: -8,
+    right: -8,
     backgroundColor: '#e74c3c',
     borderRadius: 12,
     width: 24,
     height: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
   },
   addImageButton: {
     width: 100,
@@ -543,7 +747,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#ecf0f1',
+    backgroundColor: '#f8f9fa',
   },
   addImageText: {
     fontSize: 12,
@@ -567,6 +771,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: 'white',
+    color: '#2c3e50',
   },
   textArea: {
     minHeight: 80,
@@ -593,6 +798,9 @@ const styles = StyleSheet.create({
   actionSection: {
     backgroundColor: 'white',
     padding: 20,
+    marginTop: 10,
+    marginHorizontal: 10,
+    marginBottom: 20,
   },
   saveButton: {
     flexDirection: 'row',
@@ -602,6 +810,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#bdc3c7',
   },
   saveButtonText: {
     color: 'white',
@@ -615,6 +826,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#bdc3c7',
+    backgroundColor: 'white',
   },
   cancelButtonText: {
     color: '#7f8c8d',
@@ -630,7 +842,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '50%',
+    maxHeight: '60%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -638,12 +850,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#ecf0f1',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#2c3e50',
+  },
+  modalScrollView: {
+    maxHeight: 400,
   },
   modalOption: {
     flexDirection: 'row',
@@ -651,10 +866,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#ecf0f1',
   },
   modalOptionText: {
     fontSize: 16,
     color: '#2c3e50',
+  },
+  deniedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    padding: 20,
+  },
+  deniedTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#e74c3c',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  deniedText: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    marginBottom: 30,
+    lineHeight: 22,
+  },
+  backButton: {
+    backgroundColor: '#3498db',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

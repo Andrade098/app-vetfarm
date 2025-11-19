@@ -1,100 +1,192 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Dados simulados de farmácias parceiras
-const mockPartners = [
-  {
-    id: 1,
-    name: 'Farmácia Veterinária Central',
-    category: 'Farmácia - Premium',
-    address: 'Rua das Flores, 123 - Centro',
-    city: 'São Paulo - SP',
-    phone: '(11) 9999-9999',
-    email: 'contato@farmaciacentral.com.br',
-    rating: 4.8,
-    productsCount: 45,
-    image: 'https://via.placeholder.com/100',
-    description: 'Farmácia especializada em produtos veterinários com entrega rápida'
-  },
-  {
-    id: 2,
-    name: 'DrogaVet Express',
-    category: 'Farmácia - Express',
-    address: 'Av. Principal, 456 - Jardim',
-    city: 'Rio de Janeiro - RJ',
-    phone: '(21) 8888-8888',
-    email: 'sac@drogavet.com.br',
-    rating: 4.5,
-    productsCount: 32,
-    image: 'https://via.placeholder.com/100',
-    description: 'Atendimento 24h com entrega em toda região metropolitana'
-  },
-  {
-    id: 3,
-    name: 'VetFarm Parceira',
-    category: 'Farmácia - Standard',
-    address: 'Rua dos Animais, 789 - Zona Rural',
-    city: 'Campinas - SP',
-    phone: '(19) 7777-7777',
-    email: 'vendas@vetfarm.com.br',
-    rating: 4.2,
-    productsCount: 28,
-    image: 'https://via.placeholder.com/100',
-    description: 'Especializada em produtos para grandes animais'
-  },
-  {
-    id: 4,
-    name: 'Farmácia do Campo',
-    category: 'Farmácia - Rural',
-    address: 'Estrada Rural, S/N - Fazenda',
-    city: 'Ribeirão Preto - SP',
-    phone: '(16) 6666-6666',
-    email: 'campo@farmaciadocampo.com.br',
-    rating: 4.7,
-    productsCount: 38,
-    image: 'https://via.placeholder.com/100',
-    description: 'Atendimento especializado para produtores rurais'
-  },
-  {
-    id: 5,
-    name: 'PetVet Solutions',
-    category: 'Farmácia - Pet',
-    address: 'Alameda Pets, 321 - Pet Center',
-    city: 'Belo Horizonte - MG',
-    phone: '(31) 5555-5555',
-    email: 'solutions@petvet.com.br',
-    rating: 4.9,
-    productsCount: 52,
-    image: 'https://via.placeholder.com/100',
-    description: 'Produtos de alta qualidade para pets e animais de produção'
-  },
-  {
-    id: 6,
-    name: 'AgroFarmácia Brasil',
-    category: 'Farmácia - Agro',
-    address: 'Rodovia BR-101, Km 205',
-    city: 'Porto Alegre - RS',
-    phone: '(51) 4444-4444',
-    email: 'brasil@agrofarmacia.com.br',
-    rating: 4.6,
-    productsCount: 41,
-    image: 'https://via.placeholder.com/100',
-    description: 'Distribuidora autorizada dos principais laboratórios'
-  }
-];
+// ⭐⭐ CONSTANTE PARA IP DO SERVIDOR ⭐⭐
+const API_URL = 'http://192.168.0.3:3000';
 
 export default function DeletePartnerScreen() {
   const router = useRouter();
+  
+  // ESTADOS PARA PROTEÇÃO
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isMatriz, setIsMatriz] = useState(false);
+  const [accessDenied, setAccessDenied] = useState(false);
+
+  // Estados existentes
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPartner, setSelectedPartner] = useState<number | null>(null);
-  const [partners, setPartners] = useState(mockPartners);
+  const [partners, setPartners] = useState<any[]>([]);
+  
+  
+  // 🔍 🔍 🔍 DEBUG TEMPORÁRIO - ADICIONE ESTAS LINHAS 🔍 🔍 🔍
+useEffect(() => {
+  const checkToken = async () => {
+    const token = await AsyncStorage.getItem('userToken');
+    const userData = await AsyncStorage.getItem('userData');
+    console.log('🔍 [DELETE] Debug - Token:', token);
+    console.log('🔍 [DELETE] Debug - UserData:', userData);
+  };
+  checkToken();
+}, []);
+// 🔍 🔍 🔍 FIM DO DEBUG 🔍 🔍 🔍
+
+  // VERIFICAR SE É MATRIZ E CARREGAR PARCEIROS
+  useEffect(() => {
+    checkUserPermissions();
+  }, []);
+
+ const checkUserPermissions = async () => {
+  try {
+    setIsLoading(true);
+    
+    const token = await AsyncStorage.getItem('userToken');
+    console.log('🔐 [DELETE] Token:', token ? `Presente (${token.length} chars)` : 'Ausente');
+    
+    if (!token) {
+      Alert.alert('Sessão Expirada', 'Por favor, faça login novamente.');
+      setAccessDenied(true);
+      return;
+    }
+
+    // Tente diferentes endpoints
+    const endpoints = [
+      `${API_URL}/api/farmacia/auth/tipo`,
+      `${API_URL}/api/farmacia/tipo`,
+      `${API_URL}/api/auth/tipo`
+    ];
+
+    let response = null;
+    let lastError = null;
+
+    for (const endpoint of endpoints) {
+      try {
+        console.log('🔄 [DELETE] Tentando endpoint:', endpoint);
+        response = await fetch(endpoint, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) break;
+        
+        lastError = `Endpoint ${endpoint}: Status ${response.status}`;
+        console.log(`❌ [DELETE] ${lastError}`);
+      } catch (error) {
+        lastError = `Endpoint ${endpoint}: ${error.message}`;
+        console.log(`❌ [DELETE] ${lastError}`);
+      }
+    }
+
+    if (response && response.ok) {
+      const data = await response.json();
+      console.log('✅ [DELETE] Resposta da API:', data);
+      
+      const userType = data.tipo || data.userType || data.role;
+      console.log('👤 [DELETE] Tipo identificado:', userType);
+      
+      setIsMatriz(userType === 'matriz');
+      
+      if (userType !== 'matriz') {
+        Alert.alert('Acesso Negado', 'Somente farmácias matriz podem excluir parceiros.');
+        setAccessDenied(true);
+      } else {
+        await loadPartners(); // ⚠️ MANTENHA esta linha se existir
+      }
+    } else {
+      throw new Error(lastError || 'Falha em todos os endpoints');
+    }
+
+  } catch (error) {
+    console.error('💥 [DELETE] Erro crítico:', error);
+    
+    // Fallback para desenvolvimento
+    if (__DEV__) {
+      console.log('🔧 [DELETE] Modo desenvolvimento: Permitindo acesso');
+      setIsMatriz(true);
+      await loadPartners(); // ⚠️ MANTENHA se existir
+    } else {
+      Alert.alert('Erro', 'Não foi possível verificar suas permissões.');
+      setAccessDenied(true);
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+  // CARREGAR PARCEIROS DA API
+  const loadPartners = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await fetch(`${API_URL}/api/farmacias/parceiros/todos`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const partnersData = await response.json();
+        setPartners(partnersData);
+      } else if (response.status === 403) {
+        setAccessDenied(true);
+        Alert.alert('Acesso Negado', 'Você não tem permissão para visualizar parceiros.');
+      } else {
+        Alert.alert('Erro', 'Falha ao carregar parceiros.');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar parceiros:', error);
+      Alert.alert('Erro', 'Falha ao conectar com o servidor.');
+    }
+  };
+
+  // EXCLUIR PARCEIRO
+  const deletePartner = async (partnerId: number) => {
+    try {
+      setIsDeleting(true);
+      
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await fetch(`${API_URL}/api/farmacias/parceiros/${partnerId}/excluir`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Remove da lista local
+        setPartners(partners.filter(partner => partner.id !== partnerId));
+        setSelectedPartner(null);
+        
+        Alert.alert('Sucesso', 'Farmácia parceira excluída com sucesso!');
+      } else if (response.status === 403) {
+        Alert.alert('Acesso Negado', 'Você não tem permissão para excluir parceiros.');
+        setAccessDenied(true);
+      } else if (response.status === 404) {
+        Alert.alert('Erro', 'Farmácia parceira não encontrada.');
+      } else {
+        const errorData = await response.json();
+        Alert.alert('Erro', errorData.error || 'Erro ao excluir parceiro');
+      }
+    } catch (error) {
+      console.error('Erro ao excluir parceiro:', error);
+      Alert.alert('Erro', 'Falha ao conectar com o servidor');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const filteredPartners = partners.filter(partner =>
-    partner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    partner.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    partner.category.toLowerCase().includes(searchTerm.toLowerCase())
+    partner.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    partner.cidade.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (partner.categoria && partner.categoria.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleSearch = (text: string) => {
@@ -115,24 +207,16 @@ export default function DeletePartnerScreen() {
     
     Alert.alert(
       'Confirmar Exclusão',
-      `Tem certeza que deseja excluir permanentemente a farmácia parceira "${partner?.name}"?\n\nEsta ação não pode ser desfeita.`,
+      `Tem certeza que deseja excluir permanentemente a farmácia parceira "${partner?.nome}"?\n\n⚠️  Esta ação não pode ser desfeita.\n📦 Todos os produtos associados serão removidos.\n🚫 O acesso ao sistema será revogado.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         { 
-          text: 'Excluir', 
+          text: 'Excluir Permanentemente', 
           style: 'destructive',
           onPress: () => deletePartner(selectedPartner)
         }
       ]
     );
-  };
-
-  const deletePartner = (partnerId: number) => {
-    // Simulando exclusão - na prática, você faria uma chamada API aqui
-    setPartners(partners.filter(partner => partner.id !== partnerId));
-    setSelectedPartner(null);
-    
-    Alert.alert('Sucesso', 'Farmácia parceira excluída com sucesso!');
   };
 
   const getSelectedPartner = () => {
@@ -165,6 +249,35 @@ export default function DeletePartnerScreen() {
     );
   };
 
+  // TELA DE CARREGAMENTO
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#3498db" />
+        <Text style={styles.loadingText}>Carregando parceiros...</Text>
+      </View>
+    );
+  }
+
+  // TELA DE ACESSO NEGADO
+  if (accessDenied) {
+    return (
+      <View style={styles.deniedContainer}>
+        <Ionicons name="lock-closed" size={64} color="#e74c3c" />
+        <Text style={styles.deniedTitle}>Acesso Negado</Text>
+        <Text style={styles.deniedText}>
+          Somente farmácias matriz podem excluir parceiros.
+        </Text>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>Voltar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Stack.Screen 
@@ -177,7 +290,7 @@ export default function DeletePartnerScreen() {
         }} 
       />
 
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Barra de Pesquisa */}
         <View style={styles.searchSection}>
           <View style={styles.searchContainer}>
@@ -187,6 +300,7 @@ export default function DeletePartnerScreen() {
               placeholder="Buscar farmácia por nome, cidade ou categoria..."
               value={searchTerm}
               onChangeText={handleSearch}
+              placeholderTextColor="#999"
             />
             {searchTerm.length > 0 && (
               <TouchableOpacity onPress={() => setSearchTerm('')}>
@@ -207,7 +321,7 @@ export default function DeletePartnerScreen() {
               <Ionicons name="business-outline" size={48} color="#bdc3c7" />
               <Text style={styles.emptyStateText}>Nenhuma farmácia encontrada</Text>
               <Text style={styles.emptyStateSubtext}>
-                Tente buscar por outro termo ou verifique a ortografia
+                {searchTerm ? 'Tente buscar por outro termo ou verifique a ortografia' : 'Não há farmácias parceiras cadastradas'}
               </Text>
             </View>
           ) : (
@@ -219,36 +333,41 @@ export default function DeletePartnerScreen() {
                   selectedPartner === partner.id && styles.selectedPartnerCard
                 ]}
                 onPress={() => selectPartner(partner.id)}
+                disabled={isDeleting}
               >
-                <Image source={{ uri: partner.image }} style={styles.partnerImage} />
+                <Image 
+                  source={{ uri: partner.imagem || 'https://via.placeholder.com/100' }} 
+                  style={styles.partnerImage}
+                  defaultSource={{ uri: 'https://via.placeholder.com/100' }}
+                />
                 
                 <View style={styles.partnerInfo}>
                   <Text style={styles.partnerName} numberOfLines={1}>
-                    {partner.name}
+                    {partner.nome}
                   </Text>
-                  <Text style={styles.partnerCategory}>{partner.category}</Text>
+                  <Text style={styles.partnerCategory}>{partner.categoria || 'Farmácia Parceira'}</Text>
                   
-                  {renderStars(partner.rating)}
+                  {partner.rating && renderStars(partner.rating)}
                   
                   <View style={styles.partnerContact}>
                     <Ionicons name="location" size={12} color="#7f8c8d" />
                     <Text style={styles.partnerAddress} numberOfLines={1}>
-                      {partner.address}, {partner.city}
+                      {partner.endereco}, {partner.cidade}
                     </Text>
                   </View>
                   
                   <View style={styles.partnerContact}>
                     <Ionicons name="call" size={12} color="#7f8c8d" />
-                    <Text style={styles.partnerPhone}>{partner.phone}</Text>
+                    <Text style={styles.partnerPhone}>{partner.telefone}</Text>
                   </View>
 
                   <Text style={styles.partnerDescription} numberOfLines={2}>
-                    {partner.description}
+                    {partner.descricao}
                   </Text>
                   
                   <View style={styles.partnerDetails}>
                     <Text style={styles.productsCount}>
-                      {partner.productsCount} produtos
+                      {partner.produtosCount || 0} produtos
                     </Text>
                     <Text style={styles.partnerEmail} numberOfLines={1}>
                       {partner.email}
@@ -273,24 +392,28 @@ export default function DeletePartnerScreen() {
           <View style={styles.selectedSection}>
             <Text style={styles.sectionTitle}>Farmácia Selecionada para Exclusão</Text>
             <View style={styles.selectedPartner}>
-              <Image source={{ uri: getSelectedPartner()?.image }} style={styles.selectedPartnerImage} />
+              <Image 
+                source={{ uri: getSelectedPartner()?.imagem || 'https://via.placeholder.com/100' }} 
+                style={styles.selectedPartnerImage}
+                defaultSource={{ uri: 'https://via.placeholder.com/100' }}
+              />
               
               <View style={styles.selectedPartnerInfo}>
-                <Text style={styles.selectedPartnerName}>{getSelectedPartner()?.name}</Text>
-                <Text style={styles.selectedPartnerCategory}>{getSelectedPartner()?.category}</Text>
+                <Text style={styles.selectedPartnerName}>{getSelectedPartner()?.nome}</Text>
+                <Text style={styles.selectedPartnerCategory}>{getSelectedPartner()?.categoria || 'Farmácia Parceira'}</Text>
                 
-                {getSelectedPartner() && renderStars(getSelectedPartner().rating)}
+                {getSelectedPartner()?.rating && renderStars(getSelectedPartner().rating)}
                 
                 <View style={styles.selectedPartnerContact}>
                   <Ionicons name="location" size={14} color="#7f8c8d" />
                   <Text style={styles.selectedPartnerAddress}>
-                    {getSelectedPartner()?.address}, {getSelectedPartner()?.city}
+                    {getSelectedPartner()?.endereco}, {getSelectedPartner()?.cidade}
                   </Text>
                 </View>
                 
                 <View style={styles.selectedPartnerContact}>
                   <Ionicons name="call" size={14} color="#7f8c8d" />
-                  <Text style={styles.selectedPartnerPhone}>{getSelectedPartner()?.phone}</Text>
+                  <Text style={styles.selectedPartnerPhone}>{getSelectedPartner()?.telefone}</Text>
                 </View>
 
                 <View style={styles.selectedPartnerContact}>
@@ -299,12 +422,12 @@ export default function DeletePartnerScreen() {
                 </View>
 
                 <Text style={styles.selectedPartnerDescription}>
-                  {getSelectedPartner()?.description}
+                  {getSelectedPartner()?.descricao}
                 </Text>
                 
                 <View style={styles.selectedPartnerDetails}>
                   <Text style={styles.selectedProductsCount}>
-                    {getSelectedPartner()?.productsCount} produtos cadastrados
+                    {getSelectedPartner()?.produtosCount || 0} produtos cadastrados
                   </Text>
                 </View>
               </View>
@@ -317,26 +440,38 @@ export default function DeletePartnerScreen() {
           <TouchableOpacity 
             style={[
               styles.deleteButton,
-              !selectedPartner && styles.deleteButtonDisabled
+              (!selectedPartner || isDeleting) && styles.deleteButtonDisabled
             ]}
             onPress={confirmDelete}
-            disabled={!selectedPartner}
+            disabled={!selectedPartner || isDeleting}
           >
-            <Ionicons name="trash" size={20} color="white" />
-            <Text style={styles.deleteButtonText}>Excluir Farmácia Parceira</Text>
+            {isDeleting ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Ionicons name="trash" size={20} color="white" />
+            )}
+            <Text style={styles.deleteButtonText}>
+              {isDeleting ? 'Excluindo...' : 'Excluir Farmácia Parceira'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={styles.cancelButton}
+            style={[styles.cancelButton, isDeleting && styles.cancelButtonDisabled]}
             onPress={() => router.back()}
+            disabled={isDeleting}
           >
             <Text style={styles.cancelButtonText}>Cancelar</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Espaço extra no final */}
+        <View style={styles.bottomSpacer} />
       </ScrollView>
     </View>
   );
 }
+
+
 
 const styles = StyleSheet.create({
   container: {
@@ -583,5 +718,47 @@ const styles = StyleSheet.create({
     color: '#7f8c8d',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    marginTop: 10,
+  },
+  deniedContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    padding: 20,
+  },
+  deniedTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#e74c3c',
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  deniedText: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  backButton: {
+    backgroundColor: '#3498db',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

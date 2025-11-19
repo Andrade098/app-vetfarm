@@ -4,7 +4,7 @@ const cors = require('cors');
 
 // ⭐⭐ CORS CONFIGURADO PARA ANDROID ⭐⭐
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://192.168.0.6:3000', 'exp://192.168.0.6:8081', 'http://localhost:8081'],
+  origin: ['http://localhost:3000', 'http://192.168.0.3:3000', 'exp://192.168.0.3:8081', 'http://localhost:8081'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept']

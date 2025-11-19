@@ -1,5 +1,5 @@
-const { DataTypes, Sequelize } = require ('sequelize');
-const  db = require ('../config/db'); // ajuste conforme o caminho do seu arquivo db.ts
+const { DataTypes } = require('sequelize');
+const db = require('../config/db');
 
 const Farmacia = db.define('Farmacia', {
   id: {
@@ -8,7 +8,6 @@ const Farmacia = db.define('Farmacia', {
     autoIncrement: true,
     unique: true,
     primaryKey: true
-    
   },
   nome: {
     type: DataTypes.STRING,
@@ -27,7 +26,7 @@ const Farmacia = db.define('Farmacia', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  endereco:  {
+  endereco: {
     type: DataTypes.STRING,
     allowNull: false,
   },
@@ -52,12 +51,10 @@ const Farmacia = db.define('Farmacia', {
     allowNull: false,
   },
   tipo: {
-    type: DataTypes.ENUM('farmacia','matriz'),
+    type: DataTypes.ENUM('matriz', 'filial'),
     allowNull: false,
-    defaultValue: 'farmacia',
-},
-
-
+    defaultValue: 'filial',
+  },
 });
 
 module.exports = Farmacia;

@@ -15,10 +15,9 @@ module.exports = {
         const senhaHash = await bcrypt.hash(senha, 10);
 
         const novaFarmacia = await Farmacia.create({
-            nome,
-            email,
+            ...dados,
             senha: senhaHash,
-            tipo: tipo || 'parceira'  // padrão: parceira  
+            tipo: tipo || 'filial'
         });
 
         return novaFarmacia;
@@ -26,6 +25,12 @@ module.exports = {
 
     async listarFarmacias() {
         return await Farmacia.findAll();
+    },
+
+    async listarFiliais() {
+        return await Farmacia.findAll({
+            where: { tipo: 'filial' }
+        });
     },
 
     async buscarPorId(id) {
@@ -36,10 +41,23 @@ module.exports = {
         return farmacia;
     },
 
+    async buscarPorEmail(email) {
+        const farmacia = await Farmacia.findOne({ where: { email } });
+        if (!farmacia) {
+            throw { status: 404, message: "Farmácia não encontrada" };
+        }
+        return farmacia;
+    },
+
     async atualizarFarmacia(id, dados) {
         const farmacia = await Farmacia.findByPk(id);
         if (!farmacia) {
             throw { status: 404, message: "Farmácia não encontrada" };
+        }
+
+        // Impedir que filial vire matriz via atualização
+        if (dados.tipo && farmacia.tipo === 'filial' && dados.tipo === 'matriz') {
+            throw { status: 403, message: "Filial não pode se tornar matriz" };
         }
 
         // Se atualizar senha
@@ -55,6 +73,11 @@ module.exports = {
         const farmacia = await Farmacia.findByPk(id);
         if (!farmacia) {
             throw { status: 404, message: "Farmácia não encontrada" };
+        }
+
+        // Impedir exclusão de matriz
+        if (farmacia.tipo === 'matriz') {
+            throw { status: 403, message: "Não é possível excluir uma farmácia matriz" };
         }
 
         await farmacia.destroy();

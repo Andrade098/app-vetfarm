@@ -1,42 +1,91 @@
-const LoginService = require('../services/LoginService');
+const farmaciaService = require('../services/farmaciaService');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
-console.log('✅ LoginController.js carregado!');
+module.exports = {
+    async login(req, res) {
+        try {
+            const { email, senha } = req.body;
 
-class LoginController {
-  async login(req, res) {
-    const { email, senha } = req.body;
+            console.log('🔐 TENTATIVA DE LOGIN - EMAIL:', email);
+            console.log('🔐 TENTATIVA DE LOGIN - SENHA:', senha ? '***' : 'FALTANDO');
+            console.log('🔐 BODY COMPLETO:', req.body);
 
-    console.log('🔐 CONTROLLER - Recebendo tentativa de login:');
-    console.log('  - Email:', email);
-    console.log('  - Senha:', senha ? '***' : 'FALTANDO');
+            if (!email || !senha) {
+                console.log('❌ EMAIL OU SENHA FALTANDO');
+                return res.status(400).json({ 
+                    success: false,
+                    error: 'Email e senha são obrigatórios' 
+                });
+            }
 
-    try {
-      if (!email || !senha) {
-        console.log('❌ Dados incompletos no login');
-        return res.status(400).json({
-          success: false,
-          error: "E-mail e senha são obrigatórios!"
-        });
-      }
+            let farmacia;
+            try {
+                console.log('🔍 BUSCANDO FARMÁCIA NO BANCO...');
+                farmacia = await farmaciaService.buscarPorEmail(email);
+                console.log('✅ FARMÁCIA ENCONTRADA:', {
+                    id: farmacia.id,
+                    email: farmacia.email,
+                    nome: farmacia.nome,
+                    temSenha: !!farmacia.senha,
+                    tipo: farmacia.tipo
+                });
+            } catch (error) {
+                console.log('❌ ERRO AO BUSCAR FARMÁCIA:', error.message);
+                return res.status(401).json({ 
+                    success: false,
+                    error: 'Credenciais inválidas' 
+                });
+            }
+            
+            console.log('🔑 COMPARANDO SENHA...');
+            console.log('   - Senha recebida:', senha);
+            console.log('   - Hash no banco:', farmacia.senha ? 'EXISTE' : 'NÃO EXISTE');
+            
+            const senhaValida = await bcrypt.compare(senha, farmacia.senha);
+            console.log('🔑 RESULTADO DA COMPARAÇÃO:', senhaValida);
+            
+            if (!senhaValida) {
+                console.log('❌ SENHA INVÁLIDA');
+                return res.status(401).json({ 
+                    success: false,
+                    error: 'Credenciais inválidas' 
+                });
+            }
 
-      const resultado = await LoginService.login(email, senha);
+            console.log('✅ LOGIN BEM-SUCEDIDO');
+            
+            const token = jwt.sign(
+                { 
+                    id: farmacia.id, 
+                    email: farmacia.email, 
+                    tipo: farmacia.tipo,
+                    nome: farmacia.nome 
+                }, 
+                process.env.JWT_SECRET || 'segredo',
+                { expiresIn: '24h' }
+            );
 
-      console.log('✅ Login realizado com sucesso para:', resultado.email);
+            console.log('✅ TOKEN GERADO COM SUCESSO');
 
-      return res.json({
-        success: true,
-        mensagem: "Login efetuado com sucesso",
-        ...resultado
-      });
+            return res.json({
+                success: true,
+                token,
+                farmacia: {
+                    id: farmacia.id,
+                    nome: farmacia.nome,
+                    email: farmacia.email,
+                    tipo: farmacia.tipo
+                }
+            });
 
-    } catch (error) {
-      console.error('❌ ERRO NO LOGIN CONTROLLER:', error.message);
-      return res.status(400).json({
-        success: false,
-        error: error.message
-      });
+        } catch (err) {
+            console.error('💥 ERRO GRAVE NO LOGIN:', err);
+            console.error('💥 STACK:', err.stack);
+            return res.status(500).json({ 
+                success: false,
+                error: 'Erro interno do servidor' 
+            });
+        }
     }
-  }
-}
-
-module.exports = new LoginController();
+};

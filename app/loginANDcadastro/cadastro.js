@@ -90,9 +90,9 @@ export default function Cadastro() {
       };
 
       console.log('📤 DADOS QUE SERÃO ENVIADOS:', JSON.stringify(dadosParaEnviar, null, 2));
-      console.log('📤 URL:', "http://192.168.0.6:3000/api/clientes");
+      console.log('📤 URL:', "http://192.168.0.3:3000/api/clientes");
 
-      const response = await fetch('http://192.168.0.6:3000/api/clientes', {
+      const response = await fetch('http://192.168.0.3:3000/api/clientes', {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -285,7 +285,7 @@ export default function Cadastro() {
 
       <View style={styles.loginContainer}>
         <Text style={styles.loginText}>Já possui uma conta?</Text>
-        <Link href="/loginANDcadastro/login" asChild>
+        <Link href="/loginANDcadastro/" asChild>
           <TouchableOpacity>
             <Text style={styles.loginLink}>Fazer login</Text>
           </TouchableOpacity>

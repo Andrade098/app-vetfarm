@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt');
 console.log('✅ clienteRoutes.js CARREGADO!');
 
 const clienteController = require('../controllers/clienteController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const { authMiddleware } = require('../middlewares/authMiddleware');
 
 // ⭐⭐ ROTA DE TESTE (APENAS PARA DEBUG) ⭐⭐
 router.post('/teste', (req, res) => {

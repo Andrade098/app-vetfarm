@@ -44,5 +44,55 @@ module.exports = {
         } catch (err) {
             return res.status(err.status || 500).json({ error: err.message });
         }
+    },
+
+    // NOVAS FUNÇÕES PARA GERENCIAR PARCEIROS
+    async listarParceiros(req, res) {
+        try {
+            const parceiros = await farmaciaService.listarFiliais();
+            return res.json(parceiros);
+        } catch (err) {
+            return res.status(err.status || 500).json({ error: err.message });
+        }
+    },
+
+    async adicionarParceiro(req, res) {
+        try {
+            const dadosParceiro = {
+                ...req.body,
+                tipo: 'filial'
+            };
+            const novoParceiro = await farmaciaService.criarFarmacia(dadosParceiro);
+            return res.status(201).json(novoParceiro);
+        } catch (err) {
+            return res.status(err.status || 500).json({ error: err.message });
+        }
+    },
+
+    async editarParceiro(req, res) {
+        try {
+            const parceiroAtualizado = await farmaciaService.atualizarFarmacia(req.params.id, req.body);
+            return res.json(parceiroAtualizado);
+        } catch (err) {
+            return res.status(err.status || 500).json({ error: err.message });
+        }
+    },
+
+    async excluirParceiro(req, res) {
+        try {
+            await farmaciaService.deletarFarmacia(req.params.id);
+            return res.json({ message: "Parceiro removido com sucesso" });
+        } catch (err) {
+            return res.status(err.status || 500).json({ error: err.message });
+        }
+    },
+
+    async verificarTipo(req, res) {
+        try {
+            const farmacia = await farmaciaService.buscarPorId(req.user.id);
+            return res.json({ tipo: farmacia.tipo });
+        } catch (err) {
+            return res.status(err.status || 500).json({ error: err.message });
+        }
     }
 };
