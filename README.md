@@ -7,11 +7,14 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 1. Install dependencies
 
    ```bash
+   Vá ma pasta raiz do projeto
    npm install
    ------
+   
+   
    No Mysql:
    root ,
-    SENHA: "FJZB365FJB@#",
+    SENHA: "senha-do-seu-banco",
     host: "localhost",
 
    depois de um: create database vetfarm
