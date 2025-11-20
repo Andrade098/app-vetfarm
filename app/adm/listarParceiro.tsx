@@ -39,7 +39,7 @@ export default function ListarParceirosScreen() {
     }
 
     const userData = JSON.parse(userDataString);
-    const token = userData.token;
+    const token = await AsyncStorage.getItem('userToken');
     
     console.log('🔑 Token encontrado:', token ? 'SIM' : 'NÃO');
     console.log('👤 Tipo do usuário:', userData.tipo);

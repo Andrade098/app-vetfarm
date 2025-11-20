@@ -274,7 +274,7 @@ const produtoController = {
   },
 
   // ✅ MÉTODOS EXISTENTES (mantidos iguais)
-  const produtoController = {
+  
   // ✅ ESTES MÉTODOS PRECISAM EXISTIR:
   listarCategorias: async (req, res) => {
     try {

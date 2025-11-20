@@ -222,7 +222,7 @@ useEffect(() => {
     console.log('📤 5. Dados sendo enviados:', partnerData);
     console.log('🔐 6. Token:', token ? `Presente (${token.length} chars)` : 'Ausente');
 
-    const response = await fetch(`${API_URL}/api/farmacia/parceiros/novo`, {
+    const response = await fetch(`${API_URL}/api/farmacias/parceiros/novo`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
