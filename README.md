@@ -14,18 +14,16 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    cd backend
    npm install
 
-   ```
-
-   ------
-   Crie um arquivo .env e coloque os dados de acordo com suas credenciais do SGBD
+   Crie um arquivo .env na raiz da pasta backend e coloque os dados de acordo com suas credenciais do SGBD
    
    JWT_SECRET= sua chave secreta
    DB_HOST=localhost
    DB_USER=root
-   DB_PASS='sua senha do root'
+   DB_PASS='sua senha'
    DB_NAME=vetfarm
 
-   Crie um schema diretamento no SGBD
+   ```
+
 
 
 2. Start the app
@@ -38,16 +36,38 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
    Depois de iniciar tudo:
 
-   Crie um arquivo .env na raiz da pasta backend e coloque os dados de acordo com suas credenciais do SGBD
-   
-   JWT_SECRET= sua chave secreta
-   DB_HOST=localhost
-   DB_USER=root
-   DB_PASS='sua senha'
-   DB_NAME=vetfarm
-
    Crie um schema diretamento no SGBD com o nome vetfarm
    e posteriormente insere o comando a seguir:
+
+   INSERT INTO farmacia (
+    nome, 
+    email, 
+    senha, 
+    telefone, 
+    endereco, 
+    cidade, 
+    estado, 
+    bairro, 
+    cep, 
+    descricao, 
+    tipo, 
+    criado_em, 
+    atualizado_em
+   ) VALUES (
+    'Farmácia VetFarm Matriz', 
+    'matriz@vetfarm.com', 
+    '$2b$10$8S2XCyMJjRC4.k.UkHL/7.Zb.6m6.8Kj7nYkR6t6qQ6b6Qk6Y6X6O', -- senha: 123456
+    '(11) 99999-9999', 
+    'Rua Principal, 123', 
+    'São Paulo', 
+    'SP', 
+    'Centro', 
+    '01234-567', 
+    'Farmácia veterinária matriz - especializada em medicamentos para animais', 
+    'matriz', 
+    NOW(), 
+    NOW()
+   );
 
    
    ```
