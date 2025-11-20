@@ -3,15 +3,13 @@ const router = express.Router();
 const farmaciaProdutoController = require('../controllers/farmaciaProdutoController');
 const { authMiddleware } = require('../middlewares/authMiddleware');
 
-//router.use(authFarmacia);
+router.use(authMiddleware);
 
-// ✅ APENAS AS ROTAS QUE VOCÊ PRECISA AGORA
+// ✅ ROTAS DO RELACIONAMENTO FARMÁCIA-PRODUTO
 router.post('/', farmaciaProdutoController.adicionarProduto);
 
-// ❌ COMENTE AS OUTRAS ATÉ IMPLEMENTAR
+// ✅ DESCOMENTE quando for implementar:
 // router.get('/farmacia/:farmacia_id', farmaciaProdutoController.listarPorFarmacia);
-// router.get('/farmacia/:farmacia_id/produto/:produto_id', farmaciaProdutoController.buscarPorFarmacia);
 // router.put('/farmacia/:farmacia_id/produto/:produto_id', farmaciaProdutoController.atualizarEstoquePreco);
-// router.delete('/farmacia/:farmacia_id/produto/:produto_id', farmaciaProdutoController.removerProduto);
 
 module.exports = router;

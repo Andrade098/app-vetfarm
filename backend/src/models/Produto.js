@@ -1,9 +1,9 @@
 const { DataTypes } = require('sequelize');
 const db = require('../config/db');
 
-const Produto = db.define('Produto', {
+const Produto = db.define('Produtos', {
   id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.INTEGER.UNSIGNED,
     allowNull: false,
     autoIncrement: true,
     unique: true,

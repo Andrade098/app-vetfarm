@@ -1,7 +1,10 @@
 const Produto = require('./Produto');
 const Categoria = require('./Categoria');
 const Subcategoria = require('./Subcategoria');
+const Farmacia = require('./Farmacia');
+const FarmaciaProduto = require('./FarmaciaProduto');
 
+// ASSOCIAÇÕES EXISTENTES (Categoria, Subcategoria, Produto)
 // Produto pertence a uma Categoria (Tipo de Produto)
 Produto.belongsTo(Categoria, {
   foreignKey: 'categoria_id',
@@ -38,8 +41,48 @@ Subcategoria.hasMany(Produto, {
   as: 'produtos'
 });
 
+// NOVAS ASSOCIAÇÕES PARA farmacia_produtos
+// Farmacia tem muitos Produtos através da tabela farmacia_produtos
+Farmacia.belongsToMany(Produto, {
+  through: FarmaciaProduto,
+  foreignKey: 'farmacia_id',
+  otherKey: 'produto_id',
+  as: 'produtos'
+});
+
+// Produto pertence a muitas Farmácias através da tabela farmacia_produtos
+Produto.belongsToMany(Farmacia, {
+  through: FarmaciaProduto,
+  foreignKey: 'produto_id',
+  otherKey: 'farmacia_id',
+  as: 'farmacias'
+});
+
+// Associações diretas com a tabela de junção (opcional, mas útil)
+Farmacia.hasMany(FarmaciaProduto, {
+  foreignKey: 'farmacia_id',
+  as: 'farmaciaProdutos'
+});
+
+Produto.hasMany(FarmaciaProduto, {
+  foreignKey: 'produto_id',
+  as: 'farmaciaProdutos'
+});
+
+FarmaciaProduto.belongsTo(Farmacia, {
+  foreignKey: 'farmacia_id',
+  as: 'farmacia'
+});
+
+FarmaciaProduto.belongsTo(Produto, {
+  foreignKey: 'produto_id',
+  as: 'produto'
+});
+
 module.exports = {
   Produto,
   Categoria,
-  Subcategoria
+  Subcategoria,
+  Farmacia,
+  FarmaciaProduto
 };

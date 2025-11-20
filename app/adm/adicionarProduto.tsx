@@ -64,27 +64,36 @@ useEffect(() => {
   };
 
   const fetchCategorias = async () => {
-    try {
-      const token = await AsyncStorage.getItem('userToken');
-      const response = await fetch(`${API_URL}/api/produtos/categorias`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('📋 Categorias carregadas:', data.categorias);
-        setCategorias(data.categorias);
-      } else {
-        console.log('❌ Erro ao carregar categorias:', response.status);
-        Alert.alert('Erro', 'Não foi possível carregar as categorias');
-      }
-    } catch (error) {
-      console.error('💥 Erro ao buscar categorias:', error);
-      Alert.alert('Erro', 'Falha ao conectar com o servidor');
+  try {
+    const token = await AsyncStorage.getItem('userToken');
+    
+    console.log('🔐 [FETCH CATEGORIAS] Token:', token);
+    console.log('🌐 [FETCH CATEGORIAS] URL:', `${API_URL}/api/produtos/categorias`);
+    
+    const response = await fetch(`${API_URL}/api/produtos/categorias`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    console.log('📡 [FETCH CATEGORIAS] Status:', response.status);
+    console.log('📡 [FETCH CATEGORIAS] OK:', response.ok);
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ [FETCH CATEGORIAS] Dados recebidos:', data);
+      console.log('✅ [FETCH CATEGORIAS] Número de categorias:', data.categorias?.length);
+      setCategorias(data.categorias);
+    } else {
+      const errorText = await response.text();
+      console.log('❌ [FETCH CATEGORIAS] Erro:', response.status, errorText);
+      Alert.alert('Erro', 'Não foi possível carregar as categorias');
     }
-  };
+  } catch (error) {
+    console.error('💥 [FETCH CATEGORIAS] Erro catch:', error);
+    Alert.alert('Erro', 'Falha ao conectar com o servidor');
+  }
+};
 
   const fetchSubcategorias = async (categoriaId: number) => {
     try {
@@ -236,97 +245,96 @@ useEffect(() => {
   };
 
   const createProductAndLink = async () => {
-    try {
-      setIsLoading(true);
-      
-      const token = await AsyncStorage.getItem('userToken');
-          console.log('🔐 TOKEN NO ASYNCSTORAGE:', token);
-
-       console.log('📤 HEADERS QUE SERÃO ENVIADOS:', {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    });
-      
-      if (!token || !farmId) {
-        Alert.alert('Erro', 'Dados de autenticação não encontrados');
-        return;
-      }
-
-      // ✅ PASSO 1: Criar o produto (geral)
-      console.log('📤 [STEP 1] Criando produto geral...');
-      
-      const productData = {
-        nome: produtoData.nome.trim(),
-        descricao: produtoData.descricao.trim(),
-        categoria_id: parseInt(produtoData.categoria_id),
-        subcategoria_id: parseInt(produtoData.subcategoria_id),
-        imagens: images
-      };
-
-      console.log('📤 [STEP 1] Dados do produto:', productData);
-
-      const createResponse = await fetch(`${API_URL}/api/produtos`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(productData),
-      });
-
-      if (!createResponse.ok) {
-        const errorText = await createResponse.text();
-        console.log('❌ [STEP 1] Erro ao criar produto:', createResponse.status, errorText);
-        Alert.alert('Erro', errorText || `Erro ${createResponse.status} ao criar produto`);
-        return;
-      }
-
-      const createdProduct = await createResponse.json();
-      console.log('✅ [STEP 1] Produto criado:', createdProduct.produto.id);
-
-      // ✅ PASSO 2: Vincular produto à farmácia (com preço/estoque)
-      console.log('📤 [STEP 2] Vinculando produto à farmácia...');
-      
-      const linkData = {
-        farmacia_id: farmId,
-        produto_id: createdProduct.produto.id,
-        preco_venda: farmaciaProdutoData.preco_venda.replace(',', '.'),
-        estoque: farmaciaProdutoData.estoque ? parseInt(farmaciaProdutoData.estoque) : 0
-      };
-
-      console.log('📤 [STEP 2] Dados do vínculo:', linkData);
-
-      const linkResponse = await fetch(`${API_URL}/api/farmacia-produtos`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(linkData),
-      });
-
-      if (!linkResponse.ok) {
-        const errorText = await linkResponse.text();
-        console.log('❌ [STEP 2] Erro ao vincular produto:', linkResponse.status, errorText);
-        Alert.alert('Erro', errorText || `Erro ${linkResponse.status} ao vincular produto à farmácia`);
-        return;
-      }
-
-      console.log('✅ [STEP 2] Produto vinculado com sucesso!');
-      
-      Alert.alert(
-        'Sucesso', 
-        'Produto criado e adicionado à farmácia com sucesso!',
-        [{ text: 'OK', onPress: () => router.back() }]
-      );
-
-    } catch (error) {
-      console.error('💥 [ADD PRODUCT] Erro catch:', error);
-      Alert.alert('Erro', `Falha ao conectar com o servidor: ${error.message}`);
-    } finally {
-      setIsLoading(false);
+  try {
+    setIsLoading(true);
+    
+    const token = await AsyncStorage.getItem('userToken');
+    
+    if (!token || !farmId) {
+      Alert.alert('Erro', 'Dados de autenticação não encontrados');
+      return;
     }
-  };
+
+    // ✅ PASSO 1: Criar produto geral
+    console.log('📤 [STEP 1] Criando produto geral em /api/produtos...');
+    
+    const productData = {
+      nome: produtoData.nome.trim(),
+      descricao: produtoData.descricao.trim(),
+      categoria_id: parseInt(produtoData.categoria_id),
+      subcategoria_id: parseInt(produtoData.subcategoria_id),
+      imagens: images
+    };
+
+    const createResponse = await fetch(`${API_URL}/api/produtos`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(productData),
+    });
+
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text();
+      console.log('❌ [STEP 1] Erro ao criar produto:', createResponse.status, errorText);
+      Alert.alert('Erro', errorText || `Erro ${createResponse.status} ao criar produto`);
+      return;
+    }
+
+    const createdProduct = await createResponse.json();
+    console.log('✅ [STEP 1] Produto criado com ID:', createdProduct.produto.id);
+
+    // ✅ PASSO 2: Vincular à farmácia - ⭐⭐ MUDANÇA AQUI ⭐⭐
+    console.log('📤 [STEP 2] Vinculando produto em /api/farmacia-produtos...');
+    
+    const linkData = {
+      farmacia_id: farmId,
+      produto_id: createdProduct.produto.id,
+      preco_venda: farmaciaProdutoData.preco_venda.replace(',', '.'),
+      estoque: farmaciaProdutoData.estoque ? parseInt(farmaciaProdutoData.estoque) : 0
+    };
+
+    console.log('📤 [STEP 2] Dados do vínculo:', linkData);
+
+    // ⭐⭐ MUDANÇA CRÍTICA: /produtos/farmacia → /farmacia-produtos
+    const linkResponse = await fetch(`${API_URL}/api/farmacia-produtos`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(linkData),
+    });
+
+    if (!linkResponse.ok) {
+      const errorText = await linkResponse.text();
+      console.log('❌ [STEP 2] Erro ao vincular produto:', linkResponse.status, errorText);
+      
+      if (linkResponse.status === 400) {
+        Alert.alert('Atenção', 'Este produto já está cadastrado na sua farmácia');
+      } else {
+        Alert.alert('Erro', errorText || `Erro ${linkResponse.status} ao vincular produto à farmácia`);
+      }
+      return;
+    }
+
+    const linkResult = await linkResponse.json();
+    console.log('✅ [STEP 2] Produto vinculado com sucesso!', linkResult);
+    
+    Alert.alert(
+      'Sucesso', 
+      'Produto criado e adicionado à farmácia com sucesso!',
+      [{ text: 'OK', onPress: () => router.back() }]
+    );
+
+  } catch (error) {
+    console.error('💥 [ADD PRODUCT] Erro catch:', error);
+    Alert.alert('Erro', `Falha ao conectar com o servidor: ${error.message}`);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const getCategoriaLabel = () => {
     if (!produtoData.categoria_id) return 'Selecione o tipo de produto';

@@ -83,6 +83,9 @@ const produtoController = {
   // ✅ ADICIONAR PRODUTO A UMA FARMÁCIA (com preço/estoque)
   adicionarAFarmacia: async (req, res) => {
     try {
+
+        console.log('🏪 [ADICIONAR A FARMACIA] Endpoint chamado');
+        console.log('📦 Body recebido:', req.body);
       const {
         farmacia_id,
         produto_id,
@@ -94,14 +97,20 @@ const produtoController = {
 
       // Validações
       if (!farmacia_id || !produto_id || !preco_venda) {
-        return res.status(400).json({
-          error: 'Preencha todos os campos obrigatórios: farmacia_id, produto_id, preco_venda'
-        });
-      }
+      console.log('❌ Campos faltando:', { farmacia_id, produto_id, preco_venda });
+      return res.status(400).json({
+        error: 'Preencha todos os campos obrigatórios: farmacia_id, produto_id, preco_venda'
+      });
+    }
 
       // Verificar se farmácia e produto existem
-      const farmacia = await Farmacia.findByPk(farmacia_id);
-      const produto = await Produto.findByPk(produto_id);
+      console.log('🔍 Procurando farmácia:', farmacia_id);
+    const farmacia = await Farmacia.findByPk(farmacia_id);
+    console.log('🏪 Farmácia encontrada:', farmacia ? farmacia.id : 'NÃO');
+
+    console.log('🔍 Procurando produto:', produto_id);
+    const produto = await Produto.findByPk(produto_id);
+    console.log('📦 Produto encontrado:', produto ? produto.id : 'NÃO');
 
       if (!farmacia) {
         return res.status(404).json({ error: 'Farmácia não encontrada' });
@@ -143,10 +152,10 @@ const produtoController = {
       });
 
     } catch (error) {
-      console.error('💥 Erro ao adicionar produto à farmácia:', error);
-      res.status(500).json({
-        error: 'Erro interno do servidor ao adicionar produto à farmácia'
-      });
+    console.error('💥 ERRO em adicionarAFarmacia:', error);
+    res.status(500).json({
+      error: 'Erro interno do servidor ao adicionar produto à farmácia'
+    });
     }
   },
 
@@ -273,19 +282,23 @@ const produtoController = {
     }
   },
 
-  // ✅ MÉTODOS EXISTENTES (mantidos iguais)
-  
-  // ✅ ESTES MÉTODOS PRECISAM EXISTIR:
+  // ✅ MÉTODOS PARA CATEGORIAS E SUBCATEGORIAS
   listarCategorias: async (req, res) => {
     try {
+      console.log('📋 Buscando categorias...');
       const categorias = await Categoria.findAll({
         include: [{
           model: Subcategoria,
-          as: 'subcategorias'
-        }]
+          as: 'subcategorias',
+          attributes: ['id', 'nome', 'descricao']
+        }],
+        order: [['nome', 'ASC']]
       });
+      
+      console.log('✅ Categorias encontradas:', categorias.length);
       res.json({ categorias });
     } catch (error) {
+      console.error('💥 Erro ao buscar categorias:', error);
       res.status(500).json({ error: 'Erro ao carregar categorias' });
     }
   },
@@ -293,16 +306,20 @@ const produtoController = {
   listarSubcategorias: async (req, res) => {
     try {
       const { categoria_id } = req.params;
+      console.log('🐾 Buscando subcategorias para categoria:', categoria_id);
+      
       const subcategorias = await Subcategoria.findAll({
-        where: { categoria_id }
+        where: { categoria_id },
+        order: [['nome', 'ASC']]
       });
+      
+      console.log('✅ Subcategorias encontradas:', subcategorias.length);
       res.json({ subcategorias });
     } catch (error) {
+      console.error('💥 Erro ao buscar subcategorias:', error);
       res.status(500).json({ error: 'Erro ao carregar subcategorias' });
     }
-  },
-
-  // ... outros métodos
+  }
 };
 
 module.exports = produtoController;
