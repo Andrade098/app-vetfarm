@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL = 'http://192.168.0.3:3000';
@@ -11,12 +12,12 @@ export default function AddProductScreen() {
   const router = useRouter();
   
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [farmId, setFarmId] = useState<number | null>(null);
   const [categorias, setCategorias] = useState<any[]>([]);
   const [subcategorias, setSubcategorias] = useState<any[]>([]);
   const [images, setImages] = useState<string[]>([]);
   
-  // ✅ ESTADOS SEPARADOS: Produto geral + Farmácia-produto
   const [produtoData, setProdutoData] = useState({
     nome: '',
     categoria_id: '',
@@ -33,15 +34,81 @@ export default function AddProductScreen() {
   const [showCategorias, setShowCategorias] = useState(false);
   const [showSubcategorias, setShowSubcategorias] = useState(false);
 
-  // CARREGAR DADOS DA FARMÁCIA E CATEGORIAS
-  // 📍 ADICIONE ISSO JUNTO AOS SEUS OUTROS USEEFFECTS:
-// CARREGAR DADOS DA FARMÁCIA E CATEGORIAS
-useEffect(() => {
-  console.log('🔄 [ADD PRODUCT] useEffect executando...');
-  loadFarmData();
-  fetchCategorias();
-}, []);
+  // ✅ NOVA FUNÇÃO: Upload para o servidor
+  const uploadImageToServer = async (imageUri: string): Promise<string> => {
+    try {
+      console.log('📤 Iniciando upload da imagem:', imageUri);
+      
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        throw new Error('Token não encontrado');
+      }
 
+      const formData = new FormData();
+      
+      let mimeType = 'image/jpeg';
+      if (imageUri.includes('.png')) mimeType = 'image/png';
+      if (imageUri.includes('.gif')) mimeType = 'image/gif';
+      
+      formData.append('image', {
+        uri: imageUri,
+        type: mimeType,
+        name: `product_${Date.now()}.${mimeType.split('/')[1]}`
+      } as any);
+
+      console.log('🔄 Enviando para /api/upload...');
+      
+      const response = await fetch(`${API_URL}/api/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro no upload: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Upload realizado com sucesso:', result);
+      
+      // Retornar a URL completa da imagem
+      const imageUrl = `${API_URL}${result.url}`;
+      console.log('🖼️ URL da imagem:', imageUrl);
+      
+      return imageUrl;
+      
+    } catch (error) {
+      console.error('❌ Erro no upload da imagem:', error);
+      
+      // FALLBACK: Se o upload falhar, converter para Base64
+      console.log('🔄 Upload falhou, usando fallback Base64...');
+      try {
+        const base64 = await FileSystem.readAsStringAsync(imageUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        
+        let mimeType = 'image/jpeg';
+        if (imageUri.includes('.png')) mimeType = 'image/png';
+        if (imageUri.includes('.gif')) mimeType = 'image/gif';
+        
+        const base64Data = `data:${mimeType};base64,${base64}`;
+        return base64Data;
+      } catch (fallbackError) {
+        console.error('❌ Fallback também falhou:', fallbackError);
+        throw error;
+      }
+    }
+  };
+
+  // CARREGAR DADOS DA FARMÁCIA E CATEGORIAS
+  useEffect(() => {
+    console.log('🔄 [ADD PRODUCT] useEffect executando...');
+    loadFarmData();
+    fetchCategorias();
+  }, []);
 
   const loadFarmData = async () => {
     try {
@@ -64,36 +131,36 @@ useEffect(() => {
   };
 
   const fetchCategorias = async () => {
-  try {
-    const token = await AsyncStorage.getItem('userToken');
-    
-    console.log('🔐 [FETCH CATEGORIAS] Token:', token);
-    console.log('🌐 [FETCH CATEGORIAS] URL:', `${API_URL}/api/produtos/categorias`);
-    
-    const response = await fetch(`${API_URL}/api/produtos/categorias`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-    
-    console.log('📡 [FETCH CATEGORIAS] Status:', response.status);
-    console.log('📡 [FETCH CATEGORIAS] OK:', response.ok);
-    
-    if (response.ok) {
-      const data = await response.json();
-      console.log('✅ [FETCH CATEGORIAS] Dados recebidos:', data);
-      console.log('✅ [FETCH CATEGORIAS] Número de categorias:', data.categorias?.length);
-      setCategorias(data.categorias);
-    } else {
-      const errorText = await response.text();
-      console.log('❌ [FETCH CATEGORIAS] Erro:', response.status, errorText);
-      Alert.alert('Erro', 'Não foi possível carregar as categorias');
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      
+      console.log('🔐 [FETCH CATEGORIAS] Token:', token);
+      console.log('🌐 [FETCH CATEGORIAS] URL:', `${API_URL}/api/produtos/categorias`);
+      
+      const response = await fetch(`${API_URL}/api/produtos/categorias`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      console.log('📡 [FETCH CATEGORIAS] Status:', response.status);
+      console.log('📡 [FETCH CATEGORIAS] OK:', response.ok);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ [FETCH CATEGORIAS] Dados recebidos:', data);
+        console.log('✅ [FETCH CATEGORIAS] Número de categorias:', data.categorias?.length);
+        setCategorias(data.categorias);
+      } else {
+        const errorText = await response.text();
+        console.log('❌ [FETCH CATEGORIAS] Erro:', response.status, errorText);
+        Alert.alert('Erro', 'Não foi possível carregar as categorias');
+      }
+    } catch (error) {
+      console.error('💥 [FETCH CATEGORIAS] Erro catch:', error);
+      Alert.alert('Erro', 'Falha ao conectar com o servidor');
     }
-  } catch (error) {
-    console.error('💥 [FETCH CATEGORIAS] Erro catch:', error);
-    Alert.alert('Erro', 'Falha ao conectar com o servidor');
-  }
-};
+  };
 
   const fetchSubcategorias = async (categoriaId: number) => {
     try {
@@ -118,8 +185,11 @@ useEffect(() => {
     }
   };
 
+  // ✅ ATUALIZADA: Função para selecionar e fazer upload
   const pickImage = async () => {
     try {
+      setIsUploading(true);
+      
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
@@ -131,15 +201,33 @@ useEffect(() => {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 0.8,
+        quality: 0.7,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setImages([...images, result.assets[0].uri]);
+        const newImageUri = result.assets[0].uri;
+        console.log('🖼️ Nova imagem selecionada:', newImageUri);
+        
+        try {
+          const uploadedUrl = await uploadImageToServer(newImageUri);
+          console.log('✅ Imagem processada com sucesso:', uploadedUrl);
+          
+          setImages(prev => {
+            const newImages = [...prev, uploadedUrl];
+            console.log('📸 Nova lista de imagens:', newImages.length);
+            return newImages;
+          });
+          
+        } catch (uploadError) {
+          console.error('❌ Erro no processamento da imagem:', uploadError);
+          Alert.alert('Erro', 'Não foi possível processar a imagem. Tente novamente.');
+        }
       }
     } catch (error) {
       console.error('Erro ao selecionar imagem:', error);
       Alert.alert('Erro', 'Não foi possível selecionar a imagem');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -159,6 +247,39 @@ useEffect(() => {
         }
       ]
     );
+  };
+
+  // ✅ CORREÇÃO: Função para verificar se é Base64
+  const isBase64Image = (uri: string) => {
+    return uri.startsWith('data:image');
+  };
+
+  // ✅ CORREÇÃO: Função para verificar se é URL do servidor
+  const isServerImage = (uri: string) => {
+    return uri.startsWith(API_URL);
+  };
+
+  // ✅ CORREÇÃO: Função para obter source da imagem
+  const getImageSource = (uri: string) => {
+    if (!uri) return null;
+    
+    // Se for Base64, usar diretamente
+    if (isBase64Image(uri)) {
+      return { uri };
+    }
+    
+    // Se for HTTP URL, usar diretamente
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      return { uri };
+    }
+    
+    // Se for Blob URL ou file://, tentar usar (pode não funcionar)
+    if (uri.startsWith('blob:') || uri.startsWith('file://')) {
+      console.log('⚠️ URL Blob/file detectada, tentando usar:', uri);
+      return { uri };
+    }
+    
+    return null;
   };
 
   const handleProdutoChange = (field: string, value: string) => {
@@ -221,12 +342,31 @@ useEffect(() => {
     return true;
   };
 
-  // ✅ NOVO FLUXO: Criar produto E vincular à farmácia
+  // ✅ CORREÇÃO: Criar produto E vincular à farmácia
   const handleSubmit = async () => {
     console.log('🟡 [ADD PRODUCT] Iniciando processo de criação...');
     
     if (!validateForm()) {
       return;
+    }
+
+    // ✅ AVISO: Base64 pode ser grande
+    const base64Images = images.filter(img => isBase64Image(img));
+    if (base64Images.length > 0) {
+      const totalSize = base64Images.reduce((acc, img) => acc + img.length, 0);
+      console.log('📊 Tamanho total das imagens Base64:', totalSize);
+      
+      if (totalSize > 2000000) { // 2MB
+        Alert.alert(
+          'Imagens Grandes',
+          `As ${base64Images.length} imagens são muito grandes (${Math.round(totalSize/1000)}KB). Isso pode afetar o desempenho. Deseja continuar?`,
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Continuar', onPress: createProductAndLink }
+          ]
+        );
+        return;
+      }
     }
 
     if (images.length === 0) {
@@ -245,96 +385,100 @@ useEffect(() => {
   };
 
   const createProductAndLink = async () => {
-  try {
-    setIsLoading(true);
-    
-    const token = await AsyncStorage.getItem('userToken');
-    
-    if (!token || !farmId) {
-      Alert.alert('Erro', 'Dados de autenticação não encontrados');
-      return;
-    }
-
-    // ✅ PASSO 1: Criar produto geral
-    console.log('📤 [STEP 1] Criando produto geral em /api/produtos...');
-    
-    const productData = {
-      nome: produtoData.nome.trim(),
-      descricao: produtoData.descricao.trim(),
-      categoria_id: parseInt(produtoData.categoria_id),
-      subcategoria_id: parseInt(produtoData.subcategoria_id),
-      imagens: images
-    };
-
-    const createResponse = await fetch(`${API_URL}/api/produtos`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(productData),
-    });
-
-    if (!createResponse.ok) {
-      const errorText = await createResponse.text();
-      console.log('❌ [STEP 1] Erro ao criar produto:', createResponse.status, errorText);
-      Alert.alert('Erro', errorText || `Erro ${createResponse.status} ao criar produto`);
-      return;
-    }
-
-    const createdProduct = await createResponse.json();
-    console.log('✅ [STEP 1] Produto criado com ID:', createdProduct.produto.id);
-
-    // ✅ PASSO 2: Vincular à farmácia - ⭐⭐ MUDANÇA AQUI ⭐⭐
-    console.log('📤 [STEP 2] Vinculando produto em /api/farmacia-produtos...');
-    
-    const linkData = {
-      farmacia_id: farmId,
-      produto_id: createdProduct.produto.id,
-      preco_venda: farmaciaProdutoData.preco_venda.replace(',', '.'),
-      estoque: farmaciaProdutoData.estoque ? parseInt(farmaciaProdutoData.estoque) : 0
-    };
-
-    console.log('📤 [STEP 2] Dados do vínculo:', linkData);
-
-    // ⭐⭐ MUDANÇA CRÍTICA: /produtos/farmacia → /farmacia-produtos
-    const linkResponse = await fetch(`${API_URL}/api/farmacia-produtos`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(linkData),
-    });
-
-    if (!linkResponse.ok) {
-      const errorText = await linkResponse.text();
-      console.log('❌ [STEP 2] Erro ao vincular produto:', linkResponse.status, errorText);
+    try {
+      setIsLoading(true);
       
-      if (linkResponse.status === 400) {
-        Alert.alert('Atenção', 'Este produto já está cadastrado na sua farmácia');
-      } else {
-        Alert.alert('Erro', errorText || `Erro ${linkResponse.status} ao vincular produto à farmácia`);
+      const token = await AsyncStorage.getItem('userToken');
+      
+      if (!token || !farmId) {
+        Alert.alert('Erro', 'Dados de autenticação não encontrados');
+        return;
       }
-      return;
+
+      // ✅ PASSO 1: Criar produto geral
+      console.log('📤 [STEP 1] Criando produto geral em /api/produtos...');
+      
+      const productData = {
+        nome: produtoData.nome.trim(),
+        descricao: produtoData.descricao.trim(),
+        categoria_id: parseInt(produtoData.categoria_id),
+        subcategoria_id: parseInt(produtoData.subcategoria_id),
+        imagens: images
+      };
+
+      console.log('📤 [STEP 1] Dados do produto:', {
+        ...productData,
+        imagens: `${images.length} imagens (${images.filter(img => isServerImage(img)).length} no servidor, ${images.filter(img => isBase64Image(img)).length} em Base64)`
+      });
+
+      const createResponse = await fetch(`${API_URL}/api/produtos`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productData),
+      });
+
+      if (!createResponse.ok) {
+        const errorText = await createResponse.text();
+        console.log('❌ [STEP 1] Erro ao criar produto:', createResponse.status, errorText);
+        Alert.alert('Erro', errorText || `Erro ${createResponse.status} ao criar produto`);
+        return;
+      }
+
+      const createdProduct = await createResponse.json();
+      console.log('✅ [STEP 1] Produto criado com ID:', createdProduct.produto.id);
+
+      // ✅ PASSO 2: Vincular à farmácia
+      console.log('📤 [STEP 2] Vinculando produto em /api/farmacia-produtos...');
+      
+      const linkData = {
+        farmacia_id: farmId,
+        produto_id: createdProduct.produto.id,
+        preco_venda: farmaciaProdutoData.preco_venda.replace(',', '.'),
+        estoque: farmaciaProdutoData.estoque ? parseInt(farmaciaProdutoData.estoque) : 0
+      };
+
+      console.log('📤 [STEP 2] Dados do vínculo:', linkData);
+
+      const linkResponse = await fetch(`${API_URL}/api/farmacia-produtos`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(linkData),
+      });
+
+      if (!linkResponse.ok) {
+        const errorText = await linkResponse.text();
+        console.log('❌ [STEP 2] Erro ao vincular produto:', linkResponse.status, errorText);
+        
+        if (linkResponse.status === 400) {
+          Alert.alert('Atenção', 'Este produto já está cadastrado na sua farmácia');
+        } else {
+          Alert.alert('Erro', errorText || `Erro ${linkResponse.status} ao vincular produto à farmácia`);
+        }
+        return;
+      }
+
+      const linkResult = await linkResponse.json();
+      console.log('✅ [STEP 2] Produto vinculado com sucesso!', linkResult);
+      
+      Alert.alert(
+        'Sucesso', 
+        'Produto criado e adicionado à farmácia com sucesso!',
+        [{ text: 'OK', onPress: () => router.back() }]
+      );
+
+    } catch (error) {
+      console.error('💥 [ADD PRODUCT] Erro catch:', error);
+      Alert.alert('Erro', `Falha ao conectar com o servidor: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
-
-    const linkResult = await linkResponse.json();
-    console.log('✅ [STEP 2] Produto vinculado com sucesso!', linkResult);
-    
-    Alert.alert(
-      'Sucesso', 
-      'Produto criado e adicionado à farmácia com sucesso!',
-      [{ text: 'OK', onPress: () => router.back() }]
-    );
-
-  } catch (error) {
-    console.error('💥 [ADD PRODUCT] Erro catch:', error);
-    Alert.alert('Erro', `Falha ao conectar com o servidor: ${error.message}`);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const getCategoriaLabel = () => {
     if (!produtoData.categoria_id) return 'Selecione o tipo de produto';
@@ -371,28 +515,75 @@ useEffect(() => {
       />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Seção de Imagens */}
+        {/* Seção de Imagens ATUALIZADA */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Imagens do Produto</Text>
-          <Text style={styles.sectionSubtitle}>Adicione até 4 imagens do produto</Text>
+          <Text style={styles.sectionSubtitle}>
+            {images.length} imagem{images.length !== 1 ? 'ens' : ''} {images.length === 0 ? 'adicionada' : 'adicionadas'}
+            {isUploading && ' (Fazendo upload...)'}
+          </Text>
           
           <ScrollView horizontal style={styles.imagesContainer} showsHorizontalScrollIndicator={false}>
-            {images.map((uri, index) => (
-              <View key={index} style={styles.imageWrapper}>
-                <Image source={{ uri }} style={styles.image} />
-                <TouchableOpacity 
-                  style={styles.removeImageButton}
-                  onPress={() => removeImage(index)}
-                >
-                  <Ionicons name="close" size={16} color="white" />
-                </TouchableOpacity>
-              </View>
-            ))}
+            {images.map((uri, index) => {
+              const imageSource = getImageSource(uri);
+              const isServer = isServerImage(uri);
+              const isBase64 = isBase64Image(uri);
+              
+              return (
+                <View key={index} style={styles.imageWrapper}>
+                  {imageSource ? (
+                    <Image 
+                      source={imageSource} 
+                      style={styles.image}
+                      resizeMode="cover"
+                      onError={(e) => {
+                        console.log(`❌ Erro ao carregar imagem ${index}:`, e.nativeEvent.error);
+                      }}
+                    />
+                  ) : (
+                    <View style={styles.imagePlaceholder}>
+                      <Ionicons name="warning" size={24} color="#e74c3c" />
+                      <Text style={styles.placeholderText}>URL inválida</Text>
+                    </View>
+                  )}
+                  
+                  <View style={[
+                    styles.typeBadge,
+                    isServer ? styles.serverBadge : 
+                    isBase64 ? styles.base64Badge : styles.localBadge
+                  ]}>
+                    <Text style={styles.typeBadgeText}>
+                      {isServer ? 'Servidor' : isBase64 ? 'Base64' : 'Local'}
+                    </Text>
+                  </View>
+                  
+                  <TouchableOpacity 
+                    style={styles.removeImageButton}
+                    onPress={() => removeImage(index)}
+                  >
+                    <Ionicons name="close" size={16} color="white" />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
             
             {images.length < 4 && (
-              <TouchableOpacity style={styles.addImageButton} onPress={pickImage}>
-                <Ionicons name="camera" size={32} color="#3498db" />
-                <Text style={styles.addImageText}>Adicionar Imagem</Text>
+              <TouchableOpacity 
+                style={[
+                  styles.addImageButton,
+                  isUploading && styles.addImageButtonDisabled
+                ]} 
+                onPress={pickImage}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <ActivityIndicator size="small" color="#3498db" />
+                ) : (
+                  <Ionicons name="camera" size={32} color="#3498db" />
+                )}
+                <Text style={styles.addImageText}>
+                  {isUploading ? 'Upload...' : 'Adicionar\nImagem'}
+                </Text>
               </TouchableOpacity>
             )}
           </ScrollView>
@@ -527,7 +718,7 @@ useEffect(() => {
         </View>
       </ScrollView>
 
-      {/* Modais (mantidos iguais) */}
+      {/* Modais */}
       <Modal visible={showCategorias} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -585,7 +776,7 @@ useEffect(() => {
   );
 }
 
-// Styles (mantidos iguais)
+// ✅ ESTILOS ATUALIZADOS
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8f9fa' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f9fa' },
@@ -597,9 +788,80 @@ const styles = StyleSheet.create({
   imagesContainer: { flexDirection: 'row', marginBottom: 10 },
   imageWrapper: { position: 'relative', marginRight: 10 },
   image: { width: 100, height: 100, borderRadius: 8, backgroundColor: '#ecf0f1' },
-  removeImageButton: { position: 'absolute', top: -8, right: -8, backgroundColor: '#e74c3c', borderRadius: 12, width: 24, height: 24, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'white' },
-  addImageButton: { width: 100, height: 100, borderWidth: 2, borderColor: '#3498db', borderStyle: 'dashed', borderRadius: 8, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8f9fa' },
-  addImageText: { fontSize: 12, color: '#3498db', marginTop: 5, textAlign: 'center' },
+  imagePlaceholder: { 
+    width: 100, 
+    height: 100, 
+    borderRadius: 8, 
+    backgroundColor: '#ecf0f1', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e74c3c',
+    borderStyle: 'dashed'
+  },
+  placeholderText: {
+    color: '#e74c3c',
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 4,
+    fontWeight: 'bold',
+  },
+  typeBadge: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  serverBadge: {
+    backgroundColor: 'rgba(46, 204, 113, 0.9)',
+  },
+  base64Badge: {
+    backgroundColor: 'rgba(52, 152, 219, 0.9)',
+  },
+  localBadge: {
+    backgroundColor: 'rgba(241, 196, 15, 0.9)',
+  },
+  typeBadgeText: {
+    color: 'white',
+    fontSize: 8,
+    fontWeight: 'bold',
+  },
+  removeImageButton: { 
+    position: 'absolute', 
+    top: -8, 
+    right: -8, 
+    backgroundColor: '#e74c3c', 
+    borderRadius: 12, 
+    width: 24, 
+    height: 24, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    borderWidth: 2, 
+    borderColor: 'white' 
+  },
+  addImageButton: { 
+    width: 100, 
+    height: 100, 
+    borderWidth: 2, 
+    borderColor: '#3498db', 
+    borderStyle: 'dashed', 
+    borderRadius: 8, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: '#f8f9fa' 
+  },
+  addImageButtonDisabled: {
+    opacity: 0.5,
+  },
+  addImageText: { 
+    fontSize: 12, 
+    color: '#3498db', 
+    marginTop: 5, 
+    textAlign: 'center',
+    lineHeight: 14,
+  },
   inputGroup: { marginBottom: 15 },
   label: { fontSize: 14, fontWeight: '600', color: '#2c3e50', marginBottom: 8 },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 16, backgroundColor: 'white', color: '#2c3e50' },

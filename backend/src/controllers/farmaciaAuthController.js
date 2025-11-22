@@ -55,12 +55,14 @@ module.exports = {
 
             console.log('✅ LOGIN BEM-SUCEDIDO');
             
+            // ✅ CORREÇÃO AQUI - ADICIONE farmaciaId
             const token = jwt.sign(
                 { 
                     id: farmacia.id, 
                     email: farmacia.email, 
                     tipo: farmacia.tipo,
-                    nome: farmacia.nome 
+                    nome: farmacia.nome,
+                    farmaciaId: farmacia.id // ← LINHA ADICIONADA
                 }, 
                 process.env.JWT_SECRET || 'segredo',
                 { expiresIn: '24h' }

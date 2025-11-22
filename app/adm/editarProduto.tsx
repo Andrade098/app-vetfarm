@@ -1,99 +1,381 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image, Modal, ActivityIndicator } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Opções para os selects
-const animalCategories = [
-  { label: 'Bovinos', value: 'bovinos' },
-  { label: 'Equinos', value: 'equinos' },
-  { label: 'Ovinos', value: 'ovinos' },
-  { label: 'Suínos', value: 'suinos' },
-  { label: 'Peixes', value: 'peixes' },
-  { label: 'Aves', value: 'aves' }
-];
-
-const productCategories = [
-  { label: 'Vacinas', value: 'vacinas' },
-  { label: 'Suplementos', value: 'suplementos' },
-  { label: 'Nutrição', value: 'nutricao' },
-  { label: 'Higiene', value: 'higiene' },
-  { label: 'Acessórios', value: 'acessorios' },
-  { label: 'Antibióticos', value: 'antibioticos' },
-  { label: 'Antiparasitários', value: 'antiparasitarios' }
-];
-
-// Dados simulados do produto (em uma aplicação real, viria da API)
-const mockProductData = {
-  id: 1,
-  name: 'Vacina contra Febre Aftosa',
-  animalCategory: 'bovinos',
-  productCategory: 'vacinas',
-  description: 'Vacina para prevenção da febre aftosa em bovinos. Alta eficácia e segurança comprovada.',
-  price: '89.90',
-  stock: '24',
-  images: [
-    'https://via.placeholder.com/300?text=Imagem+1',
-    'https://via.placeholder.com/300?text=Imagem+2'
-  ]
-};
+const API_URL = 'http://192.168.0.3:3000';
 
 export default function EditProductScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const productId = params.id ? parseInt(params.id as string) : 1;
-
+  
+  const farmaciaId = params.farmacia_id;
+  const produtoId = params.produto_id;
+  
   const [images, setImages] = useState<string[]>([]);
   const [formData, setFormData] = useState({
-    name: '',
+    nome: '',
     animalCategory: '',
     productCategory: '',
-    description: '',
-    price: '',
-    stock: ''
+    descricao: '',
+    preco_venda: '',
+    estoque: ''
   });
   const [showAnimalCategories, setShowAnimalCategories] = useState(false);
   const [showProductCategories, setShowProductCategories] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  const [categorias, setCategorias] = useState<any[]>([]);
+  const [subcategorias, setSubcategorias] = useState<any[]>([]);
 
-  // Simular carregamento dos dados do produto
-  useEffect(() => {
-    const loadProductData = async () => {
-      setIsLoading(true);
-      // Simular delay de API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+  // ✅ NOVA FUNÇÃO: Upload para o servidor
+  const uploadImageToServer = async (imageUri: string): Promise<string> => {
+    try {
+      console.log('📤 Iniciando upload da imagem:', imageUri);
       
-      setFormData({
-        name: mockProductData.name,
-        animalCategory: mockProductData.animalCategory,
-        productCategory: mockProductData.productCategory,
-        description: mockProductData.description,
-        price: mockProductData.price,
-        stock: mockProductData.stock.toString()
+      // Se já for uma URL do servidor, retornar diretamente
+      if (imageUri.startsWith(API_URL)) {
+        console.log('✅ Imagem já é uma URL do servidor');
+        return imageUri;
+      }
+      
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        throw new Error('Token não encontrado');
+      }
+
+      const formData = new FormData();
+      
+      let mimeType = 'image/jpeg';
+      if (imageUri.includes('.png')) mimeType = 'image/png';
+      if (imageUri.includes('.gif')) mimeType = 'image/gif';
+      
+      formData.append('image', {
+        uri: imageUri,
+        type: mimeType,
+        name: `product_${Date.now()}.${mimeType.split('/')[1]}`
+      } as any);
+
+      console.log('🔄 Enviando para /api/upload...');
+      
+      const response = await fetch(`${API_URL}/api/upload`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro no upload: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Upload realizado com sucesso:', result);
+      
+      // Retornar a URL completa da imagem
+      const imageUrl = `${API_URL}${result.url}`;
+      console.log('🖼️ URL da imagem:', imageUrl);
+      
+      return imageUrl;
+      
+    } catch (error) {
+      console.error('❌ Erro no upload da imagem:', error);
+      
+      // FALLBACK: Se o upload falhar, converter para Base64
+      console.log('🔄 Upload falhou, usando fallback Base64...');
+      try {
+        const base64 = await FileSystem.readAsStringAsync(imageUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        
+        let mimeType = 'image/jpeg';
+        if (imageUri.includes('.png')) mimeType = 'image/png';
+        if (imageUri.includes('.gif')) mimeType = 'image/gif';
+        
+        const base64Data = `data:${mimeType};base64,${base64}`;
+        return base64Data;
+      } catch (fallbackError) {
+        console.error('❌ Fallback também falhou:', fallbackError);
+        throw error;
+      }
+    }
+  };
+
+  // ✅ NOVA FUNÇÃO: Upload múltiplo de imagens
+  const uploadAllImages = async (imageUris: string[]): Promise<string[]> => {
+    if (imageUris.length === 0) return [];
+    
+    setIsUploading(true);
+    
+    try {
+      console.log(`📤 Iniciando upload de ${imageUris.length} imagens...`);
+      
+      const uploadedUrls: string[] = [];
+      
+      for (const imageUri of imageUris) {
+        try {
+          // Verificar se já é uma URL do servidor
+          if (imageUri.startsWith(API_URL)) {
+            console.log('✅ Imagem já está no servidor:', imageUri);
+            uploadedUrls.push(imageUri);
+            continue;
+          }
+          
+          const uploadedUrl = await uploadImageToServer(imageUri);
+          uploadedUrls.push(uploadedUrl);
+          
+          // Pequeno delay para não sobrecarregar o servidor
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+        } catch (error) {
+          console.error(`❌ Erro no upload da imagem ${imageUri}:`, error);
+          // Continuar com as outras imagens mesmo se uma falhar
+          Alert.alert('Aviso', `Uma imagem não pôde ser enviada, mas as outras serão processadas.`);
+          uploadedUrls.push(imageUri); // Manter a original como fallback
+        }
+      }
+      
+      console.log('✅ Todas as imagens processadas:', uploadedUrls);
+      return uploadedUrls;
+      
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // ✅ CORREÇÃO: Função para verificar se é Base64
+  const isBase64Image = (uri: string) => {
+    return uri && typeof uri === 'string' && uri.startsWith('data:image');
+  };
+
+  // ✅ CORREÇÃO: Função para verificar se é URL do servidor
+  const isServerImage = (uri: string) => {
+    return uri && typeof uri === 'string' && uri.startsWith(API_URL);
+  };
+
+  // ✅ CORREÇÃO: Função melhorada para filtrar imagens válidas
+  const isValidImageUri = (uri: string): boolean => {
+    if (!uri || typeof uri !== 'string' || uri.trim() === '') {
+      return false;
+    }
+    
+    const isValid = 
+      uri.startsWith('data:image') || 
+      uri.startsWith('http://') || 
+      uri.startsWith('https://') ||
+      uri.startsWith('blob:') ||
+      uri.startsWith('file://') ||
+      uri.includes('/') ||
+      uri.length > 20;
+    
+    return isValid;
+  };
+
+  // ✅ CORREÇÃO: Função para obter source da imagem
+  const getImageSource = (uri: string) => {
+    if (!uri || typeof uri !== 'string') {
+      return null;
+    }
+    
+    if (uri.startsWith('data:image') || uri.startsWith('http') || uri.startsWith('file://') || uri.startsWith('blob:')) {
+      return { uri };
+    }
+    
+    return null;
+  };
+
+  useEffect(() => {
+    fetchCategorias();
+  }, []);
+
+  const fetchCategorias = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await fetch(`${API_URL}/api/produtos/categorias`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
       });
       
-      setImages(mockProductData.images);
-      setIsLoading(false);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Categorias carregadas:', data.categorias);
+        setCategorias(data.categorias || []);
+      } else {
+        console.log('❌ Erro ao carregar categorias:', response.status);
+      }
+    } catch (error) {
+      console.error('💥 Erro ao buscar categorias:', error);
+    }
+  };
+
+  const fetchSubcategorias = async (categoriaId: number) => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await fetch(`${API_URL}/api/produtos/subcategorias/${categoriaId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Subcategorias carregadas:', data.subcategorias);
+        setSubcategorias(data.subcategorias || []);
+      } else {
+        console.log('❌ Erro ao carregar subcategorias:', response.status);
+      }
+    } catch (error) {
+      console.error('💥 Erro ao buscar subcategorias:', error);
+    }
+  };
+
+  // ✅ CORREÇÃO: Buscar dados reais do produto
+  useEffect(() => {
+    const loadProductData = async () => {
+      try {
+        setIsLoading(true);
+        
+        const token = await AsyncStorage.getItem('userToken');
+        if (!token) {
+          Alert.alert('Erro', 'Token não encontrado');
+          router.back();
+          return;
+        }
+
+        console.log('🔍 Buscando produto:', { farmaciaId, produtoId });
+
+        const response = await fetch(
+          `${API_URL}/api/farmacia-produtos/farmacia/${farmaciaId}/produto/${produtoId}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Erro ${response.status}: ${await response.text()}`);
+        }
+
+        const productData = await response.json();
+        console.log('📦 Dados do produto recebidos:', productData);
+
+        setFormData({
+          nome: productData.produto?.nome || '',
+          animalCategory: productData.produto?.categoria_id?.toString() || '',
+          productCategory: productData.produto?.subcategoria_id?.toString() || '',
+          descricao: productData.produto?.descricao || '',
+          preco_venda: productData.preco_venda?.toString() || '',
+          estoque: productData.estoque?.toString() || '0'
+        });
+
+        if (productData.produto?.categoria_id) {
+          fetchSubcategorias(parseInt(productData.produto.categoria_id));
+        }
+
+        // ✅ CORREÇÃO: Carregar imagens do produto com tratamento robusto
+        let imagensArray = [];
+        
+        if (productData.produto?.imagens) {
+          try {
+            console.log('🖼️ Dados das imagens brutas:', productData.produto.imagens);
+
+            if (typeof productData.produto.imagens === 'string') {
+              try {
+                imagensArray = JSON.parse(productData.produto.imagens);
+              } catch (parseError) {
+                console.log('❌ Erro no parse JSON, usando como array direto');
+                if (isValidImageUri(productData.produto.imagens)) {
+                  imagensArray = [productData.produto.imagens];
+                }
+              }
+            } else if (Array.isArray(productData.produto.imagens)) {
+              imagensArray = productData.produto.imagens;
+            }
+            
+            imagensArray = imagensArray.filter(img => isValidImageUri(img));
+            
+            console.log('🖼️ Imagens válidas após filtro:', imagensArray.length);
+            
+          } catch (parseError) {
+            console.error('❌ Erro ao processar imagens:', parseError);
+            imagensArray = [];
+          }
+        }
+
+        setImages(imagensArray);
+        console.log('✅ Imagens finais para estado:', imagensArray);
+
+      } catch (error) {
+        console.error('❌ Erro ao carregar produto:', error);
+        Alert.alert('Erro', 'Não foi possível carregar os dados do produto');
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    loadProductData();
-  }, [productId]);
+    if (farmaciaId && produtoId) {
+      loadProductData();
+    } else {
+      Alert.alert('Erro', 'IDs do produto não encontrados');
+      router.back();
+    }
+  }, [farmaciaId, produtoId]);
 
+  // ✅ ATUALIZADA: Função para selecionar e fazer upload
   const pickImage = async () => {
     try {
+      setIsUploading(true);
+      
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permissão necessária', 'Precisamos de acesso à galeria para adicionar imagens.');
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 1,
+        quality: 0.7,
       });
 
+      console.log('📸 Resultado do image picker:', result);
+
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setImages([...images, result.assets[0].uri]);
+        const newImageUri = result.assets[0].uri;
+        console.log('🖼️ Nova imagem selecionada:', newImageUri);
+        
+        try {
+          const uploadedUrl = await uploadImageToServer(newImageUri);
+          console.log('✅ Imagem processada com sucesso:', uploadedUrl);
+          
+          setImages(prev => {
+            const newImages = [...prev, uploadedUrl];
+            console.log('📸 Nova lista de imagens:', newImages.length);
+            return newImages;
+          });
+          
+        } catch (uploadError) {
+          console.error('❌ Erro no processamento da imagem:', uploadError);
+          Alert.alert('Erro', 'Não foi possível processar a imagem. Tente novamente.');
+        }
       }
     } catch (error) {
+      console.error('❌ Erro ao selecionar imagem:', error);
       Alert.alert('Erro', 'Não foi possível selecionar a imagem');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -108,6 +390,7 @@ export default function EditProductScreen() {
           style: 'destructive',
           onPress: () => {
             const newImages = images.filter((_, i) => i !== index);
+            console.log('🗑️ Removendo imagem, novas imagens:', newImages.length);
             setImages(newImages);
           }
         }
@@ -120,22 +403,44 @@ export default function EditProductScreen() {
       ...prev,
       [field]: value
     }));
+
+    if (field === 'animalCategory' && value) {
+      fetchSubcategorias(parseInt(value));
+      setFormData(prev => ({ ...prev, productCategory: '' }));
+    }
   };
 
-  const selectAnimalCategory = (value: string) => {
-    handleInputChange('animalCategory', value);
+  const selectAnimalCategory = (categoriaId: string) => {
+    handleInputChange('animalCategory', categoriaId);
     setShowAnimalCategories(false);
   };
 
-  const selectProductCategory = (value: string) => {
-    handleInputChange('productCategory', value);
+  const selectProductCategory = (subcategoriaId: string) => {
+    handleInputChange('productCategory', subcategoriaId);
     setShowProductCategories(false);
   };
 
+  // ✅ CORREÇÃO: Funções para obter labels das categorias
+  const getAnimalCategoryLabel = () => {
+    if (!formData.animalCategory) return 'Selecione o tipo de produto';
+    const categoria = categorias.find(cat => cat.id === parseInt(formData.animalCategory));
+    return categoria ? categoria.nome : 'Selecione o tipo de produto';
+  };
+
+  const getProductCategoryLabel = () => {
+    if (!formData.productCategory) return 'Selecione o animal';
+    const subcategoria = subcategorias.find(sub => sub.id === parseInt(formData.productCategory));
+    return subcategoria ? subcategoria.nome : 'Selecione o animal';
+  };
+
   const handleSubmit = () => {
-    // Validação básica
-    if (!formData.name || !formData.animalCategory || !formData.productCategory || !formData.price) {
+    if (!formData.nome || !formData.animalCategory || !formData.productCategory || !formData.preco_venda) {
       Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    if (parseFloat(formData.preco_venda) <= 0) {
+      Alert.alert('Erro', 'O preço deve ser maior que zero');
       return;
     }
 
@@ -149,27 +454,101 @@ export default function EditProductScreen() {
     );
   };
 
-  const submitChanges = () => {
-    // Aqui você faria a chamada para sua API para atualizar o produto
-    const productData = {
-      ...formData,
-      images,
-      price: parseFloat(formData.price),
-      stock: parseInt(formData.stock) || 0,
-      id: productId
-    };
+  // ✅ CORREÇÃO: Salvar alterações no banco de dados com upload de imagens
+  const submitChanges = async () => {
+    try {
+      setIsSaving(true);
+      
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        Alert.alert('Erro', 'Token não encontrado');
+        return;
+      }
 
-    console.log('Produto atualizado:', productData);
-    Alert.alert('Sucesso', 'Produto atualizado com sucesso!');
-    router.back();
+      // ✅ NOVO: Fazer upload das imagens primeiro
+      let imageUrls = images;
+      
+      // Verificar se há imagens locais para upload
+      const hasLocalImages = images.some(img => 
+        !img.startsWith(API_URL) && !isBase64Image(img)
+      );
+      
+      if (hasLocalImages) {
+        Alert.alert('Upload', 'Fazendo upload das imagens...');
+        imageUrls = await uploadAllImages(images);
+        
+        if (imageUrls.length === 0) {
+          Alert.alert('Aviso', 'Nenhuma imagem foi enviada com sucesso. Deseja continuar?', [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Continuar', onPress: () => proceedWithSave(imageUrls, token) }
+          ]);
+          return;
+        }
+      }
+      
+      await proceedWithSave(imageUrls, token);
+      
+    } catch (error) {
+      console.error('❌ Erro ao atualizar produto:', error);
+      Alert.alert('Erro', 'Não foi possível atualizar o produto');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const getAnimalCategoryLabel = () => {
-    return animalCategories.find(cat => cat.value === formData.animalCategory)?.label || 'Selecione a categoria';
+  // ✅ NOVA FUNÇÃO: Proceder com o salvamento após upload das imagens
+  const proceedWithSave = async (imageUrls: string[], token: string) => {
+    try {
+      const updateData = {
+        nome: formData.nome,
+        descricao: formData.descricao,
+        categoria: formData.animalCategory,
+        subcategoria_id: parseInt(formData.productCategory),
+        imagens: JSON.stringify(imageUrls), // ✅ Agora são URLs do servidor ou Base64
+        preco_venda: parseFloat(formData.preco_venda),
+        estoque: parseInt(formData.estoque) || 0
+      };
+
+      console.log('📤 Enviando dados para atualização:', updateData);
+
+      const response = await fetch(
+        `${API_URL}/api/farmacia-produtos/farmacia/${farmaciaId}/produto/${produtoId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateData),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Produto atualizado com sucesso:', result);
+
+      Alert.alert('Sucesso', 'Produto atualizado com sucesso!');
+      router.back();
+
+    } catch (error) {
+      console.error('❌ Erro ao atualizar produto:', error);
+      throw error;
+    }
   };
 
-  const getProductCategoryLabel = () => {
-    return productCategories.find(cat => cat.value === formData.productCategory)?.label || 'Selecione a categoria';
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'Nunca';
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   if (isLoading) {
@@ -185,7 +564,7 @@ export default function EditProductScreen() {
           }} 
         />
         <View style={styles.loadingContainer}>
-          <Ionicons name="refresh" size={40} color="#3498db" />
+          <ActivityIndicator size="large" color="#3498db" />
           <Text style={styles.loadingText}>Carregando produto...</Text>
         </View>
       </View>
@@ -205,37 +584,99 @@ export default function EditProductScreen() {
       />
 
       <ScrollView style={styles.scrollView}>
-        {/* Cabeçalho com ID do produto */}
+        {/* Cabeçalho com IDs do produto */}
         <View style={styles.headerSection}>
-          <Text style={styles.productId}>ID: #{productId}</Text>
-          <Text style={styles.lastUpdate}>Última atualização: 15/12/2023</Text>
+          <View>
+            <Text style={styles.productId}>Farmácia ID: #{farmaciaId}</Text>
+            <Text style={styles.productId}>Produto ID: #{produtoId}</Text>
+          </View>
+          <Text style={styles.lastUpdate}>
+            Última atualização: {formatDate(new Date().toISOString())}
+          </Text>
         </View>
 
-        {/* Seção de Imagens */}
+        {/* Seção de Imagens ATUALIZADA */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Imagens do Produto</Text>
-          <Text style={styles.sectionSubtitle}>Clique para adicionar ou remover imagens</Text>
+          <Text style={styles.sectionSubtitle}>
+            {images.length} imagem{images.length !== 1 ? 'ens' : ''} {images.length === 0 ? 'cadastrada' : 'cadastradas'}
+            {(isUploading || isSaving) && ' (Processando...)'}
+          </Text>
           
-          <ScrollView horizontal style={styles.imagesContainer}>
-            {images.map((uri, index) => (
-              <View key={index} style={styles.imageWrapper}>
-                <Image source={{ uri }} style={styles.image} />
-                <TouchableOpacity 
-                  style={styles.removeImageButton}
-                  onPress={() => removeImage(index)}
-                >
-                  <Ionicons name="close" size={20} color="white" />
-                </TouchableOpacity>
-              </View>
-            ))}
+          <ScrollView horizontal style={styles.imagesContainer} showsHorizontalScrollIndicator={false}>
+            {images.map((uri, index) => {
+              const imageSource = getImageSource(uri);
+              const isServer = isServerImage(uri);
+              const isBase64 = isBase64Image(uri);
+              
+              return (
+                <View key={index} style={styles.imageWrapper}>
+                  {imageSource ? (
+                    <Image 
+                      source={imageSource} 
+                      style={styles.image}
+                      resizeMode="cover"
+                      onError={(e) => {
+                        console.log(`❌ Erro ao carregar imagem ${index}:`, uri);
+                      }}
+                    />
+                  ) : (
+                    <View style={styles.imagePlaceholder}>
+                      <Ionicons name="image" size={32} color="#bdc3c7" />
+                      <Text style={styles.placeholderText}>Imagem inválida</Text>
+                      <Text style={styles.placeholderSubtext}>Toque para remover</Text>
+                    </View>
+                  )}
+                  
+                  <View style={[
+                    styles.typeBadge,
+                    isServer ? styles.serverBadge : 
+                    isBase64 ? styles.base64Badge : styles.localBadge
+                  ]}>
+                    <Text style={styles.typeBadgeText}>
+                      {isServer ? 'Servidor' : isBase64 ? 'Base64' : 'Local'}
+                    </Text>
+                  </View>
+                  
+                  <TouchableOpacity 
+                    style={styles.removeImageButton}
+                    onPress={() => removeImage(index)}
+                    disabled={isUploading || isSaving}
+                  >
+                    <Ionicons name="close" size={16} color="white" />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
             
             {images.length < 4 && (
-              <TouchableOpacity style={styles.addImageButton} onPress={pickImage}>
-                <Ionicons name="camera" size={32} color="#3498db" />
-                <Text style={styles.addImageText}>Adicionar Imagem</Text>
+              <TouchableOpacity 
+                style={[
+                  styles.addImageButton,
+                  (isUploading || isSaving) && styles.addImageButtonDisabled
+                ]} 
+                onPress={pickImage}
+                disabled={isUploading || isSaving}
+              >
+                {isUploading ? (
+                  <ActivityIndicator size="small" color="#3498db" />
+                ) : (
+                  <Ionicons name="camera" size={32} color="#3498db" />
+                )}
+                <Text style={styles.addImageText}>
+                  {isUploading ? 'Upload...' : 'Adicionar\nImagem'}
+                </Text>
               </TouchableOpacity>
             )}
           </ScrollView>
+          
+          {images.length === 0 && (
+            <View style={styles.noImagesContainer}>
+              <Ionicons name="images" size={48} color="#bdc3c7" />
+              <Text style={styles.noImagesText}>Nenhuma imagem cadastrada</Text>
+              <Text style={styles.noImagesSubtext}>Toque no botão acima para adicionar imagens</Text>
+            </View>
+          )}
         </View>
 
         {/* Informações Básicas */}
@@ -246,20 +687,25 @@ export default function EditProductScreen() {
             <Text style={styles.label}>Nome do Produto *</Text>
             <TextInput
               style={styles.input}
-              value={formData.name}
-              onChangeText={(text) => handleInputChange('name', text)}
+              value={formData.nome}
+              onChangeText={(text) => handleInputChange('nome', text)}
               placeholder="Ex: Vacina contra Febre Aftosa"
+              editable={!isUploading && !isSaving}
             />
           </View>
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
-              <Text style={styles.label}>Categoria do Animal *</Text>
+              <Text style={styles.label}>Tipo de Produto *</Text>
               <TouchableOpacity 
                 style={styles.selectContainer}
                 onPress={() => setShowAnimalCategories(true)}
+                disabled={isUploading || isSaving}
               >
-                <Text style={styles.selectText}>
+                <Text style={[
+                  styles.selectText,
+                  !formData.animalCategory && { color: '#7f8c8d' }
+                ]}>
                   {getAnimalCategoryLabel()}
                 </Text>
                 <Ionicons name="chevron-down" size={20} color="#7f8c8d" />
@@ -267,12 +713,19 @@ export default function EditProductScreen() {
             </View>
 
             <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Categoria do Produto *</Text>
+              <Text style={styles.label}>Animal *</Text>
               <TouchableOpacity 
-                style={styles.selectContainer}
+                style={[
+                  styles.selectContainer,
+                  !formData.animalCategory && styles.selectDisabled
+                ]}
                 onPress={() => setShowProductCategories(true)}
+                disabled={!formData.animalCategory || isUploading || isSaving}
               >
-                <Text style={styles.selectText}>
+                <Text style={[
+                  styles.selectText,
+                  !formData.productCategory && { color: '#7f8c8d' }
+                ]}>
                   {getProductCategoryLabel()}
                 </Text>
                 <Ionicons name="chevron-down" size={20} color="#7f8c8d" />
@@ -290,10 +743,11 @@ export default function EditProductScreen() {
               <Text style={styles.label}>Preço (R$) *</Text>
               <TextInput
                 style={styles.input}
-                value={formData.price}
-                onChangeText={(text) => handleInputChange('price', text)}
+                value={formData.preco_venda}
+                onChangeText={(text) => handleInputChange('preco_venda', text)}
                 placeholder="0,00"
                 keyboardType="decimal-pad"
+                editable={!isUploading && !isSaving}
               />
             </View>
 
@@ -301,10 +755,11 @@ export default function EditProductScreen() {
               <Text style={styles.label}>Estoque *</Text>
               <TextInput
                 style={styles.input}
-                value={formData.stock}
-                onChangeText={(text) => handleInputChange('stock', text)}
+                value={formData.estoque}
+                onChangeText={(text) => handleInputChange('estoque', text)}
                 placeholder="Quantidade"
                 keyboardType="numeric"
+                editable={!isUploading && !isSaving}
               />
             </View>
           </View>
@@ -318,33 +773,46 @@ export default function EditProductScreen() {
             <Text style={styles.label}>Descrição do Produto</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              value={formData.description}
-              onChangeText={(text) => handleInputChange('description', text)}
+              value={formData.descricao}
+              onChangeText={(text) => handleInputChange('descricao', text)}
               placeholder="Descreva as características do produto..."
               multiline
               numberOfLines={4}
               textAlignVertical="top"
+              editable={!isUploading && !isSaving}
             />
           </View>
         </View>
 
         {/* Botões de Ação */}
         <View style={styles.actionSection}>
-          <TouchableOpacity style={styles.saveButton} onPress={handleSubmit}>
-            <Ionicons name="save" size={20} color="white" />
-            <Text style={styles.saveButtonText}>Salvar Alterações</Text>
+          <TouchableOpacity 
+            style={[styles.saveButton, (isSaving || isUploading) && styles.saveButtonDisabled]} 
+            onPress={handleSubmit}
+            disabled={isSaving || isUploading}
+          >
+            {(isSaving || isUploading) ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Ionicons name="save" size={20} color="white" />
+            )}
+            <Text style={styles.saveButtonText}>
+              {isUploading ? 'Enviando Imagens...' : 
+               isSaving ? 'Salvando...' : 'Salvar Alterações'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={styles.cancelButton}
-            onPress={() => router.back()}
+            onPress={() => router.push('/adm/listarProduto')}
+            disabled={isSaving || isUploading}
           >
             <Text style={styles.cancelButtonText}>Cancelar</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* Modal para Categorias de Animal */}
+      {/* Modal para Categorias */}
       <Modal
         visible={showAnimalCategories}
         transparent={true}
@@ -354,20 +822,20 @@ export default function EditProductScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Selecione a Categoria do Animal</Text>
+              <Text style={styles.modalTitle}>Selecione o Tipo de Produto</Text>
               <TouchableOpacity onPress={() => setShowAnimalCategories(false)}>
                 <Ionicons name="close" size={24} color="#7f8c8d" />
               </TouchableOpacity>
             </View>
             <ScrollView>
-              {animalCategories.map((category) => (
+              {categorias.map((categoria) => (
                 <TouchableOpacity
-                  key={category.value}
+                  key={categoria.id}
                   style={styles.modalOption}
-                  onPress={() => selectAnimalCategory(category.value)}
+                  onPress={() => selectAnimalCategory(categoria.id.toString())}
                 >
-                  <Text style={styles.modalOptionText}>{category.label}</Text>
-                  {formData.animalCategory === category.value && (
+                  <Text style={styles.modalOptionText}>{categoria.nome}</Text>
+                  {formData.animalCategory === categoria.id.toString() && (
                     <Ionicons name="checkmark" size={20} color="#3498db" />
                   )}
                 </TouchableOpacity>
@@ -377,7 +845,7 @@ export default function EditProductScreen() {
         </View>
       </Modal>
 
-      {/* Modal para Categorias de Produto */}
+      {/* Modal para Subcategorias */}
       <Modal
         visible={showProductCategories}
         transparent={true}
@@ -387,20 +855,20 @@ export default function EditProductScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Selecione a Categoria do Produto</Text>
+              <Text style={styles.modalTitle}>Selecione o Animal</Text>
               <TouchableOpacity onPress={() => setShowProductCategories(false)}>
                 <Ionicons name="close" size={24} color="#7f8c8d" />
               </TouchableOpacity>
             </View>
             <ScrollView>
-              {productCategories.map((category) => (
+              {subcategorias.map((subcategoria) => (
                 <TouchableOpacity
-                  key={category.value}
+                  key={subcategoria.id}
                   style={styles.modalOption}
-                  onPress={() => selectProductCategory(category.value)}
+                  onPress={() => selectProductCategory(subcategoria.id.toString())}
                 >
-                  <Text style={styles.modalOptionText}>{category.label}</Text>
-                  {formData.productCategory === category.value && (
+                  <Text style={styles.modalOptionText}>{subcategoria.nome}</Text>
+                  {formData.productCategory === subcategoria.id.toString() && (
                     <Ionicons name="checkmark" size={20} color="#3498db" />
                   )}
                 </TouchableOpacity>
@@ -413,6 +881,7 @@ export default function EditProductScreen() {
   );
 }
 
+// ✅ ESTILOS ATUALIZADOS
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -441,7 +910,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#e9ecef',
   },
   productId: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#2c3e50',
   },
@@ -485,6 +954,52 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#ecf0f1',
   },
+  imagePlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    backgroundColor: '#ecf0f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e74c3c',
+    borderStyle: 'dashed',
+  },
+  placeholderText: {
+    color: '#e74c3c',
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 4,
+    fontWeight: 'bold',
+  },
+  placeholderSubtext: {
+    color: '#e74c3c',
+    fontSize: 8,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  typeBadge: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  serverBadge: {
+    backgroundColor: 'rgba(46, 204, 113, 0.9)',
+  },
+  base64Badge: {
+    backgroundColor: 'rgba(52, 152, 219, 0.9)',
+  },
+  localBadge: {
+    backgroundColor: 'rgba(241, 196, 15, 0.9)',
+  },
+  typeBadgeText: {
+    color: 'white',
+    fontSize: 8,
+    fontWeight: 'bold',
+  },
   removeImageButton: {
     position: 'absolute',
     top: -5,
@@ -495,6 +1010,11 @@ const styles = StyleSheet.create({
     height: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 3,
   },
   addImageButton: {
     width: 100,
@@ -507,11 +1027,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#ecf0f1',
   },
+  addImageButtonDisabled: {
+    opacity: 0.5,
+  },
   addImageText: {
     fontSize: 12,
     color: '#3498db',
     marginTop: 5,
     textAlign: 'center',
+    lineHeight: 14,
+  },
+  noImagesContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  noImagesText: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    marginTop: 10,
+  },
+  noImagesSubtext: {
+    fontSize: 12,
+    color: '#bdc3c7',
+    textAlign: 'center',
+    marginTop: 5,
   },
   inputGroup: {
     marginBottom: 15,
@@ -548,6 +1087,10 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: 'white',
   },
+  selectDisabled: {
+    backgroundColor: '#f8f9fa',
+    borderColor: '#ecf0f1',
+  },
   selectText: {
     fontSize: 16,
     color: '#2c3e50',
@@ -564,6 +1107,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#bdc3c7',
   },
   saveButtonText: {
     color: 'white',

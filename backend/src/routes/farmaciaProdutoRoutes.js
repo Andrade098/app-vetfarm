@@ -8,8 +8,14 @@ router.use(authMiddleware);
 // ✅ ROTAS DO RELACIONAMENTO FARMÁCIA-PRODUTO
 router.post('/', farmaciaProdutoController.adicionarProduto);
 
-// ✅ DESCOMENTE quando for implementar:
+// ✅ NOVA ROTA - AGORA FUNCIONANDO!
+router.get('/minha-farmacia', farmaciaProdutoController.listarProdutosMinhaFarmacia);
+
+router.get('/farmacia/:farmacia_id/produto/:produto_id', authMiddleware, farmaciaProdutoController.buscarProdutoPorIds);
+
+router.put('/farmacia/:farmacia_id/produto/:produto_id', authMiddleware, farmaciaProdutoController.atualizarProdutoPorIds);
+
+// ✅ ROTA ALTERNATIVA (se quiser manter)
 // router.get('/farmacia/:farmacia_id', farmaciaProdutoController.listarPorFarmacia);
-// router.put('/farmacia/:farmacia_id/produto/:produto_id', farmaciaProdutoController.atualizarEstoquePreco);
 
 module.exports = router;

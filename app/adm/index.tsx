@@ -162,7 +162,7 @@ export default function AdminPanel() {
             </TouchableOpacity>
 
             {/* Botão Editar Produto */}
-            <TouchableOpacity style={styles.statCard} onPress={() => router.push('/adm/editarProduto')}>
+            <TouchableOpacity style={styles.statCard} onPress={() => router.push('/adm/listarProduto')}>
               <View style={styles.actionContent}>
                 <Text style={styles.statNumber}>✏️</Text>
                 <Text style={styles.statLabel}>Editar Produto</Text>
