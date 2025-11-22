@@ -33,14 +33,11 @@ export default function EditProductScreen() {
   const [categorias, setCategorias] = useState<any[]>([]);
   const [subcategorias, setSubcategorias] = useState<any[]>([]);
 
-  // ✅ NOVA FUNÇÃO: Upload para o servidor
+  // Upload para o servidor
   const uploadImageToServer = async (imageUri: string): Promise<string> => {
     try {
-      console.log('📤 Iniciando upload da imagem:', imageUri);
-      
       // Se já for uma URL do servidor, retornar diretamente
       if (imageUri.startsWith(API_URL)) {
-        console.log('✅ Imagem já é uma URL do servidor');
         return imageUri;
       }
       
@@ -61,8 +58,6 @@ export default function EditProductScreen() {
         name: `product_${Date.now()}.${mimeType.split('/')[1]}`
       } as any);
 
-      console.log('🔄 Enviando para /api/upload...');
-      
       const response = await fetch(`${API_URL}/api/upload`, {
         method: 'POST',
         headers: {
@@ -77,19 +72,12 @@ export default function EditProductScreen() {
       }
 
       const result = await response.json();
-      console.log('✅ Upload realizado com sucesso:', result);
-      
-      // Retornar a URL completa da imagem
       const imageUrl = `${API_URL}${result.url}`;
-      console.log('🖼️ URL da imagem:', imageUrl);
       
       return imageUrl;
       
     } catch (error) {
-      console.error('❌ Erro no upload da imagem:', error);
-      
       // FALLBACK: Se o upload falhar, converter para Base64
-      console.log('🔄 Upload falhou, usando fallback Base64...');
       try {
         const base64 = await FileSystem.readAsStringAsync(imageUri, {
           encoding: FileSystem.EncodingType.Base64,
@@ -102,28 +90,23 @@ export default function EditProductScreen() {
         const base64Data = `data:${mimeType};base64,${base64}`;
         return base64Data;
       } catch (fallbackError) {
-        console.error('❌ Fallback também falhou:', fallbackError);
         throw error;
       }
     }
   };
 
-  // ✅ NOVA FUNÇÃO: Upload múltiplo de imagens
+  // Upload múltiplo de imagens
   const uploadAllImages = async (imageUris: string[]): Promise<string[]> => {
     if (imageUris.length === 0) return [];
     
     setIsUploading(true);
     
     try {
-      console.log(`📤 Iniciando upload de ${imageUris.length} imagens...`);
-      
       const uploadedUrls: string[] = [];
       
       for (const imageUri of imageUris) {
         try {
-          // Verificar se já é uma URL do servidor
           if (imageUri.startsWith(API_URL)) {
-            console.log('✅ Imagem já está no servidor:', imageUri);
             uploadedUrls.push(imageUri);
             continue;
           }
@@ -131,18 +114,14 @@ export default function EditProductScreen() {
           const uploadedUrl = await uploadImageToServer(imageUri);
           uploadedUrls.push(uploadedUrl);
           
-          // Pequeno delay para não sobrecarregar o servidor
           await new Promise(resolve => setTimeout(resolve, 500));
           
         } catch (error) {
-          console.error(`❌ Erro no upload da imagem ${imageUri}:`, error);
-          // Continuar com as outras imagens mesmo se uma falhar
           Alert.alert('Aviso', `Uma imagem não pôde ser enviada, mas as outras serão processadas.`);
-          uploadedUrls.push(imageUri); // Manter a original como fallback
+          uploadedUrls.push(imageUri);
         }
       }
       
-      console.log('✅ Todas as imagens processadas:', uploadedUrls);
       return uploadedUrls;
       
     } finally {
@@ -150,17 +129,17 @@ export default function EditProductScreen() {
     }
   };
 
-  // ✅ CORREÇÃO: Função para verificar se é Base64
+  // Função para verificar se é Base64
   const isBase64Image = (uri: string) => {
     return uri && typeof uri === 'string' && uri.startsWith('data:image');
   };
 
-  // ✅ CORREÇÃO: Função para verificar se é URL do servidor
+  // Função para verificar se é URL do servidor
   const isServerImage = (uri: string) => {
     return uri && typeof uri === 'string' && uri.startsWith(API_URL);
   };
 
-  // ✅ CORREÇÃO: Função melhorada para filtrar imagens válidas
+  // Função melhorada para filtrar imagens válidas
   const isValidImageUri = (uri: string): boolean => {
     if (!uri || typeof uri !== 'string' || uri.trim() === '') {
       return false;
@@ -178,7 +157,7 @@ export default function EditProductScreen() {
     return isValid;
   };
 
-  // ✅ CORREÇÃO: Função para obter source da imagem
+  // Função para obter source da imagem
   const getImageSource = (uri: string) => {
     if (!uri || typeof uri !== 'string') {
       return null;
@@ -206,13 +185,10 @@ export default function EditProductScreen() {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Categorias carregadas:', data.categorias);
         setCategorias(data.categorias || []);
-      } else {
-        console.log('❌ Erro ao carregar categorias:', response.status);
       }
     } catch (error) {
-      console.error('💥 Erro ao buscar categorias:', error);
+      console.error('Erro ao buscar categorias:', error);
     }
   };
 
@@ -227,17 +203,14 @@ export default function EditProductScreen() {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Subcategorias carregadas:', data.subcategorias);
         setSubcategorias(data.subcategorias || []);
-      } else {
-        console.log('❌ Erro ao carregar subcategorias:', response.status);
       }
     } catch (error) {
-      console.error('💥 Erro ao buscar subcategorias:', error);
+      console.error('Erro ao buscar subcategorias:', error);
     }
   };
 
-  // ✅ CORREÇÃO: Buscar dados reais do produto
+  // Buscar dados reais do produto
   useEffect(() => {
     const loadProductData = async () => {
       try {
@@ -249,8 +222,6 @@ export default function EditProductScreen() {
           router.back();
           return;
         }
-
-        console.log('🔍 Buscando produto:', { farmaciaId, produtoId });
 
         const response = await fetch(
           `${API_URL}/api/farmacia-produtos/farmacia/${farmaciaId}/produto/${produtoId}`,
@@ -268,7 +239,6 @@ export default function EditProductScreen() {
         }
 
         const productData = await response.json();
-        console.log('📦 Dados do produto recebidos:', productData);
 
         setFormData({
           nome: productData.produto?.nome || '',
@@ -283,18 +253,15 @@ export default function EditProductScreen() {
           fetchSubcategorias(parseInt(productData.produto.categoria_id));
         }
 
-        // ✅ CORREÇÃO: Carregar imagens do produto com tratamento robusto
+        // Carregar imagens do produto com tratamento robusto
         let imagensArray = [];
         
         if (productData.produto?.imagens) {
           try {
-            console.log('🖼️ Dados das imagens brutas:', productData.produto.imagens);
-
             if (typeof productData.produto.imagens === 'string') {
               try {
                 imagensArray = JSON.parse(productData.produto.imagens);
               } catch (parseError) {
-                console.log('❌ Erro no parse JSON, usando como array direto');
                 if (isValidImageUri(productData.produto.imagens)) {
                   imagensArray = [productData.produto.imagens];
                 }
@@ -305,19 +272,15 @@ export default function EditProductScreen() {
             
             imagensArray = imagensArray.filter(img => isValidImageUri(img));
             
-            console.log('🖼️ Imagens válidas após filtro:', imagensArray.length);
-            
           } catch (parseError) {
-            console.error('❌ Erro ao processar imagens:', parseError);
             imagensArray = [];
           }
         }
 
         setImages(imagensArray);
-        console.log('✅ Imagens finais para estado:', imagensArray);
 
       } catch (error) {
-        console.error('❌ Erro ao carregar produto:', error);
+        console.error('Erro ao carregar produto:', error);
         Alert.alert('Erro', 'Não foi possível carregar os dados do produto');
       } finally {
         setIsLoading(false);
@@ -332,7 +295,7 @@ export default function EditProductScreen() {
     }
   }, [farmaciaId, produtoId]);
 
-  // ✅ ATUALIZADA: Função para selecionar e fazer upload
+  // Função para selecionar e fazer upload
   const pickImage = async () => {
     try {
       setIsUploading(true);
@@ -350,29 +313,22 @@ export default function EditProductScreen() {
         quality: 0.7,
       });
 
-      console.log('📸 Resultado do image picker:', result);
-
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const newImageUri = result.assets[0].uri;
-        console.log('🖼️ Nova imagem selecionada:', newImageUri);
         
         try {
           const uploadedUrl = await uploadImageToServer(newImageUri);
-          console.log('✅ Imagem processada com sucesso:', uploadedUrl);
           
           setImages(prev => {
             const newImages = [...prev, uploadedUrl];
-            console.log('📸 Nova lista de imagens:', newImages.length);
             return newImages;
           });
           
         } catch (uploadError) {
-          console.error('❌ Erro no processamento da imagem:', uploadError);
           Alert.alert('Erro', 'Não foi possível processar a imagem. Tente novamente.');
         }
       }
     } catch (error) {
-      console.error('❌ Erro ao selecionar imagem:', error);
       Alert.alert('Erro', 'Não foi possível selecionar a imagem');
     } finally {
       setIsUploading(false);
@@ -390,7 +346,6 @@ export default function EditProductScreen() {
           style: 'destructive',
           onPress: () => {
             const newImages = images.filter((_, i) => i !== index);
-            console.log('🗑️ Removendo imagem, novas imagens:', newImages.length);
             setImages(newImages);
           }
         }
@@ -420,7 +375,7 @@ export default function EditProductScreen() {
     setShowProductCategories(false);
   };
 
-  // ✅ CORREÇÃO: Funções para obter labels das categorias
+  // Funções para obter labels das categorias
   const getAnimalCategoryLabel = () => {
     if (!formData.animalCategory) return 'Selecione o tipo de produto';
     const categoria = categorias.find(cat => cat.id === parseInt(formData.animalCategory));
@@ -433,28 +388,28 @@ export default function EditProductScreen() {
     return subcategoria ? subcategoria.nome : 'Selecione o animal';
   };
 
-  const handleSubmit = () => {
-    if (!formData.nome || !formData.animalCategory || !formData.productCategory || !formData.preco_venda) {
-      Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
-      return;
-    }
+  // Função handleSubmit
+  // ✅ FUNÇÃO handleSubmit CORRIGIDA
+// ✅ VERSÃO ALTERNATIVA - Mais direta
+const handleSubmit = async () => {
+  console.log('🎯 [DEBUG] handleSubmit CHAMADO!');
+  
+  // Verificação rápida dos campos
+  if (!formData.nome || !formData.animalCategory || !formData.productCategory || !formData.preco_venda) {
+    Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
+    return;
+  }
 
-    if (parseFloat(formData.preco_venda) <= 0) {
-      Alert.alert('Erro', 'O preço deve ser maior que zero');
-      return;
-    }
+  if (parseFloat(formData.preco_venda) <= 0) {
+    Alert.alert('Erro', 'O preço deve ser maior que zero');
+    return;
+  }
 
-    Alert.alert(
-      'Confirmar Alterações',
-      'Deseja salvar as alterações neste produto?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Salvar', onPress: submitChanges }
-      ]
-    );
-  };
-
-  // ✅ CORREÇÃO: Salvar alterações no banco de dados com upload de imagens
+  // ✅ CORREÇÃO: Chamar submitChanges diretamente sem Alert de confirmação
+  console.log('🚀 [DEBUG] Chamando submitChanges diretamente...');
+  await submitChanges();
+};
+  // Função submitChanges
   const submitChanges = async () => {
     try {
       setIsSaving(true);
@@ -465,78 +420,92 @@ export default function EditProductScreen() {
         return;
       }
 
-      // ✅ NOVO: Fazer upload das imagens primeiro
-      let imageUrls = images;
-      
-      // Verificar se há imagens locais para upload
-      const hasLocalImages = images.some(img => 
-        !img.startsWith(API_URL) && !isBase64Image(img)
-      );
-      
-      if (hasLocalImages) {
-        Alert.alert('Upload', 'Fazendo upload das imagens...');
-        imageUrls = await uploadAllImages(images);
-        
-        if (imageUrls.length === 0) {
-          Alert.alert('Aviso', 'Nenhuma imagem foi enviada com sucesso. Deseja continuar?', [
-            { text: 'Cancelar', style: 'cancel' },
-            { text: 'Continuar', onPress: () => proceedWithSave(imageUrls, token) }
-          ]);
-          return;
-        }
+      if (!farmaciaId || !produtoId) {
+        Alert.alert('Erro', 'IDs do produto não encontrados');
+        return;
       }
-      
-      await proceedWithSave(imageUrls, token);
-      
-    } catch (error) {
-      console.error('❌ Erro ao atualizar produto:', error);
-      Alert.alert('Erro', 'Não foi possível atualizar o produto');
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
-  // ✅ NOVA FUNÇÃO: Proceder com o salvamento após upload das imagens
-  const proceedWithSave = async (imageUrls: string[], token: string) => {
-    try {
+      // Estrutura de dados baseada no que o backend espera
       const updateData = {
         nome: formData.nome,
         descricao: formData.descricao,
-        categoria: formData.animalCategory,
+        categoria_id: parseInt(formData.animalCategory),
         subcategoria_id: parseInt(formData.productCategory),
-        imagens: JSON.stringify(imageUrls), // ✅ Agora são URLs do servidor ou Base64
+        imagens: images,
         preco_venda: parseFloat(formData.preco_venda),
         estoque: parseInt(formData.estoque) || 0
       };
 
-      console.log('📤 Enviando dados para atualização:', updateData);
+      const url = `${API_URL}/api/farmacia-produtos/farmacia/${farmaciaId}/produto/${produtoId}`;
 
-      const response = await fetch(
-        `${API_URL}/api/farmacia-produtos/farmacia/${farmaciaId}/produto/${produtoId}`,
-        {
+      // Fazer a requisição PUT
+      try {
+        const response = await fetch(url, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(updateData),
-        }
-      );
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erro ${response.status}: ${errorText}`);
+        if (!response.ok) {
+          // Tentar estrutura alternativa se a primeira falhar
+          const alternativeData = {
+            produto: {
+              nome: formData.nome,
+              descricao: formData.descricao,
+              categoria_id: parseInt(formData.animalCategory),
+              subcategoria_id: parseInt(formData.productCategory),
+              imagens: images,
+            },
+            preco_venda: parseFloat(formData.preco_venda),
+            estoque: parseInt(formData.estoque) || 0
+          };
+
+          const altResponse = await fetch(url, {
+            method: 'PUT',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(alternativeData),
+          });
+
+          if (!altResponse.ok) {
+            throw new Error(`Erro ${altResponse.status}: ${await altResponse.text()}`);
+          }
+
+          // Sucesso com estrutura alternativa
+          Alert.alert('Sucesso', 'Produto atualizado com sucesso!', [
+            { 
+              text: 'OK', 
+              onPress: () => router.back()
+            }
+          ]);
+          return;
+        }
+
+        // Sucesso com estrutura principal
+        Alert.alert('Sucesso', 'Produto atualizado com sucesso!', [
+          { 
+            text: 'OK', 
+            onPress: () => router.back()
+          }
+        ]);
+
+      } catch (fetchError) {
+        throw new Error(`Erro de rede: ${fetchError.message}`);
       }
 
-      const result = await response.json();
-      console.log('✅ Produto atualizado com sucesso:', result);
-
-      Alert.alert('Sucesso', 'Produto atualizado com sucesso!');
-      router.back();
-
     } catch (error) {
-      console.error('❌ Erro ao atualizar produto:', error);
-      throw error;
+      Alert.alert(
+        'Erro', 
+        `Não foi possível atualizar o produto.\n\nErro: ${error.message}`,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -595,7 +564,7 @@ export default function EditProductScreen() {
           </Text>
         </View>
 
-        {/* Seção de Imagens ATUALIZADA */}
+        {/* Seção de Imagens */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Imagens do Produto</Text>
           <Text style={styles.sectionSubtitle}>
@@ -616,9 +585,6 @@ export default function EditProductScreen() {
                       source={imageSource} 
                       style={styles.image}
                       resizeMode="cover"
-                      onError={(e) => {
-                        console.log(`❌ Erro ao carregar imagem ${index}:`, uri);
-                      }}
                     />
                   ) : (
                     <View style={styles.imagePlaceholder}>
@@ -881,7 +847,7 @@ export default function EditProductScreen() {
   );
 }
 
-// ✅ ESTILOS ATUALIZADOS
+// ESTILOS
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -1137,10 +1103,8 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: 'white',
     borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '50%',
   },
-  modalHeader: {
+   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

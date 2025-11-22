@@ -15,6 +15,10 @@ router.get('/farmacia/:farmacia_id/produto/:produto_id', authMiddleware, farmaci
 
 router.put('/farmacia/:farmacia_id/produto/:produto_id', authMiddleware, farmaciaProdutoController.atualizarProdutoPorIds);
 
+// ✅ ADICIONE ESTA ROTA DELETE:
+// ✅ CORREÇÃO: Rota DELETE para chave primária composta
+router.delete('/farmacia/:farmaciaId/produto/:produtoId', farmaciaProdutoController.removerProduto);
+
 // ✅ ROTA ALTERNATIVA (se quiser manter)
 // router.get('/farmacia/:farmacia_id', farmaciaProdutoController.listarPorFarmacia);
 

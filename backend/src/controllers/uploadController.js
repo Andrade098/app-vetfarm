@@ -30,6 +30,8 @@ const storage = multer.diskStorage({
 // Filtro para aceitar apenas imagens
 const fileFilter = (req, file, cb) => {
   console.log('🔍 Verificando tipo de arquivo:', file.mimetype);
+  console.log('📤 Campo do arquivo:', file.fieldname);
+  console.log('📄 Nome original:', file.originalname);
   
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
@@ -47,20 +49,46 @@ const upload = multer({
   }
 });
 
+// ✅ MIDDLEWARE DE DEBUG
+const debugMiddleware = (req, res, next) => {
+  console.log('=== 📥 INÍCIO DO UPLOAD ===');
+  console.log('📋 Headers:', req.headers['content-type']);
+  console.log('🔍 Método:', req.method);
+  console.log('📊 Tem body?:', !!req.body);
+  console.log('📁 Tem file?:', !!req.file);
+  console.log('📁 Tem files?:', !!req.files);
+  console.log('=== 🏁 FIM DO UPLOAD ===');
+  next();
+};
+
 // Controlador principal
 const uploadImage = (req, res) => {
   try {
     console.log('📥 Recebendo upload...');
     
     if (!req.file) {
-      console.log('❌ Nenhum arquivo recebido');
+      console.log('❌ Nenhum arquivo recebido no req.file');
+      console.log('🔍 Body:', req.body);
+      console.log('🔍 Headers:', req.headers);
+      
       return res.status(400).json({
         success: false,
-        message: 'Nenhuma imagem foi enviada'
+        message: 'Nenhuma imagem foi enviada ou campo incorreto',
+        debug: {
+          hasFile: !!req.file,
+          hasFiles: !!req.files,
+          bodyKeys: Object.keys(req.body),
+          contentType: req.headers['content-type']
+        }
       });
     }
 
-    console.log('✅ Arquivo recebido:', req.file);
+    console.log('✅ Arquivo recebido:', {
+      filename: req.file.filename,
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    });
     
     // Retornar a URL da imagem
     const imageUrl = `/uploads/${req.file.filename}`;
@@ -85,5 +113,6 @@ const uploadImage = (req, res) => {
 
 module.exports = {
   uploadMiddleware: upload.single('image'),
-  uploadImage
+  uploadImage,
+  debugMiddleware
 };

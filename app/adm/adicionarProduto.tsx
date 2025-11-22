@@ -35,74 +35,104 @@ export default function AddProductScreen() {
   const [showSubcategorias, setShowSubcategorias] = useState(false);
 
   // ✅ NOVA FUNÇÃO: Upload para o servidor
-  const uploadImageToServer = async (imageUri: string): Promise<string> => {
-    try {
-      console.log('📤 Iniciando upload da imagem:', imageUri);
-      
-      const token = await AsyncStorage.getItem('userToken');
-      if (!token) {
-        throw new Error('Token não encontrado');
-      }
+  // ✅ CORREÇÃO: Função de upload para React Native Web
+const uploadImageToServer = async (imageUri: string): Promise<string> => {
+  try {
+    console.log('📤 Iniciando upload da imagem:', imageUri);
+    
+    const token = await AsyncStorage.getItem('userToken');
+    if (!token) {
+      throw new Error('Token não encontrado');
+    }
 
-      const formData = new FormData();
+    // ✅ CORREÇÃO: FormData específico para React Native Web
+    const formData = new FormData();
+    
+    let mimeType = 'image/jpeg';
+    if (imageUri.includes('.png')) mimeType = 'image/png';
+    if (imageUri.includes('.gif')) mimeType = 'image/gif';
+    
+    // ✅ CORREÇÃO: Para React Native Web, precisamos de um Blob
+    try {
+      // Tentar fazer fetch da imagem e converter para Blob
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
       
-      let mimeType = 'image/jpeg';
-      if (imageUri.includes('.png')) mimeType = 'image/png';
-      if (imageUri.includes('.gif')) mimeType = 'image/gif';
+      // ✅ CORREÇÃO: Usar Blob no FormData
+      formData.append('image', blob, `product_${Date.now()}.${mimeType.split('/')[1]}`);
+      
+    } catch (blobError) {
+      console.log('❌ Erro ao criar blob, tentando abordagem alternativa...');
+      
+      // ✅ FALLBACK: Abordagem alternativa para React Native Web
+      // Extrair o nome do arquivo da URI
+      const filename = imageUri.split('/').pop() || `product_${Date.now()}.jpg`;
       
       formData.append('image', {
         uri: imageUri,
         type: mimeType,
-        name: `product_${Date.now()}.${mimeType.split('/')[1]}`
+        name: filename
       } as any);
-
-      console.log('🔄 Enviando para /api/upload...');
-      
-      const response = await fetch(`${API_URL}/api/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erro no upload: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Upload realizado com sucesso:', result);
-      
-      // Retornar a URL completa da imagem
-      const imageUrl = `${API_URL}${result.url}`;
-      console.log('🖼️ URL da imagem:', imageUrl);
-      
-      return imageUrl;
-      
-    } catch (error) {
-      console.error('❌ Erro no upload da imagem:', error);
-      
-      // FALLBACK: Se o upload falhar, converter para Base64
-      console.log('🔄 Upload falhou, usando fallback Base64...');
-      try {
-        const base64 = await FileSystem.readAsStringAsync(imageUri, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-        
-        let mimeType = 'image/jpeg';
-        if (imageUri.includes('.png')) mimeType = 'image/png';
-        if (imageUri.includes('.gif')) mimeType = 'image/gif';
-        
-        const base64Data = `data:${mimeType};base64,${base64}`;
-        return base64Data;
-      } catch (fallbackError) {
-        console.error('❌ Fallback também falhou:', fallbackError);
-        throw error;
-      }
     }
-  };
 
+    console.log('🔄 Enviando para /api/upload...');
+    
+    const response = await fetch(`${API_URL}/api/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // ❌ NÃO incluir 'Content-Type' - o FormData define automaticamente
+      },
+      body: formData,
+    });
+
+    console.log('📡 Status da resposta:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log('❌ Erro no upload:', errorText);
+      throw new Error(`Erro no upload: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('✅ Upload realizado com sucesso:', result);
+    
+    if (!result.url) {
+      throw new Error('URL da imagem não retornada pelo servidor');
+    }
+    
+    // Retornar a URL completa da imagem
+    const imageUrl = `${API_URL}${result.url}`;
+    console.log('🖼️ URL da imagem:', imageUrl);
+    
+    return imageUrl;
+    
+  } catch (error) {
+    console.error('❌ Erro no upload da imagem:', error);
+    
+    // ✅ CORREÇÃO: Para React Native Web, não podemos usar FileSystem
+    console.log('🔄 Upload falhou, convertendo para Base64 via fetch...');
+    try {
+      // Converter imagem para Base64 via fetch
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+      
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          resolve(base64data);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      
+    } catch (fallbackError) {
+      console.error('❌ Fallback também falhou:', fallbackError);
+      throw error;
+    }
+  }
+};
   // CARREGAR DADOS DA FARMÁCIA E CATEGORIAS
   useEffect(() => {
     console.log('🔄 [ADD PRODUCT] useEffect executando...');
@@ -710,7 +740,7 @@ export default function AddProductScreen() {
 
           <TouchableOpacity 
             style={styles.cancelButton}
-            onPress={() => router.back()}
+            onPress={() => router.push('/adm')}
             disabled={isLoading}
           >
             <Text style={styles.cancelButtonText}>Cancelar</Text>

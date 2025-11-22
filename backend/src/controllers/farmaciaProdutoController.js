@@ -246,26 +246,37 @@ const farmaciaProdutoController = {
   },
 
   // ✅ FUNÇÃO EXTRA: Remover produto da farmácia
-  removerProduto: async (req, res) => {
+  // No controller (farmaciaProdutoController.js)
+     removerProduto: async (req, res) => {
     try {
-      const { id } = req.params;
+        const { farmaciaId, produtoId } = req.params;
+        
+        console.log('🗑️ Excluindo relação:', { farmaciaId, produtoId });
 
-      const farmaciaProduto = await FarmaciaProduto.findByPk(id);
-      
-      if (!farmaciaProduto) {
-        return res.status(404).json({ error: 'Relação farmácia-produto não encontrada' });
-      }
+        const resultado = await FarmaciaProduto.destroy({
+            where: {
+                farmacia_id: parseInt(farmaciaId),
+                produto_id: parseInt(produtoId)
+            }
+        });
 
-      await farmaciaProduto.destroy();
+        if (resultado === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Relação farmácia-produto não encontrada' 
+            });
+        }
 
-      res.json({ message: 'Produto removido da farmácia com sucesso!' });
-
+        res.json({ 
+            success: true, 
+            message: 'Produto removido da farmácia com sucesso' 
+        });
     } catch (error) {
-      console.error('💥 ERRO em removerProduto:', error);
-      res.status(500).json({ 
-        error: 'Erro interno do servidor',
-        details: error.message
-      });
+        console.error('Erro ao remover produto:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Erro interno do servidor' 
+        });
     }
   },
 
