@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, FlatList, Dimensions, Modal } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, FlatList, Dimensions, Modal, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// ⭐⭐ CONSTANTE PARA IP DO SERVIDOR ⭐⭐
+const API_URL = 'http://192.168.0.3:3000';
 
 // Dados de exemplo para categorias
 const categories = [
@@ -10,264 +14,6 @@ const categories = [
   { id: '2', name: 'Suplementos', icon: '🌱' },
   { id: '3', name: 'Medicamentos', icon: '💊' },
   { id: '4', name: 'Acessórios', icon: '🐎' },
-];
-
-// ⭐⭐ TODOS OS PRODUTOS DE TODAS AS CATEGORIAS ⭐⭐
-const allProducts = [
-  // 🐄 BOVINOS
-  {
-    id: '1',
-    name: 'Vacina Brucelose B19',
-    price: 'R$ 89,90',
-    category: 'Vacinas',
-    animal: 'Bovinos',
-    image: require('../../assets/images/produtos/vacina-brucelose.png'),
-  },
-  {
-    id: '2',
-    name: 'Vacina Febre Aftosa',
-    price: 'R$ 67,50',
-    category: 'Vacinas',
-    animal: 'Bovinos',
-    image: require('../../assets/images/produtos/vacina.png'),
-  },
-  {
-    id: '3',
-    name: 'Vacina Raiva',
-    price: 'R$ 95,00',
-    category: 'Vacinas',
-    animal: 'Bovinos',
-    image: require('../../assets/images/produtos/vacina-raiva.png'),
-  },
-  {
-    id: '4',
-    name: 'Vacina Clostridiose',
-    price: 'R$ 78,90',
-    category: 'Vacinas',
-    animal: 'Bovinos',
-    image: require('../../assets/images/produtos/vacina-clostridiose.png'),
-  },
-  {
-    id: '5',
-    name: 'Ivermectina 1%',
-    price: 'R$ 45,90',
-    category: 'Medicamentos',
-    animal: 'Bovinos',
-    image: require('../../assets/images/produtos/ivermectina.png'),
-  },
-  {
-    id: '6',
-    name: 'Albendazol 10%',
-    price: 'R$ 38,50',
-    category: 'Medicamentos',
-    animal: 'Bovinos',
-    image: require('../../assets/images/produtos/albendazol.png'),
-  },
-  {
-    id: '7',
-    name: 'Brinco de Identificação Bovino',
-    price: 'R$ 12,90',
-    category: 'Acessórios',
-    animal: 'Bovinos',
-    image: require('../../assets/images/produtos/brinco-bovino.png'),
-  },
-  {
-    id: '8',
-    name: 'Aplicador de Brincos',
-    price: 'R$ 89,00',
-    category: 'Acessórios',
-    animal: 'Bovinos',
-    image: require('../../assets/images/produtos/aplicador-brinco.png'),
-  },
-  {
-    id: '9',
-    name: 'Núcleo Mineral para Gado de Corte',
-    price: 'R$ 149,90',
-    category: 'Suplementos',
-    animal: 'Bovinos',
-    image: require('../../assets/images/produtos/suplemento-mineral.png'),
-  },
-  {
-    id: '10',
-    name: 'Vitamina A-D-E',
-    price: 'R$ 67,80',
-    category: 'Suplementos',
-    animal: 'Bovinos',
-    image: require('../../assets/images/produtos/vitamina-ade.png'),
-  },
-
-  // 🐑 OVINOS
-  {
-    id: '11',
-    name: 'Vacina Clostridial (Covexin 10)',
-    price: 'R$ 82,50',
-    category: 'Vacinas',
-    animal: 'Ovinos',
-    image: require('../../assets/images/produtos/vacina-clostridial.png'),
-  },
-  {
-    id: '12',
-    name: 'Albendazol 10%',
-    price: 'R$ 42,90',
-    category: 'Medicamentos',
-    animal: 'Ovinos',
-    image: require('../../assets/images/produtos/albendazol-ovino.png'),
-  },
-  {
-    id: '13',
-    name: 'Tesoura para Tosa de Lã',
-    price: 'R$ 35,00',
-    category: 'Acessórios',
-    animal: 'Ovinos',
-    image: require('../../assets/images/produtos/tesoura-tosa.png'),
-  },
-  {
-    id: '14',
-    name: 'Sal Mineral para Ovinos',
-    price: 'R$ 79,90',
-    category: 'Suplementos',
-    animal: 'Ovinos',
-    image: require('../../assets/images/produtos/sal-mineral-ovino.png'),
-  },
-
-  // 🐖 SUÍNOS
-  {
-    id: '15',
-    name: 'Vacina Peste Suína',
-    price: 'R$ 75,90',
-    category: 'Vacinas',
-    animal: 'Suínos',
-    image: require('../../assets/images/produtos/vacina-peste-suina.png'),
-  },
-  {
-    id: '16',
-    name: 'Vacina Rinite Atrófica',
-    price: 'R$ 82,50',
-    category: 'Vacinas',
-    animal: 'Suínos',
-    image: require('../../assets/images/produtos/vacina-rinite.png'),
-  },
-  {
-    id: '17',
-    name: 'Enrofloxacina 10%',
-    price: 'R$ 58,90',
-    category: 'Medicamentos',
-    animal: 'Suínos',
-    image: require('../../assets/images/produtos/enrofloxacina.png'),
-  },
-  {
-    id: '18',
-    name: 'Bebedouro Tipo Nipple',
-    price: 'R$ 24,90',
-    category: 'Acessórios',
-    animal: 'Suínos',
-    image: require('../../assets/images/produtos/bebedouro-nipple.png'),
-  },
-  {
-    id: '19',
-    name: 'Premix Vitamínico para Suínos',
-    price: 'R$ 129,90',
-    category: 'Suplementos',
-    animal: 'Suínos',
-    image: require('../../assets/images/produtos/premix-suino.png'),
-  },
-
-  // 🐎 EQUINOS
-  {
-    id: '20',
-    name: 'Vacina Antitetânica',
-    price: 'R$ 65,00',
-    category: 'Vacinas',
-    animal: 'Equinos',
-    image: require('../../assets/images/produtos/vacina-antitetanica.png'),
-  },
-  {
-    id: '21',
-    name: 'Pasta Vermífuga com Ivermectina',
-    price: 'R$ 52,90',
-    category: 'Medicamentos',
-    animal: 'Equinos',
-    image: require('../../assets/images/produtos/pasta-vermifuga.png'),
-  },
-  {
-    id: '22',
-    name: 'Cabeçada de Couro',
-    price: 'R$ 89,90',
-    category: 'Acessórios',
-    animal: 'Equinos',
-  },
-  {
-    id: '23',
-    name: 'Suplemento Vitamínico-Mineral',
-    price: 'R$ 139,90',
-    category: 'Suplementos',
-    animal: 'Equinos',
-    image: require('../../assets/images/produtos/suplemento-equino.png'),
-  },
-
-  // 🐔 AVES
-  {
-    id: '24',
-    name: 'Vacina contra Newcastle',
-    price: 'R$ 48,90',
-    category: 'Vacinas',
-    animal: 'Aves',
-    image: require('../../assets/images/produtos/vacina-newcastle.png'),
-  },
-  {
-    id: '25',
-    name: 'Oxitetraciclina Solúvel',
-    price: 'R$ 32,50',
-    category: 'Medicamentos',
-    animal: 'Aves',
-    image: require('../../assets/images/produtos/oxitetraciclina.png'),
-  },
-  {
-    id: '26',
-    name: 'Comedouro Automático para Aves',
-    price: 'R$ 45,00',
-    category: 'Acessórios',
-    animal: 'Aves',
-    image: require('../../assets/images/produtos/comedouro-aves.png'),
-  },
-  {
-    id: '27',
-    name: 'Complexo Vitamínico para Aves',
-    price: 'R$ 39,90',
-    category: 'Suplementos',
-    animal: 'Aves',
-    image: require('../../assets/images/produtos/vitaminas-aves.png'),
-  },
-
-  // 🐟 PEIXES
-  {
-    id: '28',
-    name: 'Vacina contra Streptococcus',
-    price: 'R$ 125,00',
-    category: 'Vacinas',
-    animal: 'Peixes',
-  },
-  {
-    id: '29',
-    name: 'Formalina',
-    price: 'R$ 28,90',
-    category: 'Medicamentos',
-    animal: 'Peixes',
-  },
-  {
-    id: '30',
-    name: 'Rede de Manejo para Peixes',
-    price: 'R$ 34,90',
-    category: 'Acessórios',
-    animal: 'Peixes',
-  },
-  {
-    id: '31',
-    name: 'Ração com Probióticos',
-    price: 'R$ 89,90',
-    category: 'Suplementos',
-    animal: 'Peixes',
-  },
 ];
 
 // Dados de exemplo para notificações
@@ -280,6 +26,19 @@ const notificationsData = [
   { id: '6', title: 'Entrega realizada', message: 'Seu pedido #122 foi entregue', time: '1 dia', read: true },
 ];
 
+// Interface para o produto da API
+interface Produto {
+  produto_id: number;
+  nome: string;
+  descricao: string;
+  categoria: string;
+  imagens: string[];
+  farmacia_id: number;
+  farmacia_nome: string;
+  preco_venda: number;
+  estoque: number;
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -287,9 +46,128 @@ export default function HomeScreen() {
   const [showCart, setShowCart] = useState(false);
   const [notifications, setNotifications] = useState(notificationsData);
   const [cartItems, setCartItems] = useState([]);
-  // ⭐⭐ ESTADO DOS FAVORITOS
   const [favoritos, setFavoritos] = useState<string[]>([]);
+  
+  // ⭐⭐ NOVOS ESTADOS PARA PRODUTOS REAIS ⭐⭐
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // ⭐⭐ CARREGAR PRODUTOS REAIS DA API ⭐⭐
+  useEffect(() => {
+    loadProdutos();
+  }, []);
+
+  // ⭐⭐ CARREGAR PRODUTOS REAIS DA API ⭐⭐
+const loadProdutos = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+    
+    const token = await AsyncStorage.getItem('userToken');
+    
+    if (!token) {
+      throw new Error('Token de autenticação não encontrado');
+    }
+
+    console.log('📡 Buscando produtos de TODAS as farmácias...');
+    
+    // ✅ USE A NOVA ROTA /loja
+    const response = await fetch(`${API_URL}/api/farmacia-produtos/loja`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    console.log('📡 Status da resposta:', response.status);
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Não autorizado - faça login novamente');
+      }
+      throw new Error(`Erro HTTP: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('✅ Produtos carregados de TODAS as farmácias:', data.length);
+    
+    // ✅ AGORA VAI MOSTRAR PRODUTOS DE TODAS AS FARMÁCIAS
+    setProdutos(data);
+    
+  } catch (error) {
+    console.error('❌ Erro ao carregar produtos:', error);
+    setError(error.message);
+  } finally {
+    setLoading(false);
+  }
+};
+  // ⭐⭐ FUNÇÃO PARA OBTER IMAGEM DO PRODUTO ⭐⭐
+  const getProductImage = (imagens: string[]) => {
+    if (!imagens || imagens.length === 0) {
+      return null;
+    }
+
+    try {
+      let imageUrl = imagens[0];
+      
+      // Parsear se for string JSON
+      if (typeof imageUrl === 'string' && imageUrl.startsWith('[')) {
+        try {
+          const parsedImages = JSON.parse(imageUrl);
+          imageUrl = Array.isArray(parsedImages) && parsedImages.length > 0 ? parsedImages[0] : null;
+        } catch (parseError) {
+          console.log('❌ Erro ao parsear JSON de imagens:', parseError);
+          return null;
+        }
+      }
+
+      if (!imageUrl || typeof imageUrl !== 'string') {
+        return null;
+      }
+
+      // Corrigir URLs problemáticas
+      if (imageUrl.includes('flacalhost')) {
+        imageUrl = imageUrl.replace('flacalhost', 'localhost');
+      }
+      if (imageUrl.includes('lobshttp')) {
+        imageUrl = imageUrl.replace('lobshttp', 'http');
+      }
+
+      // Se for URL relativa, adicionar base URL
+      if (imageUrl.startsWith('/uploads/')) {
+        imageUrl = `${API_URL}${imageUrl}`;
+      }
+
+      // Se for Base64, usar diretamente
+      if (imageUrl.startsWith('data:image')) {
+        return { uri: imageUrl };
+      }
+
+      // Verificar se é uma URL válida
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        return { uri: imageUrl };
+      }
+
+      console.log('❌ URL de imagem inválida:', imageUrl);
+      return null;
+
+    } catch (error) {
+      console.error('❌ Erro ao processar imagem:', error);
+      return null;
+    }
+  };
+
+  // ⭐⭐ FUNÇÃO PARA FORMATAR PREÇO ⭐⭐
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(price);
+  };
+
+  // Funções existentes (mantidas)
   function handleMenu() {
     router.push('/home/menu');
   }
@@ -310,24 +188,32 @@ export default function HomeScreen() {
     alert(`Notificação: ${notification.title}`);
   }
 
-  // Função para adicionar produto ao carrinho
-  function handleAddToCart(product: any) {
-    const existingItem = cartItems.find(item => item.id === product.id);
+  // Função para adicionar produto ao carrinho (atualizada para produtos reais)
+  function handleAddToCart(product: Produto) {
+    const productWithId = {
+      ...product,
+      id: `${product.produto_id}_${product.farmacia_id}`, // ID único
+      price: formatPrice(product.preco_venda),
+      name: product.nome,
+      category: product.categoria,
+      image: getProductImage(product.imagens)
+    };
+
+    const existingItem = cartItems.find(item => item.id === productWithId.id);
 
     if (existingItem) {
       setCartItems(cartItems.map(item =>
-        item.id === product.id
+        item.id === productWithId.id
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ));
     } else {
-      setCartItems([...cartItems, { ...product, quantity: 1 }]);
+      setCartItems([...cartItems, { ...productWithId, quantity: 1 }]);
     }
 
-    alert(`${product.name} adicionado ao carrinho!`);
+    alert(`${product.nome} adicionado ao carrinho!`);
   }
 
-  // ⭐⭐ FUNÇÃO PARA ADICIONAR/REMOVER DOS FAVORITOS
   const toggleFavorito = (productId: string) => {
     setFavoritos(prev => {
       if (prev.includes(productId)) {
@@ -338,12 +224,11 @@ export default function HomeScreen() {
     });
   };
 
-  // Função para remover produto do carrinho
+  // Funções do carrinho (mantidas)
   function handleRemoveFromCart(productId: string) {
     setCartItems(cartItems.filter(item => item.id !== productId));
   }
 
-  // Função para aumentar quantidade
   function handleIncreaseQuantity(productId: string) {
     setCartItems(cartItems.map(item =>
       item.id === productId
@@ -352,7 +237,6 @@ export default function HomeScreen() {
     ));
   }
 
-  // Função para diminuir quantidade
   function handleDecreaseQuantity(productId: string) {
     setCartItems(cartItems.map(item =>
       item.id === productId && item.quantity > 1
@@ -361,7 +245,6 @@ export default function HomeScreen() {
     ));
   }
 
-  // Calcular total do carrinho
   function calculateTotal() {
     return cartItems.reduce((total, item) => {
       const price = parseFloat(item.price.replace('R$ ', '').replace(',', '.'));
@@ -369,7 +252,6 @@ export default function HomeScreen() {
     }, 0).toFixed(2).replace('.', ',');
   }
 
-  // Função para navegar para categoriaAnimal
   function handleCategoryPress(categoryId: string, categoryName: string) {
     router.push({
       pathname: '/home/categoriaAnimal',
@@ -380,12 +262,10 @@ export default function HomeScreen() {
     });
   }
 
-  // Função para o "Ver mais" das categorias
   function handleViewAllCategories() {
     router.push('/home/categoria');
   }
 
-  // Função para finalizar compra - navega para a tela de finalização
   function handleCheckout() {
     setShowCart(false);
     router.push({
@@ -397,46 +277,75 @@ export default function HomeScreen() {
     });
   }
 
-  const renderProduct = ({ item }) => (
-    <TouchableOpacity style={styles.productCard}>
-      {/* ⭐⭐ BOTÃO FAVORITO NO CANTO SUPERIOR DIREITO */}
-      <TouchableOpacity
-        style={styles.favoritoButton}
-        onPress={() => toggleFavorito(item.id)}
-      >
-        <Ionicons
-          name={favoritos.includes(item.id) ? "heart" : "heart-outline"}
-          size={20}
-          color={favoritos.includes(item.id) ? "#ff3b30" : "#666"}
-        />
-      </TouchableOpacity>
-
-      <View style={styles.productImagePlaceholder}>
-        {item.image ? (
-          <Image
-            source={item.image}
-            style={styles.productImage}
-            resizeMode="contain"
-          />
-        ) : (
-          <Text style={styles.productEmoji}>📦</Text>
-        )}
-      </View>
-      <View style={styles.productInfo}>
-        <Text style={styles.productCategory}>{item.category} - {item.animal}</Text>
-        <Text style={styles.productName}>{item.name}</Text>
-        <Text style={styles.productPrice}>{item.price}</Text>
+  // ⭐⭐ RENDERIZAR PRODUTO REAL ⭐⭐
+  const renderProduct = ({ item }: { item: Produto }) => {
+    const productUniqueId = `${item.produto_id}_${item.farmacia_id}`;
+    const imageSource = getProductImage(item.imagens);
+    
+    return (
+      <TouchableOpacity style={styles.productCard}>
+        {/* BOTÃO FAVORITO */}
         <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => handleAddToCart(item)}
+          style={styles.favoritoButton}
+          onPress={() => toggleFavorito(productUniqueId)}
         >
-          <Text style={styles.addButtonText}>+ Adicionar</Text>
+          <Ionicons
+            name={favoritos.includes(productUniqueId) ? "heart" : "heart-outline"}
+            size={20}
+            color={favoritos.includes(productUniqueId) ? "#ff3b30" : "#666"}
+          />
         </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
 
-  // Renderizar item do carrinho
+        <View style={styles.productImagePlaceholder}>
+          {imageSource ? (
+            <Image
+              source={imageSource}
+              style={styles.productImage}
+              resizeMode="cover"
+              onError={(e) => console.log('Erro ao carregar imagem:', e.nativeEvent.error)}
+            />
+          ) : (
+            <Text style={styles.productEmoji}>📦</Text>
+          )}
+        </View>
+        
+        <View style={styles.productInfo}>
+          <Text style={styles.productCategory}>
+            {item.categoria} - {item.farmacia_nome}
+          </Text>
+          <Text style={styles.productName} numberOfLines={2}>
+            {item.nome}
+          </Text>
+          <Text style={styles.productPrice}>
+            {formatPrice(item.preco_venda)}
+          </Text>
+          
+          {/* Indicador de estoque */}
+          <Text style={[
+            styles.estoqueText,
+            { color: item.estoque > 0 ? '#27ae60' : '#e74c3c' }
+          ]}>
+            {item.estoque > 0 ? `${item.estoque} em estoque` : 'Fora de estoque'}
+          </Text>
+          
+          <TouchableOpacity
+            style={[
+              styles.addButton,
+              item.estoque === 0 && styles.addButtonDisabled
+            ]}
+            onPress={() => handleAddToCart(item)}
+            disabled={item.estoque === 0}
+          >
+            <Text style={styles.addButtonText}>
+              {item.estoque > 0 ? '+ Adicionar' : 'Sem estoque'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // Renderizar item do carrinho (mantido)
   const renderCartItem = ({ item }) => (
     <View style={styles.cartItem}>
       <View style={styles.cartItemImage}>
@@ -485,7 +394,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.fullContainer}>
-      {/* HEADER */}
+      {/* HEADER (mantido) */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleMenu} style={styles.menuButton}>
           <Ionicons name="menu" size={28} color="#126b1a" />
@@ -520,7 +429,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* MODAL PARA NOTIFICAÇÕES */}
+      {/* MODAIS (mantidos) */}
       <Modal
         visible={showNotifications}
         transparent={true}
@@ -577,7 +486,6 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* MODAL PARA CARRINHO - VERSÃO MELHORADA */}
       <Modal
         visible={showCart}
         transparent={true}
@@ -662,16 +570,15 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* CONTEÚDO */}
+      {/* CONTEÚDO PRINCIPAL */}
       <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
-        {/* BANNER - COM MENSAGEM PERSONALIZADA */}
+        {/* BANNER */}
         <View style={styles.bannerContainer}>
           <Image
             source={require('../../assets/images/bemvindos.png')}
             style={styles.bannerImage}
             resizeMode="contain"
           />
-          {/* ⭐⭐ MENSAGEM DE BOAS-VINDAS PERSONALIZADA ⭐⭐ */}
           {user && (
             <View style={styles.welcomeMessage}>
               <Text style={styles.welcomeText}>Bem-vindo, {user.nome}! 👋</Text>
@@ -679,7 +586,7 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* CATEGORIAS */}
+        {/* CATEGORIAS (mantido) */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Categorias</Text>
@@ -702,25 +609,57 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ⭐⭐ TODOS OS PRODUTOS - AGORA COM TODOS OS 31 PRODUTOS E BOTÃO DE FAVORITOS ⭐⭐ */}
+        {/* ⭐⭐ NOSSOS PRODUTOS - AGORA COM DADOS REAIS ⭐⭐ */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Nossos Produtos</Text>
-          <Text style={styles.productsCount}>{allProducts.length} produtos disponíveis</Text>
-          <FlatList
-            data={allProducts}
-            renderItem={renderProduct}
-            keyExtractor={item => item.id}
-            numColumns={2}
-            columnWrapperStyle={styles.productsGrid}
-            contentContainerStyle={styles.productsList}
-            scrollEnabled={false}
-          />
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Nossos Produtos</Text>
+            <TouchableOpacity onPress={loadProdutos}>
+              <Ionicons name="refresh" size={20} color="#126b1a" />
+            </TouchableOpacity>
+          </View>
+
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#126b1a" />
+              <Text style={styles.loadingText}>Carregando produtos...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle-outline" size={48} color="#e74c3c" />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={loadProdutos}>
+                <Text style={styles.retryButtonText}>Tentar Novamente</Text>
+              </TouchableOpacity>
+            </View>
+          ) : produtos.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="cube-outline" size={48} color="#bdc3c7" />
+              <Text style={styles.emptyText}>Nenhum produto disponível</Text>
+              <Text style={styles.emptySubtext}>Tente novamente mais tarde</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.productsCount}>
+                {produtos.length} produto{produtos.length !== 1 ? 's' : ''} disponível{produtos.length !== 1 ? 's' : ''}
+              </Text>
+              <FlatList
+                data={produtos}
+                renderItem={renderProduct}
+                keyExtractor={item => `${item.produto_id}_${item.farmacia_id}`}
+                numColumns={2}
+                columnWrapperStyle={styles.productsGrid}
+                contentContainerStyle={styles.productsList}
+                scrollEnabled={false}
+              />
+            </>
+          )}
         </View>
       </ScrollView>
     </View>
   );
 }
 
+// ESTILOS
 const { width, height } = Dimensions.get('window');
 const categoryCardSize = (width - 60) / 2;
 
@@ -794,11 +733,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginBottom: 10,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 10,
   },
   productsCount: {
     fontSize: 14,
@@ -852,9 +796,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
-    position: 'relative', // ⭐⭐ PARA POSICIONAR O BOTÃO DE FAVORITO
+    position: 'relative',
   },
-  // ⭐⭐ ESTILOS PARA O BOTÃO DE FAVORITO NO CANTO
   favoritoButton: {
     position: 'absolute',
     top: 10,
@@ -908,6 +851,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#126b1a',
+    marginBottom: 4,
+  },
+  estoqueText: {
+    fontSize: 10,
+    fontWeight: '500',
     marginBottom: 8,
   },
   addButton: {
@@ -916,16 +864,13 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     alignItems: 'center',
   },
+  addButtonDisabled: {
+    backgroundColor: '#bdc3c7',
+  },
   addButtonText: {
     color: 'white',
     fontSize: 12,
     fontWeight: 'bold',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
   },
   viewAllText: {
     fontSize: 14,
@@ -1225,5 +1170,56 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+  },
+  // ⭐⭐ NOVOS ESTILOS PARA CARREGAMENTO E ERRO ⭐⭐
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#e74c3c',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#126b1a',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
   },
 });

@@ -154,6 +154,100 @@ const farmaciaProdutoController = {
     }
   },
 
+  // ✅ NOVA FUNÇÃO: Listar produtos de TODAS as farmácias para a loja
+  // ✅ FUNÇÃO CORRIGIDA: Listar produtos de TODAS as farmácias para a loja
+listarProdutosLoja: async (req, res) => {
+  try {
+    console.log('🛍️ [LOJA] Buscando produtos de TODAS as farmácias');
+    
+    const { Op } = require('sequelize');
+    
+    // Baseado nas colunas que vimos no log, usar apenas as que existem
+    const farmaciaAttributes = ['id', 'nome', 'endereco', 'email', 'telefone']; // ✅ COLUNAS QUE EXISTEM
+    
+    console.log('🎯 Atributos da farmácia que serão usados:', farmaciaAttributes);
+    
+    const farmaciaProdutos = await FarmaciaProduto.findAll({
+      include: [
+        {
+          model: Produto,
+          as: 'produto',
+          attributes: ['id', 'nome', 'descricao', 'categoria_id', 'subcategoria_id', 'imagens', 'ativo', 'criado_em', 'atualizado_em'],
+          where: {
+            ativo: true
+          },
+          required: true
+        },
+        {
+          model: Farmacia,
+          as: 'farmacia',
+          attributes: farmaciaAttributes, // ✅ USANDO APENAS COLUNAS QUE EXISTEM
+          // ✅ REMOVIDO o where 'ativa' já que essa coluna não existe
+          required: true
+        }
+      ],
+      where: {
+        estoque: {
+          [Op.gt]: 0
+        }
+      },
+      order: [['produto_id', 'ASC'], ['preco_venda', 'ASC']]
+    });
+
+    console.log('📦 Produtos encontrados na loja:', farmaciaProdutos.length);
+
+    // Formatar resposta para a loja
+    const produtosLoja = farmaciaProdutos.map(item => {
+      const data = item.toJSON();
+      
+      // Processar imagens
+      let imagensProcessadas = [];
+      try {
+        if (data.produto?.imagens) {
+          if (Array.isArray(data.produto.imagens)) {
+            imagensProcessadas = data.produto.imagens;
+          } else if (typeof data.produto.imagens === 'string') {
+            imagensProcessadas = JSON.parse(data.produto.imagens);
+          }
+        }
+      } catch (error) {
+        console.log('❌ Erro ao processar imagens:', error);
+        imagensProcessadas = [];
+      }
+
+      return {
+        produto_id: data.produto_id,
+        nome: data.produto?.nome || 'Produto sem nome',
+        descricao: data.produto?.descricao || '',
+        categoria: data.produto?.categoria_id || 'Geral',
+        imagens: imagensProcessadas,
+        farmacia_id: data.farmacia_id,
+        farmacia_nome: data.farmacia?.nome || 'Farmácia',
+        farmacia_endereco: data.farmacia?.endereco || null,
+        farmacia_email: data.farmacia?.email || null,
+        farmacia_telefone: data.farmacia?.telefone || null,
+        preco_venda: data.preco_venda,
+        estoque: data.estoque,
+        ativo: data.produto?.ativo || false,
+        disponivel_na_farmacia: true
+      };
+    });
+
+    console.log('✅ Produtos formatados para loja:', produtosLoja.length);
+    
+    res.json(produtosLoja);
+
+  } catch (error) {
+    console.error('💥 ERRO em listarProdutosLoja:', error);
+    console.error('📋 Detalhes do erro:', error.message);
+    
+    res.status(500).json({
+      error: 'Erro interno do servidor ao buscar produtos da loja',
+      details: error.message
+    });
+  }
+},
+
   // ✅ FUNÇÃO ALTERNATIVA CORRIGIDA
   listarPorFarmacia: async (req, res) => {
     try {
@@ -246,8 +340,7 @@ const farmaciaProdutoController = {
   },
 
   // ✅ FUNÇÃO EXTRA: Remover produto da farmácia
-  // No controller (farmaciaProdutoController.js)
-     removerProduto: async (req, res) => {
+  removerProduto: async (req, res) => {
     try {
         const { farmaciaId, produtoId } = req.params;
         

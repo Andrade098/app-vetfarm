@@ -33,7 +33,7 @@ export default function MenuScreen() {
             style: 'destructive',
             onPress: () => {
               logout(); // ⭐⭐ CHAMA A FUNÇÃO DE LOGOUT
-              router.replace('/');
+              router.push('/');
             },
           },
         ]
