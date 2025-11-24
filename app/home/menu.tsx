@@ -1,12 +1,41 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Image, Alert } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Image, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../contexts/AuthContext'; // ⭐⭐ IMPORTE O AUTH CONTEXT
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function MenuScreen() {
   const router = useRouter();
-  const { user, logout } = useAuth(); // ⭐⭐ USE OS DADOS DO USUÁRIO
+  const { user, logout, fetchUserData, loading } = useAuth();
+
+  // Buscar dados atualizados quando a tela abre
+  useEffect(() => {
+    if (!loading) {
+      const loadUserData = async () => {
+        await fetchUserData();
+      };
+      
+      loadUserData();
+    }
+  }, [loading]);
+
+  // Debug para verificar os dados
+  useEffect(() => {
+    console.log('🔍 Dados do usuário no MenuScreen:', user);
+    console.log('🔍 Loading:', loading);
+  }, [user, loading]);
+
+  // Mostrar loading enquanto carrega
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#126b1a" />
+          <Text style={styles.loadingText}>Carregando...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const menuItems = [
     { id: '1', title: 'Resumo da conta', icon: 'person-outline', screen: 'resumoconta' },
@@ -32,8 +61,8 @@ export default function MenuScreen() {
             text: 'Sair',
             style: 'destructive',
             onPress: () => {
-              logout(); // ⭐⭐ CHAMA A FUNÇÃO DE LOGOUT
-              router.push('/');
+              logout();
+              router.replace('/');
             },
           },
         ]
@@ -41,6 +70,23 @@ export default function MenuScreen() {
     } else {
       router.push(`/home/${screen}`);
     }
+  };
+
+  // Função para formatar o nome completo
+  const getFullName = () => {
+    if (!user) return 'Usuário';
+    if (user.nome && user.sobrenome) {
+      return `${user.nome} ${user.sobrenome}`;
+    }
+    return user.nome || 'Usuário';
+  };
+
+  // Função para formatar o tipo de usuário
+  const getUserType = () => {
+    if (!user) return 'Tipo de usuário';
+    if (user.tipo === 'cliente') return 'Cliente';
+    if (user.tipo === 'farmacia') return 'Farmácia';
+    return user.tipo || 'Tipo de usuário';
   };
 
   return (
@@ -58,7 +104,7 @@ export default function MenuScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Perfil do usuário - AGORA COM DADOS REAIS */}
+        {/* Perfil do usuário - AGORA COM DADOS REAIS DO CONTEXTO */}
         <View style={styles.profileSection}>
           <Image
             source={require('../../assets/images/logovetfarm.png')}
@@ -66,13 +112,13 @@ export default function MenuScreen() {
           />
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>
-              {user?.nome || 'Usuário'} {/* ⭐⭐ NOME REAL */}
+              {getFullName()}
             </Text>
             <Text style={styles.profileEmail}>
-              {user?.email || 'email@exemplo.com'} {/* ⭐⭐ EMAIL REAL */}
+              {user?.email || 'email@exemplo.com'}
             </Text>
             <Text style={styles.profileType}>
-              {user?.tipo === 'cliente' ? 'Cliente' : user?.tipo || 'Tipo de usuário'}
+              {getUserType()}
             </Text>
           </View>
         </View>
@@ -125,6 +171,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -145,7 +201,7 @@ const styles = StyleSheet.create({
     color: '#126b1a',
   },
   headerRight: {
-    width: 34, // Para manter o alinhamento com a tela anterior
+    width: 34,
   },
   content: {
     flex: 1,

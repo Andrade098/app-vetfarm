@@ -125,12 +125,36 @@ module.exports = {
 
   async buscarPorEmail(email) {
     console.log('🔍 SERVICE - Buscando cliente por email:', email);
-    const cliente = await Cliente.findOne({ where: { email } });
+    
+    const cliente = await Cliente.findOne({ 
+        where: { email },
+        attributes: [
+            'id', 
+            'nome', 
+            'sobrenome', // ⭐⭐ INCLUA EXPLICITAMENTE
+            'email', 
+            'telefone', 
+            'cpf', 
+            'data_nascimento', 
+            'senha', // ⭐⭐ NECESSÁRIO PARA COMPARAÇÃO
+            
+        ]
+    });
+    
+    console.log('🔍 SERVICE - Cliente encontrado:', {
+        id: cliente?.id,
+        nome: cliente?.nome,
+        sobrenome: cliente?.sobrenome, // ⭐⭐ VERIFIQUE AQUI
+        email: cliente?.email,
+        temSobrenome: !!cliente?.sobrenome
+    });
+    
     if (!cliente) {
-      throw { status: 404, message: 'Cliente não encontrado' };
+        throw { status: 404, message: 'Cliente não encontrado' };
     }
+    
     return cliente;
-  },
+},
 
   async atualizarCliente(id, dados) {
     console.log('✏️ SERVICE - Atualizando cliente ID:', id);

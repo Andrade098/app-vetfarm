@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface User {
   id: string;
@@ -17,6 +18,8 @@ interface AuthContextData {
   login: (userData: User, token: string) => void;
   logout: () => void;
   updatePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
+  fetchUserData: () => Promise<void>;
+  loading: boolean; // ⭐⭐ ADICIONE ESTE ESTADO
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -24,16 +27,105 @@ const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userToken, setUserToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true); // ⭐⭐ ESTADO DE CARREGAMENTO
 
-  const login = (userData: User, token: string) => {
-    console.log('🔐 Login no AuthContext - Token:', token);
-    setUser(userData);
-    setUserToken(token);
+  // ⭐⭐ MESMO IP DO LOGIN - IMPORTANTE PARA ANDROID ⭐⭐
+  const API_URL = 'http://192.168.0.6:3000';
+
+  // ⭐⭐ CARREGAR DADOS DO ASYNCSTORAGE QUANDO O APP INICIA ⭐⭐
+  useEffect(() => {
+    const loadStoredData = async () => {
+      try {
+        console.log('🔍 AuthContext - Carregando dados do AsyncStorage...');
+        
+        const storedToken = await AsyncStorage.getItem('userToken');
+        const storedUser = await AsyncStorage.getItem('userData');
+        
+        console.log('🔍 Token no AsyncStorage:', storedToken ? 'EXISTE' : 'NÃO EXISTE');
+        console.log('🔍 UserData no AsyncStorage:', storedUser ? 'EXISTE' : 'NÃO EXISTE');
+        
+        if (storedToken && storedUser) {
+          const userData = JSON.parse(storedUser);
+          console.log('✅ AuthContext - Dados carregados:', userData);
+          
+          setUser(userData);
+          setUserToken(storedToken);
+        } else {
+          console.log('ℹ️ AuthContext - Nenhum dado salvo encontrado');
+        }
+      } catch (error) {
+        console.error('❌ Erro ao carregar dados do AsyncStorage:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStoredData();
+  }, []);
+
+  // ⭐⭐ NOVA FUNÇÃO PARA BUSCAR DADOS ATUALIZADOS DO USUÁRIO
+  const fetchUserData = async (): Promise<void> => {
+    try {
+      if (!userToken) {
+        console.log('❌ Token não disponível para buscar dados do usuário');
+        return;
+      }
+
+      console.log('🔍 Buscando dados atualizados do usuário...');
+      
+      const response = await fetch(`${API_URL}/api/clientes/perfil`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userToken}`,
+        },
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        console.log('✅ Dados atualizados do usuário:', userData);
+        
+        // ⭐⭐ ATUALIZAR O CONTEXTO E O ASYNCSTORAGE
+        setUser(userData.usuario);
+        await AsyncStorage.setItem('userData', JSON.stringify(userData.usuario));
+        
+      } else {
+        console.log('❌ Erro ao buscar dados do usuário:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao buscar dados do usuário:', error);
+    }
   };
 
-  const logout = () => {
+ const login = async (userData: User, token: string) => {
+    console.log('🔐 Login no AuthContext - Dados recebidos:', userData);
+    console.log('🔐 Login no AuthContext - Sobrenome recebido:', userData.sobrenome);
+    
+    // ⭐⭐ VERIFIQUE SE O USERDATA TEM SOBRENOME
+    if (!userData.sobrenome) {
+        console.warn('⚠️ AVISO: userData não tem sobrenome! Campos recebidos:', Object.keys(userData));
+    }
+    
+    // Salva no contexto
+    setUser(userData);
+    setUserToken(token);
+    
+    // Salva no AsyncStorage
+    await AsyncStorage.setItem('userToken', token);
+    await AsyncStorage.setItem('userData', JSON.stringify(userData));
+    
+    console.log('✅ Dados salvos no AuthContext e AsyncStorage');
+    console.log('✅ Sobrenome salvo:', userData.sobrenome);
+};
+
+  const logout = async () => {
+    // ⭐⭐ LIMPAR CONTEXTO E ASYNCSTORAGE
     setUser(null);
     setUserToken(null);
+    await AsyncStorage.removeItem('userToken');
+    await AsyncStorage.removeItem('userData');
+    
+    console.log('✅ Logout realizado - dados removidos');
   };
 
   const updatePassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
@@ -46,9 +138,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log('❌ Usuário não autenticado');
         return { success: false, message: 'Usuário não autenticado' };
       }
-
-      // ⭐⭐ MESMO IP DO LOGIN - IMPORTANTE PARA ANDROID ⭐⭐
-      const API_URL = 'http://192.168.0.6:3000';
 
       const response = await fetch(`${API_URL}/api/clientes/alterar-senha`, {
         method: 'PUT',
@@ -78,7 +167,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, userToken, login, logout, updatePassword }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      userToken, 
+      login, 
+      logout, 
+      updatePassword, 
+      fetchUserData,
+      loading // ⭐⭐ EXPORTE O LOADING
+    }}>
       {children}
     </AuthContext.Provider>
   );

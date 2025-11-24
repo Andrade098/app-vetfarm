@@ -11,15 +11,11 @@ const { authMiddleware } = require('../middlewares/authMiddleware');
 // ⭐⭐ ROTA DE LOGIN DO CLIENTE ⭐⭐
 router.post('/login', clienteAuthController.login);
 
+// ⭐⭐ ROTA DE PERFIL DO USUÁRIO LOGADO ⭐⭐
+router.get('/perfil', authMiddleware, clienteController.buscarPerfil);
+
+
 // ⭐⭐ ROTA DE TESTE (APENAS PARA DEBUG) ⭐⭐
-router.post('/teste', (req, res) => {
-  console.log('🎯 ROTA /teste ACIONADA! Body:', req.body);
-  res.json({
-    success: true,
-    message: 'ROTA TESTE FUNCIONANDO!',
-    body: req.body
-  });
-});
 
 // ⭐⭐ ROTA REAL DE CRIAÇÃO ⭐⭐
 router.post('/', (req, res) => {

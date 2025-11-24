@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState , useEffect} from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,14 @@ export default function MeusDadosScreen() {
   const router = useRouter();
   const { user, login } = useAuth();
 
+
+  // ⭐⭐ ADICIONE ESTES CONSOLE.LOGS AQUI - NO INÍCIO DO COMPONENTE
+  console.log('🔍 USER COMPLETO:', JSON.stringify(user, null, 2));
+  console.log('🔍 SOBRENOME:', user?.sobrenome);
+  console.log('🔍 TIPO DO SOBRENOME:', typeof user?.sobrenome);
+  console.log('🔍 USER EXISTE?', user ? 'SIM' : 'NÃO');
   // Estado dos dados do usuário - COM DADOS REAIS DO AUTHCONTEXT
+  
   const [userData, setUserData] = useState({
     nome: user?.nome || 'Usuário',
     sobrenome: user?.sobrenome || 'Não informado',
@@ -18,6 +25,27 @@ export default function MeusDadosScreen() {
     celular: user?.telefone || 'Não informado',
     dataNascimento: user?.data_nascimento || 'Não informada',
   });
+   
+  // ⭐⭐ TAMBÉM ADICIONE ESTE USEEFFECT PARA SINCRONIZAR
+  useEffect(() => {
+    console.log('🔄 useEffect executando - user atualizado:', user);
+    
+    if (user) {
+      const newUserData = {
+        nome: user.nome || 'Usuário',
+        sobrenome: user.sobrenome || 'Não informado',
+        email: user.email || 'email@exemplo.com',
+        cpf: user.cpf || 'Não informado',
+        celular: user.telefone || 'Não informado',
+        dataNascimento: user.data_nascimento || 'Não informada',
+      };
+      
+      setUserData(newUserData);
+      setDadosEditados(newUserData);
+      
+      console.log('✅ Dados sincronizados no estado local:', newUserData);
+    }
+  }, [user]); // ⭐⭐ ISSO VAI EXECUTAR SEMPRE QUE O USER MUDAR
 
   const [isEditing, setIsEditing] = useState(false);
   const [dadosEditados, setDadosEditados] = useState({ ...userData });
@@ -40,15 +68,18 @@ export default function MeusDadosScreen() {
         return;
       }
 
-      // Busca o token
-      const token = await AsyncStorage.getItem('token');
+      // ⭐⭐ CORREÇÃO 1: Busca o token CORRETO
+      const token = await AsyncStorage.getItem('userToken');
       if (!token) {
         Alert.alert('Erro', 'Sessão expirada. Faça login novamente.');
         router.push('/loginANDcadastro');
         return;
       }
 
-      // Faz a requisição para atualizar no backend
+      console.log('🔐 Token:', token ? 'EXISTE' : 'NÃO EXISTE');
+      console.log('📦 Dados para enviar:', dadosEditados);
+
+      // ⭐⭐ CORREÇÃO 2: Faz a requisição para atualizar no backend
       const response = await fetch('http://192.168.0.6:3000/api/clientes/meus-dados', {
         method: 'PUT',
         headers: {
@@ -64,7 +95,10 @@ export default function MeusDadosScreen() {
         }),
       });
 
+      console.log('📡 Status da resposta:', response.status);
+
       const data = await response.json();
+      console.log('📡 Resposta da API:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao atualizar dados');
@@ -74,8 +108,8 @@ export default function MeusDadosScreen() {
         // Atualiza os dados locais
         setUserData({ ...dadosEditados });
 
-        // Atualiza o AuthContext com os novos dados
-        login({
+        // ⭐⭐ CORREÇÃO 3: Atualiza o AuthContext com os novos dados
+        const updatedUser = {
           id: user?.id || '',
           nome: dadosEditados.nome,
           sobrenome: dadosEditados.sobrenome,
@@ -84,16 +118,23 @@ export default function MeusDadosScreen() {
           cpf: user?.cpf || '',
           data_nascimento: dadosEditados.dataNascimento,
           tipo: user?.tipo || 'cliente'
-        });
+        };
+
+        login(updatedUser, token); // ⭐⭐ PASSA O TOKEN TAMBÉM
+
+        // ⭐⭐ CORREÇÃO 4: Atualiza o AsyncStorage
+        await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
 
         setIsEditing(false);
         Alert.alert('Sucesso', 'Dados atualizados com sucesso!');
+        
+        console.log('✅ Dados atualizados no AuthContext e AsyncStorage');
       } else {
         throw new Error(data.error || 'Erro ao atualizar dados');
       }
 
     } catch (error) {
-      console.error('Erro ao salvar dados:', error);
+      console.error('❌ Erro ao salvar dados:', error);
       Alert.alert('Erro', error.message || 'Não foi possível salvar os dados. Tente novamente.');
     } finally {
       setLoading(false);
@@ -250,13 +291,13 @@ export default function MeusDadosScreen() {
             {isEditing ? (
               <TextInput
                 style={styles.input}
-                value={dadosEditados.dataNascimento}
+                value={userData.dataNascimento}
                 onChangeText={(text) => handleInputChange('dataNascimento', text)}
-                placeholder="DD/MM/AAAA"
+                placeholder="AAA/MM/DD"
                 keyboardType="numeric"
               />
             ) : (
-              <Text style={styles.valueText}>{formatarData(userData.dataNascimento)}</Text>
+              <Text style={styles.valueText}>{(userData.dataNascimento)}</Text>
             )}
           </View>
 

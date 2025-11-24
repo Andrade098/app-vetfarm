@@ -24,11 +24,17 @@ module.exports = {
             try {
                 console.log('🔍 BUSCANDO CLIENTE NO BANCO...');
                 cliente = await clienteService.buscarPorEmail(email);
+                console.log('🔍 CLIENTE DO SERVICE (COMPLETO):', JSON.stringify(cliente, null, 2));
                 console.log('✅ CLIENTE ENCONTRADO:', {
                     id: cliente.id,
                     email: cliente.email,
                     nome: cliente.nome,
-                    temSenha: !!cliente.senha
+                    sobrenome: cliente.sobrenome,
+                    telefone: cliente.telefone,
+                    cpf: cliente.cpf,
+                    data_nascimento: cliente.data_nascimento,
+                    temSenha: !!cliente.senha,
+                    todosOsCampos: Object.keys(cliente.get ? cliente.get() : cliente)
                 });
             } catch (error) {
                 console.log('❌ ERRO AO BUSCAR CLIENTE:', error.message);
@@ -60,7 +66,8 @@ module.exports = {
                     id: cliente.id, 
                     email: cliente.email, 
                     nome: cliente.nome,
-                    tipo: 'cliente' // ⭐⭐ TIPO CLIENTE ⭐⭐
+                    sobrenome: cliente.sobrenome,
+                     // ⭐⭐ TIPO CLIENTE ⭐⭐
                 }, 
                 process.env.JWT_SECRET || 'segredo',
                 { expiresIn: '24h' }
@@ -74,8 +81,12 @@ module.exports = {
                 usuario: { // ⭐⭐ RETORNA "usuario" EM VEZ DE "farmacia" ⭐⭐
                     id: cliente.id,
                     nome: cliente.nome,
+                    sobrenome: cliente.sobrenome,
                     email: cliente.email,
-                    tipo: 'cliente'
+                    telefone: cliente.telefone,
+                    cpf: cliente.cpf,
+                    data_nascimento: cliente.data_nascimento,
+                    
                 }
             });
 

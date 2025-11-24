@@ -146,6 +146,49 @@ exports.atualizarMeusDados = async (req, res) => {
   }
 };
 
+exports.buscarPerfil = async (req, res) => {
+    try {
+        const userId = req.user.id; // Pegando do token JWT
+        
+        console.log('👤 CONTROLLER - Buscando perfil do usuário ID:', userId);
+
+        const Cliente = require('../models/Cliente');
+        const cliente = await Cliente.findByPk(userId);
+
+        if (!cliente) {
+            return res.status(404).json({
+                success: false,
+                error: "Cliente não encontrado!"
+            });
+        }
+
+        console.log('✅ Perfil encontrado para:', cliente.nome);
+
+        res.json({
+            success: true,
+            usuario: {
+                id: cliente.id,
+                nome: cliente.nome,
+                sobrenome: cliente.sobrenome,
+                email: cliente.email,
+                telefone: cliente.telefone,
+                cpf: cliente.cpf,
+                data_nascimento: cliente.data_nascimento,
+                
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ ERRO AO BUSCAR PERFIL:', error);
+        res.status(500).json({
+            success: false,
+            error: "Erro interno do servidor"
+        });
+    }
+};
+
+  
+
 // ⭐⭐ FUNÇÕES ADICIONAIS ⭐⭐
 exports.listar = async (req, res) => {
   try {

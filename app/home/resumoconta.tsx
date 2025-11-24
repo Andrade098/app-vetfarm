@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Modal, FlatList } from 'react-native';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  TouchableOpacity, 
+  StyleSheet, 
+  SafeAreaView, 
+  Modal, 
+  FlatList,
+  ActivityIndicator 
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
@@ -13,18 +23,44 @@ const calcularPontos = (valor: number) => {
   return Math.floor(valor / 10);
 };
 
+// Componente de Loading
+const LoadingScreen = () => (
+  <SafeAreaView style={styles.container}>
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color="#126b1a" />
+      <Text style={styles.loadingText}>Carregando seus dados...</Text>
+    </View>
+  </SafeAreaView>
+);
+
+// Componente de Error
+const ErrorScreen = ({ onRetry }: { onRetry: () => void }) => (
+  <SafeAreaView style={styles.container}>
+    <View style={styles.errorContainer}>
+      <Ionicons name="alert-circle-outline" size={48} color="#e74c3c" />
+      <Text style={styles.errorText}>Usuário não encontrado</Text>
+      <Text style={styles.errorSubtext}>Não foi possível carregar seus dados</Text>
+      <TouchableOpacity 
+        style={styles.retryButton}
+        onPress={onRetry}
+      >
+        <Text style={styles.retryButtonText}>Voltar</Text>
+      </TouchableOpacity>
+    </View>
+  </SafeAreaView>
+);
+
+// Componente auxiliar para Info Items
+const InfoItem = ({ label, value }: { label: string; value: string }) => (
+  <View style={styles.infoItem}>
+    <Text style={styles.infoLabel}>{label}</Text>
+    <Text style={styles.infoValue}>{value}</Text>
+  </View>
+);
+
 export default function ResumoContaScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-
-  // Estado dos dados do usuário - COM DADOS REAIS DO AUTHCONTEXT
-  const [userData, setUserData] = useState({
-    nome: user?.nome || 'Usuário',
-    email: user?.email || 'email@exemplo.com',
-    telefone: user?.telefone || 'Não informado',
-    cpf: user?.cpf || 'Não informado',
-    dataNascimento: user?.data_nascimento || 'Não informada',
-  });
+  const { user, loading } = useAuth();
 
   const [showHistorico, setShowHistorico] = useState(false);
 
@@ -80,6 +116,25 @@ export default function ResumoContaScreen() {
       tipo: 'bonus'
     },
   ]);
+
+  // ⭐⭐ LOADING STATE
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  // ⭐⭐ ERROR STATE
+  if (!user) {
+    return <ErrorScreen onRetry={() => router.back()} />;
+  }
+
+  // ⭐⭐ DADOS FORMATADOS DO USUÁRIO
+  const userData = {
+    nomeCompleto: user?.nome ? `${user.nome} ${user.sobrenome || ''}`.trim() : 'Usuário',
+    email: user?.email || 'email@exemplo.com',
+    telefone: user?.telefone || 'Não informado',
+    cpf: user?.cpf || 'Não informado',
+    dataNascimento: user?.data_nascimento || 'Não informada',
+  };
 
   const calcularProgresso = () => {
     return (pontosData.pontos / pontosData.meta) * 100;
@@ -148,7 +203,7 @@ export default function ResumoContaScreen() {
         {/* Saudação - COM DADOS REAIS */}
         <View style={styles.saudacaoContainer}>
           <Text style={styles.saudacao}>Olá,</Text>
-          <Text style={styles.nomeUsuario}>{userData.nome}</Text>
+          <Text style={styles.nomeUsuario}>{userData.nomeCompleto}</Text>
           <Text style={styles.emailUsuario}>{userData.email}</Text>
         </View>
 
@@ -159,26 +214,11 @@ export default function ResumoContaScreen() {
           </View>
 
           <View style={styles.infoCard}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Nome completo</Text>
-              <Text style={styles.infoValue}>{userData.nome}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>E-mail</Text>
-              <Text style={styles.infoValue}>{userData.email}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Telefone</Text>
-              <Text style={styles.infoValue}>{userData.telefone}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>CPF</Text>
-              <Text style={styles.infoValue}>{userData.cpf}</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Data de nascimento</Text>
-              <Text style={styles.infoValue}>{userData.dataNascimento}</Text>
-            </View>
+            <InfoItem label="Nome completo" value={userData.nomeCompleto} />
+            <InfoItem label="E-mail" value={userData.email} />
+            <InfoItem label="Telefone" value={userData.telefone} />
+            <InfoItem label="CPF" value={userData.cpf} />
+            <InfoItem label="Data de nascimento" value={userData.dataNascimento} />
           </View>
         </View>
 
@@ -330,6 +370,50 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+  },
+  // ⭐⭐ NOVOS ESTILOS PARA LOADING E ERROR
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#e74c3c',
+    textAlign: 'center',
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#126b1a',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   header: {
     flexDirection: 'row',
