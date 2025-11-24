@@ -4,55 +4,50 @@ const jwt = require('jsonwebtoken');
 
 module.exports = {
     async login(req, res) {
-        try {
-            const { email, senha } = req.body;
+    try {
+        const { email, senha } = req.body;
 
-            console.log('🔐 TENTATIVA DE LOGIN - EMAIL:', email);
-            console.log('🔐 TENTATIVA DE LOGIN - SENHA:', senha ? '***' : 'FALTANDO');
-            console.log('🔐 BODY COMPLETO:', req.body);
+        console.log('🔐 [CONTROLLER] Dados recebidos:');
+        console.log('   - Email:', `"${email}"`);
+        console.log('   - Senha:', `"${senha}"`);
+        console.log('   - Tipo de senha:', typeof senha);
+        console.log('   - Tamanho senha:', senha.length);
 
-            if (!email || !senha) {
-                console.log('❌ EMAIL OU SENHA FALTANDO');
-                return res.status(400).json({ 
-                    success: false,
-                    error: 'Email e senha são obrigatórios' 
-                });
-            }
+        if (!email || !senha) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Email e senha são obrigatórios' 
+            });
+        }
 
-            let farmacia;
-            try {
-                console.log('🔍 BUSCANDO FARMÁCIA NO BANCO...');
-                farmacia = await farmaciaService.buscarPorEmail(email);
-                console.log('✅ FARMÁCIA ENCONTRADA:', {
-                    id: farmacia.id,
-                    email: farmacia.email,
-                    nome: farmacia.nome,
-                    temSenha: !!farmacia.senha,
-                    tipo: farmacia.tipo
-                });
-            } catch (error) {
-                console.log('❌ ERRO AO BUSCAR FARMÁCIA:', error.message);
-                return res.status(401).json({ 
-                    success: false,
-                    error: 'Credenciais inválidas' 
-                });
-            }
-            
-            console.log('🔑 COMPARANDO SENHA...');
-            console.log('   - Senha recebida:', senha);
-            console.log('   - Hash no banco:', farmacia.senha ? 'EXISTE' : 'NÃO EXISTE');
-            
-            const senhaValida = await bcrypt.compare(senha, farmacia.senha);
-            console.log('🔑 RESULTADO DA COMPARAÇÃO:', senhaValida);
-            
-            if (!senhaValida) {
-                console.log('❌ SENHA INVÁLIDA');
-                return res.status(401).json({ 
-                    success: false,
-                    error: 'Credenciais inválidas' 
-                });
-            }
+        const farmacia = await farmaciaService.buscarPorEmail(email);
+        
+        // TESTE DIRETO DO BCRYPT
+        console.log('🔑 [CONTROLLER] Testes de comparação:');
+        
+        // Teste 1: Comparação normal
+        const teste1 = await bcrypt.compare(senha, farmacia.senha);
+        console.log('   - Teste 1 (normal):', teste1);
+        
+        // Teste 2: Com trim
+        const teste2 = await bcrypt.compare(senha.trim(), farmacia.senha);
+        console.log('   - Teste 2 (com trim):', teste2);
+        
+        // Teste 3: Senha hardcoded
+        const teste3 = await bcrypt.compare('123456', farmacia.senha);
+        console.log('   - Teste 3 ("123456"):', teste3);
+        
+        // Teste 4: Verificar se o hash é válido
+        const hashValido = farmacia.senha.startsWith('$2');
+        console.log('   - Hash válido?:', hashValido);
 
+        if (!teste1) {
+            console.log('❌ [CONTROLLER] Todas as comparações falharam');
+            return res.status(401).json({ 
+                success: false,
+                error: 'Credenciais inválidas' 
+            });
+        }
             console.log('✅ LOGIN BEM-SUCEDIDO');
             
             // ✅ CORREÇÃO AQUI - ADICIONE farmaciaId
