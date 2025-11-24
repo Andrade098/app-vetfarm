@@ -51,12 +51,12 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
     cep, 
     descricao, 
     tipo, 
-    criado_em, 
-    atualizado_em
+    createdAt, 
+    updatedAt
    ) VALUES (
     'Farmácia VetFarm Matriz', 
     'matriz@vetfarm.com', 
-    '$2b$10$8S2XCyMJjRC4.k.UkHL/7.Zb.6m6.8Kj7nYkR6t6qQ6b6Qk6Y6X6O', -- senha: 123456
+    '', <- coloque sua senha hash criada pelo script gerarHash.js aqui
     '(11) 99999-9999', 
     'Rua Principal, 123', 
     'São Paulo', 
