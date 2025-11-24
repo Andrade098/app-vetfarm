@@ -1,318 +1,22 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Image, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  TouchableOpacity, 
+  StyleSheet, 
+  Image, 
+  FlatList,
+  SafeAreaView,
+  ActivityIndicator,
+  RefreshControl,
+  Alert
+} from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
-// Dados de exemplo para produtos por categoria e animal
-const produtosPorCategoria = {
-  // 🐄 BOVINOS
-  'Vacinas-Bovinos': [
-    {
-      id: '1',
-      nome: 'Vacina Brucelose B19',
-      preco: 'R$ 89,90',
-      descricao: 'Proteção contra brucelose bovina',
-      imagem: require('../../assets/images/produtos/vacina-brucelose.png'),
-      icone: '💉'
-    },
-    {
-      id: '2',
-      nome: 'Vacina Febre Aftosa',
-      preco: 'R$ 67,50',
-      descricao: 'Proteção contra febre aftosa',
-      imagem: require('../../assets/images/produtos/vacina.png'),
-      icone: '💉'
-    },
-    {
-      id: '3',
-      nome: 'Vacina Raiva',
-      preco: 'R$ 95,00',
-      descricao: 'Proteção contra raiva animal',
-      imagem: require('../../assets/images/produtos/vacina-raiva.png'),
-      icone: '💉'
-    },
-    {
-      id: '4',
-      nome: 'Vacina Clostridiose',
-      preco: 'R$ 78,90',
-      descricao: 'Combate a doenças clostridiais',
-      imagem: require('../../assets/images/produtos/vacina-clostridiose.png'),
-      icone: '💉'
-    },
-  ],
-  'Medicamentos-Bovinos': [
-    {
-      id: '5',
-      nome: 'Ivermectina 1%',
-      preco: 'R$ 45,90',
-      descricao: 'Antiparasitário de amplo espectro',
-      imagem: require('../../assets/images/produtos/ivermectina.png'),
-      icone: '💊'
-    },
-    {
-      id: '6',
-      nome: 'Albendazol 10%',
-      preco: 'R$ 38,50',
-      descricao: 'Vermífugo para bovinos',
-      imagem: require('../../assets/images/produtos/albendazol.png'),
-      icone: '💊'
-    },
-  ],
-  'Acessórios-Bovinos': [
-    {
-      id: '7',
-      nome: 'Brinco de Identificação Bovino',
-      preco: 'R$ 12,90',
-      descricao: 'Brinco plástico numerado para identificação',
-      imagem: require('../../assets/images/produtos/brinco-bovino.png'),
-      icone: '🏷️'
-    },
-    {
-      id: '8',
-      nome: 'Aplicador de Brincos',
-      preco: 'R$ 89,00',
-      descricao: 'Aplicador profissional para brincos',
-      imagem: require('../../assets/images/produtos/aplicador-brinco.png'),
-      icone: '🔧'
-    },
-  ],
-  'Suplementos-Bovinos': [
-    {
-      id: '9',
-      nome: 'Núcleo Mineral para Gado de Corte',
-      preco: 'R$ 149,90',
-      descricao: 'Suplemento mineral completo para bovinos',
-      imagem: require('../../assets/images/produtos/suplemento-mineral.png'),
-      icone: '💊'
-    },
-    {
-      id: '10',
-      nome: 'Vitamina A-D-E',
-      preco: 'R$ 67,80',
-      descricao: 'Complexo vitamínico essencial',
-      imagem: require('../../assets/images/produtos/vitamina-ade.png'),
-      icone: '💊'
-    },
-  ],
-
-  // 🐑 OVINOS
-  'Vacinas-Ovinos': [
-    {
-      id: '11',
-      nome: 'Vacina Clostridial (Covexin 10)',
-      preco: 'R$ 82,50',
-      descricao: 'Proteção contra doenças clostridiais',
-      imagem: require('../../assets/images/produtos/vacina-clostridial.png'),
-      icone: '💉'
-    },
-  ],
-  'Medicamentos-Ovinos': [
-    {
-      id: '12',
-      nome: 'Albendazol 10%',
-      preco: 'R$ 42,90',
-      descricao: 'Vermífugo para ovinos',
-      imagem: require('../../assets/images/produtos/albendazol-ovino.png'),
-      icone: '💊'
-    },
-  ],
-  'Acessórios-Ovinos': [
-    {
-      id: '13',
-      nome: 'Tesoura para Tosa de Lã',
-      preco: 'R$ 35,00',
-      descricao: 'Tesoura profissional para tosa de ovinos',
-      imagem: require('../../assets/images/produtos/tesoura-tosa.png'),
-      icone: '✂️'
-    },
-  ],
-  'Suplementos-Ovinos': [
-    {
-      id: '14',
-      nome: 'Sal Mineral para Ovinos',
-      preco: 'R$ 79,90',
-      descricao: 'Suplemento mineral específico para ovinos',
-      imagem: require('../../assets/images/produtos/sal-mineral-ovino.png'),
-      icone: '💊'
-    },
-  ],
-
-  // 🐖 SUÍNOS
-  'Vacinas-Suínos': [
-    {
-      id: '15',
-      nome: 'Vacina Peste Suína',
-      preco: 'R$ 75,90',
-      descricao: 'Proteção contra peste suína clássica',
-      imagem: require('../../assets/images/produtos/vacina-peste-suina.png'),
-      icone: '💉'
-    },
-    {
-      id: '16',
-      nome: 'Vacina Rinite Atrófica',
-      preco: 'R$ 82,50',
-      descricao: 'Prevenção contra rinite atrófica',
-      imagem: require('../../assets/images/produtos/vacina-rinite.png'),
-      icone: '💉'
-    },
-  ],
-  'Medicamentos-Suínos': [
-    {
-      id: '17',
-      nome: 'Enrofloxacina 10%',
-      preco: 'R$ 58,90',
-      descricao: 'Antibiótico para infecções bacterianas',
-      imagem: require('../../assets/images/produtos/enrofloxacina.png'),
-      icone: '💊'
-    },
-  ],
-  'Acessórios-Suínos': [
-    {
-      id: '18',
-      nome: 'Bebedouro Tipo Nipple',
-      preco: 'R$ 24,90',
-      descricao: 'Bebedouro automático para suínos',
-      imagem: require('../../assets/images/produtos/bebedouro-nipple.png'),
-      icone: '🚰'
-    },
-  ],
-  'Suplementos-Suínos': [
-    {
-      id: '19',
-      nome: 'Premix Vitamínico para Suínos',
-      preco: 'R$ 129,90',
-      descricao: 'Complexo vitamínico para suínos',
-      imagem: require('../../assets/images/produtos/premix-suino.png'),
-      icone: '💊'
-    },
-  ],
-
-  // 🐎 EQUINOS
-  'Vacinas-Equinos': [
-    {
-      id: '20',
-      nome: 'Vacina Antitetânica',
-      preco: 'R$ 65,00',
-      descricao: 'Proteção contra tétano em equinos',
-      imagem: require('../../assets/images/produtos/vacina-antitetanica.png'),
-      icone: '💉'
-    },
-  ],
-  'Medicamentos-Equinos': [
-    {
-      id: '21',
-      nome: 'Pasta Vermífuga com Ivermectina',
-      preco: 'R$ 52,90',
-      descricao: 'Vermífugo em pasta para equinos',
-      imagem: require('../../assets/images/produtos/pasta-vermifuga.png'),
-      icone: '💊'
-    },
-  ],
-  'Acessórios-Equinos': [
-    {
-      id: '22',
-      nome: 'Cabeçada de Couro',
-      preco: 'R$ 89,90',
-      descricao: 'Cabeçada profissional em couro legítimo',
-      icone: '🎠'
-    },
-  ],
-  'Suplementos-Equinos': [
-    {
-      id: '23',
-      nome: 'Suplemento Vitamínico-Mineral',
-      preco: 'R$ 139,90',
-      descricao: 'Suplemento completo para equinos',
-      imagem: require('../../assets/images/produtos/suplemento-equino.png'),
-      icone: '💊'
-    },
-  ],
-
-  // 🐔 AVES
-  'Vacinas-Aves': [
-    {
-      id: '24',
-      nome: 'Vacina contra Newcastle',
-      preco: 'R$ 48,90',
-      descricao: 'Proteção contra doença de Newcastle',
-      imagem: require('../../assets/images/produtos/vacina-newcastle.png'),
-      icone: '💉'
-    },
-  ],
-  'Medicamentos-Aves': [
-    {
-      id: '25',
-      nome: 'Oxitetraciclina Solúvel',
-      preco: 'R$ 32,50',
-      descricao: 'Antibiótico de amplo espectro para aves',
-      imagem: require('../../assets/images/produtos/oxitetraciclina.png'),
-      icone: '💊'
-    },
-  ],
-  'Acessórios-Aves': [
-    {
-      id: '26',
-      nome: 'Comedouro Automático para Aves',
-      preco: 'R$ 45,00',
-      descricao: 'Comedouro automático para granjas',
-      imagem: require('../../assets/images/produtos/comedouro-aves.png'),
-      icone: '🍽️'
-    },
-  ],
-  'Suplementos-Aves': [
-    {
-      id: '27',
-      nome: 'Complexo Vitamínico para Aves',
-      preco: 'R$ 39,90',
-      descricao: 'Vitaminas essenciais para aves',
-      imagem: require('../../assets/images/produtos/vitaminas-aves.png'),
-      icone: '💊'
-    },
-  ],
-
-  // 🐟 PEIXES
-  'Vacinas-Peixes': [
-    {
-      id: '28',
-      nome: 'Vacina contra Streptococcus',
-      preco: 'R$ 125,00',
-      descricao: 'Proteção contra streptococcus em peixes',
-      imagem: require('../../assets/images/produtos/porcilis-strepsuis.png'),
-      icone: '💉'
-    },
-  ],
-  'Medicamentos-Peixes': [
-    {
-      id: '29',
-      nome: 'Formalina',
-      preco: 'R$ 28,90',
-      descricao: 'Tratamento antiparasitário para aquicultura',
-      imagem: require('../../assets/images/produtos/fornalina.png'),
-      icone: '💊'
-    },
-  ],
-  'Acessórios-Peixes': [
-    {
-      id: '30',
-      nome: 'Rede de Manejo para Peixes',
-      preco: 'R$ 34,90',
-      descricao: 'Rede profissional para manejo de peixes',
-      imagem: require('../../assets/images/produtos/redeManejo.png'),
-      icone: '🎣'
-    },
-  ],
-  'Suplementos-Peixes': [
-    {
-      id: '31',
-      nome: 'Ração com Probióticos',
-      preco: 'R$ 89,90',
-      descricao: 'Ração enriquecida para peixes',
-      imagem: require('../../assets/images/produtos/racaoProbioticos.png'),
-      icone: '💊'
-    },
-  ],
-};
+const API_BASE_URL = 'http://192.168.0.3:3000/api'; // ✅ Mudei para o IP correto
 
 export default function CategoriaProdutoScreen() {
   const router = useRouter();
@@ -321,209 +25,449 @@ export default function CategoriaProdutoScreen() {
   const categoriaId = params.categoriaId;
   const categoriaNome = params.categoriaNome;
   const animalNome = params.animalNome;
-  const animalId = params.animalId;
 
-  const [cart, setCart] = useState<string[]>([]);
+  const [produtos, setProdutos] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [atualizando, setAtualizando] = useState(false);
+  const [carrinho, setCarrinho] = useState<string[]>([]);
   const [favoritos, setFavoritos] = useState<string[]>([]);
+  const [infoCategoria, setInfoCategoria] = useState(null);
 
-  const toggleCart = (productId: string) => {
-    setCart(prev => {
-      if (prev.includes(productId)) {
-        return prev.filter(id => id !== productId);
+  // Carregar produtos do servidor
+  useEffect(() => {
+    carregarDados();
+  }, [categoriaId, animalNome]);
+
+  const carregarDados = async () => {
+    try {
+      setCarregando(true);
+      
+      // Carregar informações da categoria
+      const infoResponse = await fetch(
+        `${API_BASE_URL}/categoria-produto/info/${categoriaId}/${animalNome}`
+      );
+      
+      if (infoResponse.ok) {
+        const infoData = await infoResponse.json();
+        setInfoCategoria(infoData.data);
+      }
+
+      // Carregar produtos
+      const produtosResponse = await fetch(
+        `${API_BASE_URL}/categoria-produto/produtos?categoriaId=${categoriaId}&animal=${animalNome}`
+      );
+
+      if (produtosResponse.ok) {
+        const produtosData = await produtosResponse.json();
+        console.log('Dados dos produtos:', produtosData.data.produtos); // Para debug
+        setProdutos(produtosData.data.produtos || []);
       } else {
-        return [...prev, productId];
+        Alert.alert('Erro', 'Não foi possível carregar os produtos');
+        setProdutos([]);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      Alert.alert('Erro', 'Falha na conexão com o servidor');
+      setProdutos([]);
+    } finally {
+      setCarregando(false);
+      setAtualizando(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setAtualizando(true);
+    carregarDados();
+  };
+
+  const toggleCarrinho = (produtoId: string) => {
+    setCarrinho(prev => {
+      if (prev.includes(produtoId)) {
+        return prev.filter(id => id !== produtoId);
+      } else {
+        return [...prev, produtoId];
       }
     });
   };
 
-  const toggleFavorito = (productId: string) => {
+  const toggleFavorito = (produtoId: string) => {
     setFavoritos(prev => {
-      if (prev.includes(productId)) {
-        return prev.filter(id => id !== productId);
+      if (prev.includes(produtoId)) {
+        return prev.filter(id => id !== produtoId);
       } else {
-        return [...prev, productId];
+        return [...prev, produtoId];
       }
     });
   };
 
-  const chaveProdutos = `${categoriaNome}-${animalNome}`;
-  const produtos = produtosPorCategoria[chaveProdutos] || [];
+  const formatarPreco = (preco) => {
+    if (!preco && preco !== 0) {
+      return 'Consulte';
+    }
+    
+    const precoNumerico = parseFloat(preco);
+    
+    if (isNaN(precoNumerico)) {
+      return 'Consulte';
+    }
+    
+    return `R$ ${precoNumerico.toFixed(2).replace('.', ',')}`;
+  };
 
-  const renderProduto = ({ item }) => (
-    <TouchableOpacity style={styles.produtoCard}>
-      <TouchableOpacity
-        style={styles.favoritoButton}
-        onPress={() => toggleFavorito(item.id)}
-      >
-        <Ionicons
-          name={favoritos.includes(item.id) ? "heart" : "heart-outline"}
-          size={20}
-          color={favoritos.includes(item.id) ? "#ff3b30" : "#666"}
-        />
-      </TouchableOpacity>
+  // ✅ FUNÇÃO PARA OBTER IMAGEM DO PRODUTO (COPIADA DA HOME SCREEN)
+  const getImagemProduto = (produto) => {
+    if (!produto.imagens || produto.imagens.length === 0) {
+      return null;
+    }
 
-      <View style={styles.produtoImagemContainer}>
-        {item.imagem ? (
-          <Image
-            source={item.imagem}
-            style={styles.produtoImagem}
-            resizeMode="contain"
-          />
-        ) : (
-          <View style={styles.iconeContainer}>
-            <Text style={styles.produtoIcone}>{item.icone}</Text>
+    try {
+      let imageUrl = produto.imagens[0];
+      
+      // Parsear se for string JSON
+      if (typeof imageUrl === 'string' && imageUrl.startsWith('[')) {
+        try {
+          const parsedImages = JSON.parse(imageUrl);
+          imageUrl = Array.isArray(parsedImages) && parsedImages.length > 0 ? parsedImages[0] : null;
+        } catch (parseError) {
+          console.log('❌ Erro ao parsear JSON de imagens:', parseError);
+          return null;
+        }
+      }
+
+      if (!imageUrl || typeof imageUrl !== 'string') {
+        return null;
+      }
+
+      // Corrigir URLs problemáticas
+      if (imageUrl.includes('flacalhost')) {
+        imageUrl = imageUrl.replace('flacalhost', 'localhost');
+      }
+      if (imageUrl.includes('lobshttp')) {
+        imageUrl = imageUrl.replace('lobshttp', 'http');
+      }
+
+      // Se for URL relativa, adicionar base URL
+      if (imageUrl.startsWith('/uploads/')) {
+        imageUrl = `http://192.168.0.3:3000${imageUrl}`; // ✅ Usando o mesmo IP
+      }
+
+      // Se for Base64, usar diretamente
+      if (imageUrl.startsWith('data:image')) {
+        return imageUrl;
+      }
+
+      // Verificar se é uma URL válida
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        return imageUrl;
+      }
+
+      console.log('❌ URL de imagem inválida:', imageUrl);
+      return null;
+
+    } catch (error) {
+      console.error('❌ Erro ao processar imagem:', error);
+      return null;
+    }
+  };
+
+  const ProdutoCard = ({ produto }) => {
+    const imagemProduto = getImagemProduto(produto);
+    
+    console.log('🔍 Debug Produto:', produto.nome);
+    console.log('🖼️ Debug Imagem:', imagemProduto);
+    
+    return (
+      <View style={styles.produtoCard}>
+        {/* Header do Card */}
+        <View style={styles.cardHeader}>
+          <View style={styles.categoriaTag}>
+            <Text style={styles.categoriaTagText}>
+              {produto.Categoria?.nome || categoriaNome}
+            </Text>
           </View>
-        )}
-      </View>
+          <TouchableOpacity
+            style={styles.favoritoButton}
+            onPress={() => toggleFavorito(produto.id)}
+          >
+            <Ionicons
+              name={favoritos.includes(produto.id) ? "heart" : "heart-outline"}
+              size={20}
+              color={favoritos.includes(produto.id) ? "#FF4757" : "#64748B"}
+            />
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.produtoInfo}>
-        <Text style={styles.produtoNome}>{item.nome}</Text>
-        <Text style={styles.produtoDescricao}>{item.descricao}</Text>
-        <Text style={styles.produtoPreco}>{item.preco}</Text>
+        {/* Imagem do Produto - CORRIGIDA */}
+        <View style={styles.produtoImagemContainer}>
+          {imagemProduto ? (
+            <Image 
+              source={{ uri: imagemProduto }} 
+              style={styles.produtoImagem}
+              resizeMode="contain"
+              onError={(e) => {
+                console.log('❌ Erro ao carregar imagem:', e.nativeEvent.error);
+                console.log('📛 URL problemática:', imagemProduto);
+              }}
+              onLoad={() => {
+                console.log('✅ Imagem carregada com sucesso!');
+              }}
+            />
+          ) : (
+            <View style={styles.iconeContainer}>
+              <Text style={styles.produtoIcone}>
+                {produto.Categoria?.icone || '📦'}
+              </Text>
+              <Text style={styles.semImagemTexto}>Sem imagem</Text>
+            </View>
+          )}
+        </View>
 
-        <TouchableOpacity
-          style={[
-            styles.adicionarButton,
-            cart.includes(item.id) && styles.adicionarButtonAdded
-          ]}
-          onPress={() => toggleCart(item.id)}
-        >
-          <Text style={[
-            styles.adicionarButtonText,
-            cart.includes(item.id) && styles.adicionarButtonTextAdded
-          ]}>
-            {cart.includes(item.id) ? '✓ Adicionado' : '+ Adicionar'}
+        {/* Informações do Produto */}
+        <View style={styles.produtoInfo}>
+          <Text style={styles.produtoNome} numberOfLines={2}>
+            {produto.nome}
           </Text>
-        </TouchableOpacity>
+          <Text style={styles.produtoDescricao} numberOfLines={2}>
+            {produto.descricao || 'Produto veterinário de qualidade'}
+          </Text>
+
+          {/* Preços das Farmácias */}
+          <View style={styles.precosContainer}>
+            {produto.FarmaciaProdutos && produto.FarmaciaProdutos.length > 0 ? (
+              produto.FarmaciaProdutos.slice(0, 2).map((farmaciaProduto, index) => (
+                <View key={index} style={styles.precoItem}>
+                  <Text style={styles.farmaciaNome} numberOfLines={1}>
+                    {farmaciaProduto.Farmacia?.nome || 'Farmácia'}
+                  </Text>
+                  <Text style={styles.precoTexto}>
+                    {formatarPreco(farmaciaProduto.preco)}
+                  </Text>
+                  <Text style={styles.estoqueTexto}>
+                    {farmaciaProduto.estoque} em estoque
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <View style={styles.precoItem}>
+                <Text style={styles.farmaciaNome}>Indisponível</Text>
+                <Text style={styles.precoIndisponivel}>Consulte</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Botão de Ação */}
+          <TouchableOpacity
+            style={[
+              styles.botaoCarrinho,
+              carrinho.includes(produto.id) && styles.botaoCarrinhoAdicionado
+            ]}
+            onPress={() => toggleCarrinho(produto.id)}
+          >
+            <Ionicons
+              name={carrinho.includes(produto.id) ? "checkmark-circle" : "cart-outline"}
+              size={18}
+              color={carrinho.includes(produto.id) ? "#FFFFFF" : "#059669"}
+            />
+            <Text style={[
+              styles.botaoCarrinhoTexto,
+              carrinho.includes(produto.id) && styles.botaoCarrinhoTextoAdicionado
+            ]}>
+              {carrinho.includes(produto.id) ? 'Adicionado' : 'Adicionar'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </TouchableOpacity>
+    );
+  };
+
+  const LoadingSkeleton = () => (
+    <View style={styles.skeletonContainer}>
+      {[1, 2, 3].map((item) => (
+        <View key={item} style={styles.skeletonCard}>
+          <View style={styles.skeletonImage} />
+          <View style={styles.skeletonContent}>
+            <View style={styles.skeletonLine} />
+            <View style={[styles.skeletonLine, styles.skeletonShort]} />
+            <View style={styles.skeletonButton} />
+          </View>
+        </View>
+      ))}
+    </View>
   );
 
+  if (carregando) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen
+          options={{
+            title: `${categoriaNome} - ${animalNome}`,
+            headerTitleStyle: {
+              fontWeight: 'bold',
+              fontSize: 16,
+            },
+          }}
+        />
+        <View style={styles.header}>
+          <Text style={styles.titulo}>
+            {categoriaNome} para {animalNome}
+          </Text>
+          <Text style={styles.subtitulo}>Carregando produtos...</Text>
+        </View>
+        <LoadingSkeleton />
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Stack.Screen
         options={{
           title: `${categoriaNome} - ${animalNome}`,
           headerTitleStyle: {
             fontWeight: 'bold',
-            fontSize: 18,
+            fontSize: 16,
           },
         }}
       />
 
-      <ScrollView style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.titulo}>
-            {categoriaNome} para {animalNome}
-          </Text>
-          <Text style={styles.subtitulo}>
-            {produtos.length} produtos encontrados
-          </Text>
-        </View>
-
-        {produtos.length > 0 ? (
-          <FlatList
-            data={produtos}
-            renderItem={renderProduto}
-            keyExtractor={item => item.id}
-            scrollEnabled={false}
-            contentContainerStyle={styles.listaProdutos}
+      <FlatList
+        data={produtos}
+        renderItem={({ item }) => <ProdutoCard produto={item} />}
+        keyExtractor={item => item.id.toString()}
+        contentContainerStyle={styles.listaContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={atualizando}
+            onRefresh={onRefresh}
+            colors={['#059669']}
+            tintColor={'#059669'}
           />
-        ) : (
-          <View style={styles.emptyState}>
-            <Ionicons name="alert-circle-outline" size={60} color="#ccc" />
-            <Text style={styles.emptyStateText}>Nenhum produto encontrado</Text>
-            <Text style={styles.emptyStateSubtext}>
-              Não há produtos de {categoriaNome.toLowerCase()} para {animalNome.toLowerCase()} no momento.
+        }
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <Text style={styles.titulo}>
+              {infoCategoria?.categoria?.nome || categoriaNome} para {infoCategoria?.animal || animalNome}
+            </Text>
+            <Text style={styles.subtitulo}>
+              {infoCategoria?.totalProdutos || produtos.length} {produtos.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
+            </Text>
+            <Text style={styles.descricaoHeader}>
+              {infoCategoria?.descricao || `Produtos de ${categoriaNome} para ${animalNome}`}
             </Text>
           </View>
-        )}
-
-        <TouchableOpacity
-          style={styles.voltarButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.voltarButtonText}>Voltar</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="search-outline" size={80} color="#CBD5E1" />
+            <Text style={styles.emptyStateTitulo}>Nenhum produto encontrado</Text>
+            <Text style={styles.emptyStateTexto}>
+              Não encontramos produtos de {categoriaNome.toLowerCase()} para {animalNome.toLowerCase()} no momento.
+            </Text>
+            <TouchableOpacity 
+              style={styles.botaoVoltar}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={16} color="#FFFFFF" />
+              <Text style={styles.botaoVoltarTexto}>Voltar para Animais</Text>
+            </TouchableOpacity>
+          </View>
+        }
+        ListFooterComponent={
+          produtos.length > 0 && (
+            <View style={styles.footer}>
+              <Text style={styles.footerTexto}>
+                Mostrando {produtos.length} produtos
+              </Text>
+            </View>
+          )
+        }
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F8FAFC',
   },
-  content: {
-    flex: 1,
-    padding: 15,
+  listaContainer: {
+    padding: 16,
+    paddingBottom: 30,
   },
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     padding: 20,
-    borderRadius: 10,
-    marginBottom: 15,
+    borderRadius: 16,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  titulo: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
-  subtitulo: {
-    fontSize: 14,
-    color: '#666',
-  },
-  listaProdutos: {
-    paddingBottom: 20,
-  },
-  produtoCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-    flexDirection: 'row',
-    position: 'relative',
-  },
-  favoritoButton: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 20,
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     elevation: 2,
   },
+  titulo: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: 4,
+  },
+  subtitulo: {
+    fontSize: 16,
+    color: '#64748B',
+    marginBottom: 8,
+  },
+  descricaoHeader: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontStyle: 'italic',
+  },
+  produtoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    paddingBottom: 0,
+  },
+  categoriaTag: {
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  categoriaTagText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0369A1',
+  },
+  favoritoButton: {
+    padding: 4,
+  },
   produtoImagemContainer: {
-    width: 100,
     height: 120,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
-    borderTopLeftRadius: 12,
-    borderBottomLeftRadius: 12,
+    margin: 16,
+    marginBottom: 0,
+    borderRadius: 12,
   },
   produtoImagem: {
-    width: '120%',
-    height: '120%',
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
   },
   iconeContainer: {
     width: '100%',
@@ -532,82 +476,160 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   produtoIcone: {
-    fontSize: 40,
+    fontSize: 48,
+  },
+  semImagemTexto: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 8,
   },
   produtoInfo: {
-    flex: 1,
-    padding: 15,
-    justifyContent: 'space-between',
+    padding: 16,
   },
   produtoNome: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 8,
+    lineHeight: 24,
   },
   produtoDescricao: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
-    lineHeight: 16,
-  },
-  produtoPreco: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#126b1a',
-    marginBottom: 10,
-  },
-  adicionarButton: {
-    backgroundColor: '#126b1a',
-    padding: 12,
-    borderRadius: 6,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#126b1a',
-  },
-  adicionarButtonAdded: {
-    backgroundColor: 'white',
-    borderColor: '#27ae60',
-  },
-  adicionarButtonText: {
-    color: 'white',
     fontSize: 14,
-    fontWeight: 'bold',
+    color: '#64748B',
+    marginBottom: 16,
+    lineHeight: 20,
   },
-  adicionarButtonTextAdded: {
-    color: '#27ae60',
+  precosContainer: {
+    marginBottom: 16,
+  },
+  precoItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  farmaciaNome: {
+    fontSize: 14,
+    color: '#475569',
+    flex: 1,
+  },
+  precoTexto: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#059669',
+    marginLeft: 8,
+  },
+  precoIndisponivel: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontStyle: 'italic',
+    marginLeft: 8,
+  },
+  estoqueTexto: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginLeft: 8,
+  },
+  botaoCarrinho: {
+    backgroundColor: '#D1FAE5',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#059669',
+  },
+  botaoCarrinhoAdicionado: {
+    backgroundColor: '#059669',
+  },
+  botaoCarrinhoTexto: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#059669',
+    marginLeft: 8,
+  },
+  botaoCarrinhoTextoAdicionado: {
+    color: '#FFFFFF',
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 40,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    marginBottom: 20,
+    padding: 48,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginTop: 20,
   },
-  emptyStateText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#666',
+  emptyStateTitulo: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#475569',
     marginTop: 16,
     marginBottom: 8,
   },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  voltarButton: {
-    backgroundColor: '#95a5a6',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  voltarButtonText: {
-    color: 'white',
+  emptyStateTexto: {
     fontSize: 16,
-    fontWeight: 'bold',
+    color: '#94A3B8',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  botaoVoltar: {
+    backgroundColor: '#059669',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  botaoVoltarTexto: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  footer: {
+    alignItems: 'center',
+    padding: 16,
+  },
+  footerTexto: {
+    fontSize: 14,
+    color: '#94A3B8',
+  },
+  skeletonContainer: {
+    padding: 16,
+  },
+  skeletonCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginBottom: 16,
+    padding: 16,
+    flexDirection: 'row',
+  },
+  skeletonImage: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    marginRight: 16,
+  },
+  skeletonContent: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  skeletonLine: {
+    height: 16,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  skeletonShort: {
+    width: '60%',
+  },
+  skeletonButton: {
+    height: 40,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    marginTop: 8,
   },
 });

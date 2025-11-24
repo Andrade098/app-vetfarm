@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, FlatList, Dimensions, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, FlatList, Dimensions, Modal, ActivityIndicator, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
@@ -14,16 +14,6 @@ const categories = [
   { id: '2', name: 'Suplementos', icon: '🌱' },
   { id: '3', name: 'Medicamentos', icon: '💊' },
   { id: '4', name: 'Acessórios', icon: '🐎' },
-];
-
-// Dados de exemplo para notificações
-const notificationsData = [
-  { id: '1', title: 'Pedido enviado', message: 'Seu pedido #123 foi enviado', time: '5 min', read: false },
-  { id: '2', title: 'Promoção especial', message: '20% off em medicamentos', time: '1 hora', read: false },
-  { id: '3', title: 'Produto disponível', message: 'Vacina aftosa está disponível', time: '2 horas', read: true },
-  { id: '4', title: 'Pagamento aprovado', message: 'Seu pagamento foi aprovado com sucesso', time: '3 horas', read: true },
-  { id: '5', title: 'Produto em promoção', message: 'Ração premium com 15% de desconto', time: '5 horas', read: false },
-  { id: '6', title: 'Entrega realizada', message: 'Seu pedido #122 foi entregue', time: '1 dia', read: true },
 ];
 
 // Interface para o produto da API
@@ -42,123 +32,144 @@ interface Produto {
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showCart, setShowCart] = useState(false);
-  const [notifications, setNotifications] = useState(notificationsData);
   const [cartItems, setCartItems] = useState([]);
   const [favoritos, setFavoritos] = useState<string[]>([]);
   
   // ⭐⭐ NOVOS ESTADOS PARA PRODUTOS REAIS ⭐⭐
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [produtosFiltrados, setProdutosFiltrados] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // ⭐⭐ ESTADO PARA PESQUISA ⭐⭐
+  const [pesquisa, setPesquisa] = useState('');
+  const [mostrarPesquisa, setMostrarPesquisa] = useState(false);
 
   // ⭐⭐ CARREGAR PRODUTOS REAIS DA API ⭐⭐
   useEffect(() => {
     loadProdutos();
   }, []);
 
+  // ⭐⭐ FILTRAR PRODUTOS QUANDO A PESQUISA MUDAR ⭐⭐
+  useEffect(() => {
+    if (pesquisa.trim() === '') {
+      setProdutosFiltrados(produtos);
+    } else {
+      const termo = pesquisa.toLowerCase().trim();
+      const filtrados = produtos.filter(produto =>
+        produto.nome.toLowerCase().includes(termo) ||
+        produto.descricao.toLowerCase().includes(termo) ||
+        produto.categoria.toLowerCase().includes(termo) ||
+        produto.farmacia_nome.toLowerCase().includes(termo)
+      );
+      setProdutosFiltrados(filtrados);
+    }
+  }, [pesquisa, produtos]);
+
   // ⭐⭐ CARREGAR PRODUTOS REAIS DA API ⭐⭐
-const loadProdutos = async () => {
-  try {
-    setLoading(true);
-    setError(null);
-    
-    const token = await AsyncStorage.getItem('userToken');
-    
-    if (!token) {
-      throw new Error('Token de autenticação não encontrado');
-    }
-
-    console.log('📡 Buscando produtos de TODAS as farmácias...');
-    
-    // ✅ USE A NOVA ROTA /loja
-    const response = await fetch(`${API_URL}/api/farmacia-produtos/loja`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    console.log('📡 Status da resposta:', response.status);
-    
-    if (!response.ok) {
-      if (response.status === 401) {
-        throw new Error('Não autorizado - faça login novamente');
-      }
-      throw new Error(`Erro HTTP: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    console.log('✅ Produtos carregados de TODAS as farmácias:', data.length);
-    
-    // ✅ AGORA VAI MOSTRAR PRODUTOS DE TODAS AS FARMÁCIAS
-    setProdutos(data);
-    
-  } catch (error) {
-    console.error('❌ Erro ao carregar produtos:', error);
-    setError(error.message);
-  } finally {
-    setLoading(false);
-  }
-};
-  // ⭐⭐ FUNÇÃO PARA OBTER IMAGEM DO PRODUTO ⭐⭐
-  const getProductImage = (imagens: string[]) => {
-    if (!imagens || imagens.length === 0) {
-      return null;
-    }
-
+  const loadProdutos = async () => {
     try {
-      let imageUrl = imagens[0];
+      setLoading(true);
+      setError(null);
       
-      // Parsear se for string JSON
-      if (typeof imageUrl === 'string' && imageUrl.startsWith('[')) {
-        try {
-          const parsedImages = JSON.parse(imageUrl);
-          imageUrl = Array.isArray(parsedImages) && parsedImages.length > 0 ? parsedImages[0] : null;
-        } catch (parseError) {
-          console.log('❌ Erro ao parsear JSON de imagens:', parseError);
-          return null;
+      const token = await AsyncStorage.getItem('userToken');
+      
+      if (!token) {
+        throw new Error('Token de autenticação não encontrado');
+      }
+
+      console.log('📡 Buscando produtos de TODAS as farmácias...');
+      
+      // ✅ USE A NOVA ROTA /loja
+      const response = await fetch(`${API_URL}/api/farmacia-produtos/loja`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('📡 Status da resposta:', response.status);
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Não autorizado - faça login novamente');
         }
+        throw new Error(`Erro HTTP: ${response.status}`);
       }
-
-      if (!imageUrl || typeof imageUrl !== 'string') {
-        return null;
-      }
-
-      // Corrigir URLs problemáticas
-      if (imageUrl.includes('flacalhost')) {
-        imageUrl = imageUrl.replace('flacalhost', 'localhost');
-      }
-      if (imageUrl.includes('lobshttp')) {
-        imageUrl = imageUrl.replace('lobshttp', 'http');
-      }
-
-      // Se for URL relativa, adicionar base URL
-      if (imageUrl.startsWith('/uploads/')) {
-        imageUrl = `${API_URL}${imageUrl}`;
-      }
-
-      // Se for Base64, usar diretamente
-      if (imageUrl.startsWith('data:image')) {
-        return { uri: imageUrl };
-      }
-
-      // Verificar se é uma URL válida
-      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-        return { uri: imageUrl };
-      }
-
-      console.log('❌ URL de imagem inválida:', imageUrl);
-      return null;
-
+      
+      const data = await response.json();
+      console.log('✅ Produtos carregados de TODAS as farmácias:', data.length);
+      
+      // ✅ AGORA VAI MOSTRAR PRODUTOS DE TODAS AS FARMÁCIAS
+      setProdutos(data);
+      setProdutosFiltrados(data);
+      
     } catch (error) {
-      console.error('❌ Erro ao processar imagem:', error);
-      return null;
+      console.error('❌ Erro ao carregar produtos:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
+  // ⭐⭐ FUNÇÃO PARA OBTER IMAGEM DO PRODUTO ⭐⭐
+  // ⭐⭐ USE ESTA FUNÇÃO QUE JÁ FUNCIONA ⭐⭐
+const getProductImage = (imagens: string[]) => {
+  if (!imagens || imagens.length === 0) {
+    return null;
+  }
+
+  try {
+    let imageUrl = imagens[0];
+    
+    // Parsear se for string JSON
+    if (typeof imageUrl === 'string' && imageUrl.startsWith('[')) {
+      try {
+        const parsedImages = JSON.parse(imageUrl);
+        imageUrl = Array.isArray(parsedImages) && parsedImages.length > 0 ? parsedImages[0] : null;
+      } catch (parseError) {
+        console.log('❌ Erro ao parsear JSON de imagens:', parseError);
+        return null;
+      }
+    }
+
+    if (!imageUrl || typeof imageUrl !== 'string') {
+      return null;
+    }
+
+    // Corrigir URLs problemáticas
+    if (imageUrl.includes('flacalhost')) {
+      imageUrl = imageUrl.replace('flacalhost', 'localhost');
+    }
+    if (imageUrl.includes('lobshttp')) {
+      imageUrl = imageUrl.replace('lobshttp', 'http');
+    }
+
+    // Se for URL relativa, adicionar base URL
+    if (imageUrl.startsWith('/uploads/')) {
+      imageUrl = `${API_BASE_URL}${imageUrl}`;
+    }
+
+    // Se for Base64, usar diretamente
+    if (imageUrl.startsWith('data:image')) {
+      return imageUrl;
+    }
+
+    // Verificar se é uma URL válida
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+
+    console.log('❌ URL de imagem inválida:', imageUrl);
+    return null;
+
+  } catch (error) {
+    console.error('❌ Erro ao processar imagem:', error);
+    return null;
+  }
+};
   // ⭐⭐ FUNÇÃO PARA FORMATAR PREÇO ⭐⭐
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -176,16 +187,12 @@ const loadProdutos = async () => {
     setShowCart(!showCart);
   }
 
-  function handleNotifications() {
-    setShowNotifications(!showNotifications);
-  }
-
-  function handleNotificationPress(notification: any) {
-    setNotifications(notifications.map(n =>
-      n.id === notification.id ? { ...n, read: true } : n
-    ));
-    setShowNotifications(false);
-    alert(`Notificação: ${notification.title}`);
+  // ⭐⭐ FUNÇÃO PARA TOGGLE DA PESQUISA ⭐⭐
+  function handlePesquisa() {
+    setMostrarPesquisa(!mostrarPesquisa);
+    if (mostrarPesquisa) {
+      setPesquisa(''); // Limpa a pesquisa quando fechar
+    }
   }
 
   // Função para adicionar produto ao carrinho (atualizada para produtos reais)
@@ -394,24 +401,37 @@ const loadProdutos = async () => {
 
   return (
     <View style={styles.fullContainer}>
-      {/* HEADER (mantido) */}
+      {/* HEADER (atualizado) */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleMenu} style={styles.menuButton}>
           <Ionicons name="menu" size={28} color="#126b1a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>VetFarm</Text>
         <View style={styles.headerRight}>
-          <View style={styles.notificationContainer}>
-            <TouchableOpacity onPress={handleNotifications} style={styles.iconButton}>
-              <Ionicons name="notifications-outline" size={24} color="#126b1a" />
-              {notifications.some(n => !n.read) && (
-                <View style={styles.notificationBadge}>
-                  <Text style={styles.badgeText}>
-                    {notifications.filter(n => !n.read).length}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
+          {/* ⭐⭐ L U P A  D E  P E S Q U I S A ⭐⭐ */}
+          <View style={styles.pesquisaContainer}>
+            {mostrarPesquisa ? (
+              <View style={styles.pesquisaInputContainer}>
+                <TextInput
+                  style={styles.pesquisaInput}
+                  placeholder="Buscar produtos..."
+                  value={pesquisa}
+                  onChangeText={setPesquisa}
+                  autoFocus={true}
+                  placeholderTextColor="#999"
+                />
+                <TouchableOpacity 
+                  style={styles.pesquisaCloseButton}
+                  onPress={handlePesquisa}
+                >
+                  <Ionicons name="close" size={20} color="#666" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={handlePesquisa} style={styles.iconButton}>
+                <Ionicons name="search" size={24} color="#126b1a" />
+              </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.cartContainer}>
@@ -429,63 +449,7 @@ const loadProdutos = async () => {
         </View>
       </View>
 
-      {/* MODAIS (mantidos) */}
-      <Modal
-        visible={showNotifications}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowNotifications(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowNotifications(false)}
-        >
-          <View style={styles.notificationsDropdown}>
-            <View style={styles.dropdownHeader}>
-              <Text style={styles.dropdownTitle}>Notificações</Text>
-              <Text style={styles.notificationCount}>
-                {notifications.length} {notifications.length === 1 ? 'notificação' : 'notificações'}
-              </Text>
-            </View>
-
-            <ScrollView
-              style={styles.notificationsList}
-              showsVerticalScrollIndicator={true}
-            >
-              {notifications.map((notification) => (
-                <TouchableOpacity
-                  key={notification.id}
-                  style={[
-                    styles.notificationItem,
-                    !notification.read && styles.unreadNotification
-                  ]}
-                  onPress={() => handleNotificationPress(notification)}
-                >
-                  <View style={styles.notificationContent}>
-                    <Text style={styles.notificationTitle}>{notification.title}</Text>
-                    <Text style={styles.notificationMessage} numberOfLines={2}>
-                      {notification.message}
-                    </Text>
-                    <Text style={styles.notificationTime}>{notification.time}</Text>
-                  </View>
-                  {!notification.read && (
-                    <View style={styles.unreadDot} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <TouchableOpacity
-              style={styles.seeAllButton}
-              onPress={() => setShowNotifications(false)}
-            >
-              <Text style={styles.seeAllText}>Fechar notificações</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
+      {/* MODAL DO CARRINHO (mantido) */}
       <Modal
         visible={showCart}
         transparent={true}
@@ -609,10 +573,12 @@ const loadProdutos = async () => {
           </View>
         </View>
 
-        {/* ⭐⭐ NOSSOS PRODUTOS - AGORA COM DADOS REAIS ⭐⭐ */}
+        {/* ⭐⭐ NOSSOS PRODUTOS - AGORA COM DADOS REAIS E PESQUISA ⭐⭐ */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Nossos Produtos</Text>
+            <Text style={styles.sectionTitle}>
+              {pesquisa ? `Resultados para "${pesquisa}"` : 'Nossos Produtos'}
+            </Text>
             <TouchableOpacity onPress={loadProdutos}>
               <Ionicons name="refresh" size={20} color="#126b1a" />
             </TouchableOpacity>
@@ -631,19 +597,31 @@ const loadProdutos = async () => {
                 <Text style={styles.retryButtonText}>Tentar Novamente</Text>
               </TouchableOpacity>
             </View>
-          ) : produtos.length === 0 ? (
+          ) : produtosFiltrados.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Ionicons name="cube-outline" size={48} color="#bdc3c7" />
-              <Text style={styles.emptyText}>Nenhum produto disponível</Text>
-              <Text style={styles.emptySubtext}>Tente novamente mais tarde</Text>
+              <Ionicons name="search-outline" size={48} color="#bdc3c7" />
+              <Text style={styles.emptyText}>
+                {pesquisa ? 'Nenhum produto encontrado' : 'Nenhum produto disponível'}
+              </Text>
+              <Text style={styles.emptySubtext}>
+                {pesquisa ? 'Tente buscar com outros termos' : 'Tente novamente mais tarde'}
+              </Text>
+              {pesquisa && (
+                <TouchableOpacity 
+                  style={styles.retryButton} 
+                  onPress={() => setPesquisa('')}
+                >
+                  <Text style={styles.retryButtonText}>Limpar Busca</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             <>
               <Text style={styles.productsCount}>
-                {produtos.length} produto{produtos.length !== 1 ? 's' : ''} disponível{produtos.length !== 1 ? 's' : ''}
+                {produtosFiltrados.length} produto{produtosFiltrados.length !== 1 ? 's' : ''} {pesquisa ? 'encontrado' : 'disponível'}{produtosFiltrados.length !== 1 ? 's' : ''}
               </Text>
               <FlatList
-                data={produtos}
+                data={produtosFiltrados}
                 renderItem={renderProduct}
                 keyExtractor={item => `${item.produto_id}_${item.farmacia_id}`}
                 numColumns={2}
@@ -694,6 +672,29 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: 5,
+  },
+  // ⭐⭐ ESTILOS PARA A PESQUISA ⭐⭐
+  pesquisaContainer: {
+    position: 'relative',
+  },
+  pesquisaInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f2f6',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 200,
+  },
+  pesquisaInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#2c3e50',
+    padding: 0,
+    marginRight: 8,
+  },
+  pesquisaCloseButton: {
+    padding: 2,
   },
   content: {
     flex: 1,
@@ -877,23 +878,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#126b1a',
   },
-  notificationContainer: {
-    position: 'relative',
-  },
   cartContainer: {
     position: 'relative',
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#ff3b30',
-    borderRadius: 10,
-    width: 18,
-    height: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1001,
   },
   cartBadge: {
     position: 'absolute',
@@ -919,17 +905,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingTop: 80,
     paddingRight: 10,
-  },
-  notificationsDropdown: {
-    width: width * 0.85,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-    maxHeight: height * 0.7,
   },
   cartDropdown: {
     width: width * 0.85,
@@ -961,67 +936,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  notificationCount: {
-    fontSize: 12,
-    color: '#666',
-  },
   cartCount: {
     fontSize: 12,
     color: '#666',
   },
-  notificationsList: {
-    maxHeight: height * 0.7 - 120,
-  },
   cartList: {
     maxHeight: height * 0.7 - 180,
-  },
-  notificationItem: {
-    flexDirection: 'row',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f8f8f8',
-    alignItems: 'flex-start',
-  },
-  unreadNotification: {
-    backgroundColor: '#f8f9fa',
-  },
-  notificationContent: {
-    flex: 1,
-    marginRight: 8,
-  },
-  notificationTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  notificationMessage: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-    lineHeight: 16,
-  },
-  notificationTime: {
-    fontSize: 11,
-    color: '#999',
-  },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#126b1a',
-    marginTop: 4,
-  },
-  seeAllButton: {
-    padding: 12,
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  seeAllText: {
-    color: '#126b1a',
-    fontWeight: 'bold',
-    fontSize: 14,
   },
   emptyCart: {
     padding: 40,
