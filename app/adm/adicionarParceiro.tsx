@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ⭐⭐ CONSTANTE PARA IP DO SERVIDOR ⭐⭐
-const API_URL = 'http://192.168.0.3:3000';
+const API_URL = 'http://192.168.0.2:3000';
 
 const states = [
   { label: 'Acre', value: 'AC' },

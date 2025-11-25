@@ -1,16 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useEnderecos } from '../../contexts/EnderecoContext';
 
 export default function FinalizarCompra() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { enderecoPrincipal, loading } = useEnderecos();
   
   // RECEBE OS ITENS DO CARRINHO E TOTAL
   const cartItems = params.cartItems ? JSON.parse(params.cartItems as string) : [];
-  const total = params.total || '0,00';
+  
+  // ⭐⭐ FUNÇÃO PARA CALCULAR TOTAL CORRETAMENTE ⭐⭐
+  const calcularTotal = () => {
+    if (cartItems.length === 0) return '0,00';
+    
+    const totalCalculado = cartItems.reduce((acc: number, item: any) => {
+      // Extrair o valor numérico do preço formatado
+      let precoString = item.price;
+      
+      // Remover "R$ " se existir
+      if (precoString.includes('R$')) {
+        precoString = precoString.replace('R$', '').trim();
+      }
+      
+      // Substituir vírgula por ponto e converter para número
+      const precoNumerico = parseFloat(
+        precoString.replace('.', '').replace(',', '.')
+      );
+      
+      // Se for NaN, usar 0
+      const precoValido = isNaN(precoNumerico) ? 0 : precoNumerico;
+      
+      return acc + (precoValido * item.quantity);
+    }, 0);
+    
+    // Formatar para o padrão brasileiro
+    return totalCalculado.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  const total = calcularTotal();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [formaPagamento, setFormaPagamento] = useState('');
@@ -18,11 +52,6 @@ export default function FinalizarCompra() {
     nome: '',
     email: '',
     telefone: '',
-    cep: '',
-    endereco: '',
-    numero: '',
-    cidade: '',
-    estado: '',
     cartao: '',
     validade: '',
     cvv: '',
@@ -45,12 +74,43 @@ export default function FinalizarCompra() {
     { id: 'pix', nome: 'PIX', icon: '📱' },
   ];
 
+  // Verificar se tem endereço principal quando chegar na etapa 1
+  useEffect(() => {
+    if (currentStep === 1 && !loading && !enderecoPrincipal) {
+      Alert.alert(
+        'Endereço Necessário',
+        'Você precisa cadastrar um endereço de entrega antes de finalizar a compra.',
+        [
+          { text: 'Cancelar', style: 'cancel', onPress: () => router.back() },
+          { 
+            text: 'Cadastrar Endereço', 
+            onPress: () => router.push('/home/novoendereco')
+          }
+        ]
+      );
+    }
+  }, [currentStep, loading, enderecoPrincipal]);
+
   const handleSelecionarPagamento = (forma: string) => {
     setFormaPagamento(forma);
   };
 
   const handleAvancar = () => {
     if (currentStep === 1) {
+      if (!enderecoPrincipal) {
+        Alert.alert(
+          'Endereço Necessário',
+          'Você precisa cadastrar um endereço de entrega.',
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { 
+              text: 'Cadastrar Endereço', 
+              onPress: () => router.push('/home/novoendereco')
+            }
+          ]
+        );
+        return;
+      }
       if (!formaPagamento) {
         Alert.alert('Atenção', 'Por favor, selecione uma forma de pagamento');
         return;
@@ -88,7 +148,7 @@ export default function FinalizarCompra() {
     // Simular processamento do pedido
     Alert.alert(
       'Compra Finalizada com Sucesso!',
-      `Seu pedido #${pedidoConfirmado.numeroPedido} foi processado.\nCódigo de rastreio: ${pedidoConfirmado.codigoRastreio}`,
+      `Seu pedido #${pedidoConfirmado.numeroPedido} foi processado.\nSerá entregue no endereço: ${enderecoPrincipal?.apelido}\nCódigo de rastreio: ${pedidoConfirmado.codigoRastreio}`,
       [
         {
           text: 'Acompanhar Pedido',
@@ -121,6 +181,53 @@ export default function FinalizarCompra() {
         </View>
       </View>
 
+      {/* Endereço de Entrega - AGORA USANDO O ENDEREÇO PRINCIPAL DO CONTEXTO */}
+      <View style={styles.secao}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.subtitulo}>Endereço de Entrega</Text>
+          <TouchableOpacity onPress={() => router.push('/home/meusenderecos')}>
+            <Text style={styles.editText}>Alterar</Text>
+          </TouchableOpacity>
+        </View>
+
+        {enderecoPrincipal ? (
+          <View style={styles.enderecoCard}>
+            <View style={styles.enderecoHeader}>
+              <Ionicons name="location" size={20} color="#126b1a" />
+              <Text style={styles.enderecoApelido}>{enderecoPrincipal.apelido}</Text>
+              <View style={styles.principalBadge}>
+                <Text style={styles.principalText}>PRINCIPAL</Text>
+              </View>
+            </View>
+            
+            <View style={styles.enderecoDetails}>
+              <Text style={styles.enderecoText}>
+                {enderecoPrincipal.logradouro}, {enderecoPrincipal.numero}
+                {enderecoPrincipal.complemento && `, ${enderecoPrincipal.complemento}`}
+              </Text>
+              <Text style={styles.enderecoText}>
+                {enderecoPrincipal.bairro} - {enderecoPrincipal.cidade}/{enderecoPrincipal.estado}
+              </Text>
+              <Text style={styles.enderecoText}>CEP: {enderecoPrincipal.cep}</Text>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.semEnderecoCard}>
+            <Ionicons name="location-outline" size={40} color="#ccc" />
+            <Text style={styles.semEnderecoText}>Nenhum endereço cadastrado</Text>
+            <Text style={styles.semEnderecoSubtext}>
+              Cadastre um endereço para entrega
+            </Text>
+            <TouchableOpacity 
+              style={styles.cadastrarEnderecoButton}
+              onPress={() => router.push('/home/novoendereco')}
+            >
+              <Text style={styles.cadastrarEnderecoText}>Cadastrar Endereço</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
       {/* Dados Pessoais */}
       <View style={styles.secao}>
         <Text style={styles.subtitulo}>Dados Pessoais</Text>
@@ -143,45 +250,6 @@ export default function FinalizarCompra() {
           keyboardType="phone-pad"
           value={dadosPagamento.telefone}
           onChangeText={(text) => setDadosPagamento({...dadosPagamento, telefone: text})}
-        />
-      </View>
-
-      {/* Endereço de Entrega */}
-      <View style={styles.secao}>
-        <Text style={styles.subtitulo}>Endereço de Entrega</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="CEP"
-          keyboardType="numeric"
-          value={dadosPagamento.cep}
-          onChangeText={(text) => setDadosPagamento({...dadosPagamento, cep: text})}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Endereço*"
-          value={dadosPagamento.endereco}
-          onChangeText={(text) => setDadosPagamento({...dadosPagamento, endereco: text})}
-        />
-        <View style={styles.linha}>
-          <TextInput
-            style={[styles.input, styles.inputPequeno]}
-            placeholder="Número*"
-            keyboardType="numeric"
-            value={dadosPagamento.numero}
-            onChangeText={(text) => setDadosPagamento({...dadosPagamento, numero: text})}
-          />
-          <TextInput
-            style={[styles.input, styles.inputMedio]}
-            placeholder="Cidade*"
-            value={dadosPagamento.cidade}
-            onChangeText={(text) => setDadosPagamento({...dadosPagamento, cidade: text})}
-          />
-        </View>
-        <TextInput
-          style={styles.input}
-          placeholder="Estado*"
-          value={dadosPagamento.estado}
-          onChangeText={(text) => setDadosPagamento({...dadosPagamento, estado: text})}
         />
       </View>
 
@@ -336,16 +404,26 @@ export default function FinalizarCompra() {
           <Text style={styles.revisaoTexto}>{dadosPagamento.telefone}</Text>
         </View>
 
-        {/* Endereço */}
+        {/* Endereço - AGORA USANDO O ENDEREÇO PRINCIPAL */}
         <View style={styles.revisaoGrupo}>
           <Text style={styles.revisaoTitulo}>Endereço de Entrega</Text>
-          <Text style={styles.revisaoTexto}>
-            {dadosPagamento.endereco}, {dadosPagamento.numero}
-          </Text>
-          <Text style={styles.revisaoTexto}>
-            {dadosPagamento.cidade} - {dadosPagamento.estado}
-          </Text>
-          <Text style={styles.revisaoTexto}>CEP: {dadosPagamento.cep}</Text>
+          {enderecoPrincipal ? (
+            <>
+              <Text style={styles.revisaoTexto}>
+                {enderecoPrincipal.apelido} {enderecoPrincipal.principal && '(Principal)'}
+              </Text>
+              <Text style={styles.revisaoTexto}>
+                {enderecoPrincipal.logradouro}, {enderecoPrincipal.numero}
+                {enderecoPrincipal.complemento && `, ${enderecoPrincipal.complemento}`}
+              </Text>
+              <Text style={styles.revisaoTexto}>
+                {enderecoPrincipal.bairro} - {enderecoPrincipal.cidade}/{enderecoPrincipal.estado}
+              </Text>
+              <Text style={styles.revisaoTexto}>CEP: {enderecoPrincipal.cep}</Text>
+            </>
+          ) : (
+            <Text style={styles.revisaoTextoErro}>Nenhum endereço cadastrado</Text>
+          )}
         </View>
 
         {/* Pagamento */}
@@ -356,7 +434,7 @@ export default function FinalizarCompra() {
             {formaPagamento === 'debito' && 'Cartão de Débito'}
             {formaPagamento === 'pix' && 'PIX'}
           </Text>
-          {formaPagamento !== 'pix' && (
+          {formaPagamento !== 'pix' && dadosPagamento.cartao && (
             <Text style={styles.revisaoTexto}>Final {dadosPagamento.cartao?.slice(-4)}</Text>
           )}
         </View>
@@ -460,6 +538,12 @@ export default function FinalizarCompra() {
             <Text style={styles.pedidoInfoLabel}>Previsão de Entrega</Text>
             <Text style={styles.pedidoInfoValor}>{pedidoConfirmado.dataEntrega}</Text>
           </View>
+
+          {/* Endereço de Entrega na Confirmação */}
+          <View style={styles.pedidoInfo}>
+            <Text style={styles.pedidoInfoLabel}>Endereço de Entrega</Text>
+            <Text style={styles.pedidoInfoValor}>{enderecoPrincipal?.apelido}</Text>
+          </View>
         </View>
 
         {/* Código de Rastreio */}
@@ -505,6 +589,10 @@ export default function FinalizarCompra() {
               {formaPagamento === 'pix' && 'PIX'}
             </Text>
           </View>
+          <View style={styles.resumoFinalItem}>
+            <Text style={styles.resumoFinalLabel}>Endereço:</Text>
+            <Text style={styles.resumoFinalValor}>{enderecoPrincipal?.apelido}</Text>
+          </View>
         </View>
       </View>
     </>
@@ -523,7 +611,7 @@ export default function FinalizarCompra() {
 
   const getButtonText = () => {
     switch(currentStep) {
-      case 1: return 'Avançar';
+      case 1: return 'Avançar para Pagamento';
       case 2: return 'Revisar Pedido';
       case 3: return 'Continuar para Nota Fiscal';
       case 4: return 'Confirmar e Finalizar';
@@ -531,6 +619,29 @@ export default function FinalizarCompra() {
       default: return 'Avançar';
     }
   };
+
+  // Se estiver carregando e não tem endereço principal
+  if (loading && !enderecoPrincipal && currentStep === 1) {
+    return (
+      <View style={styles.fullContainer}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={handleVoltar}
+          >
+            <Ionicons name="arrow-back" size={24} color="#126b1a" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{getStepTitle()}</Text>
+          <View style={styles.headerPlaceholder} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Ionicons name="refresh" size={40} color="#126b1a" />
+          <Text style={styles.loadingText}>Carregando endereços...</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.fullContainer}>
@@ -595,8 +706,12 @@ export default function FinalizarCompra() {
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.botaoAvancar}
-              onPress={handleAvancar} // CORREÇÃO APLICADA AQUI
+              style={[
+                styles.botaoAvancar,
+                !enderecoPrincipal && styles.botaoAvancarDisabled
+              ]}
+              onPress={handleAvancar}
+              disabled={!enderecoPrincipal}
             >
               <Text style={styles.botaoAvancarTexto}>
                 {getButtonText()}
@@ -618,7 +733,7 @@ export default function FinalizarCompra() {
             
             <TouchableOpacity 
               style={styles.botaoPrimario}
-              onPress={() => router.push('/home/')}
+              onPress={handleFinalizarCompra}
             >
               <Ionicons name="home-outline" size={20} color="white" />
               <Text style={styles.botaoPrimarioTexto}>Voltar à Loja</Text>
@@ -963,6 +1078,9 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     alignItems: 'center',
   },
+  botaoAvancarDisabled: {
+    backgroundColor: '#bdc3c7',
+  },
   botaoAvancarTexto: {
     color: 'white',
     fontSize: 16,
@@ -988,6 +1106,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#34495e',
     marginBottom: 4,
+  },
+  revisaoTextoErro: {
+    fontSize: 14,
+    color: '#e74c3c',
+    fontStyle: 'italic',
   },
   revisaoItem: {
     flexDirection: 'row',
@@ -1221,5 +1344,99 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+
+  // NOVOS ESTILOS PARA O SISTEMA DE ENDEREÇOS
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  editText: {
+    fontSize: 14,
+    color: '#126b1a',
+    fontWeight: '500',
+  },
+  enderecoCard: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#126b1a',
+  },
+  enderecoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 8,
+  },
+  enderecoApelido: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+  },
+  principalBadge: {
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  principalText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#126b1a',
+  },
+  enderecoDetails: {
+    gap: 4,
+  },
+  enderecoText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  semEnderecoCard: {
+    alignItems: 'center',
+    padding: 30,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#eee',
+    borderStyle: 'dashed',
+  },
+  semEnderecoText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#666',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  semEnderecoSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  cadastrarEnderecoButton: {
+    backgroundColor: '#126b1a',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  cadastrarEnderecoText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 200,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
 });

@@ -24,8 +24,8 @@ export default function Login() {
     }
 
     const url = tipo === 'farmacia' 
-      ? 'http://192.168.0.3:3000/api/farmacias/login'
-      : 'http://192.168.0.3:3000/api/clientes/login';
+      ? 'http://192.168.0.2:3000/api/farmacias/login'
+      : 'http://192.168.0.2:3000/api/clientes/login';
 
     console.log('🌐 URL:', url);
 

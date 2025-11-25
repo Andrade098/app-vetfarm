@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ⭐⭐ CONSTANTE PARA IP DO SERVIDOR ⭐⭐
-const API_URL = 'http://192.168.0.3:3000';
+const API_URL = 'http://192.168.0.2:3000';
 
 // Dados de exemplo para categorias
 const categories = [
@@ -115,61 +115,61 @@ export default function HomeScreen() {
   };
 
   // ⭐⭐ FUNÇÃO PARA OBTER IMAGEM DO PRODUTO ⭐⭐
-  // ⭐⭐ USE ESTA FUNÇÃO QUE JÁ FUNCIONA ⭐⭐
-const getProductImage = (imagens: string[]) => {
-  if (!imagens || imagens.length === 0) {
-    return null;
-  }
-
-  try {
-    let imageUrl = imagens[0];
-    
-    // Parsear se for string JSON
-    if (typeof imageUrl === 'string' && imageUrl.startsWith('[')) {
-      try {
-        const parsedImages = JSON.parse(imageUrl);
-        imageUrl = Array.isArray(parsedImages) && parsedImages.length > 0 ? parsedImages[0] : null;
-      } catch (parseError) {
-        console.log('❌ Erro ao parsear JSON de imagens:', parseError);
-        return null;
-      }
-    }
-
-    if (!imageUrl || typeof imageUrl !== 'string') {
+  const getProductImage = (imagens: string[]) => {
+    if (!imagens || imagens.length === 0) {
       return null;
     }
 
-    // Corrigir URLs problemáticas
-    if (imageUrl.includes('flacalhost')) {
-      imageUrl = imageUrl.replace('flacalhost', 'localhost');
-    }
-    if (imageUrl.includes('lobshttp')) {
-      imageUrl = imageUrl.replace('lobshttp', 'http');
-    }
+    try {
+      let imageUrl = imagens[0];
+      
+      // Parsear se for string JSON
+      if (typeof imageUrl === 'string' && imageUrl.startsWith('[')) {
+        try {
+          const parsedImages = JSON.parse(imageUrl);
+          imageUrl = Array.isArray(parsedImages) && parsedImages.length > 0 ? parsedImages[0] : null;
+        } catch (parseError) {
+          console.log('❌ Erro ao parsear JSON de imagens:', parseError);
+          return null;
+        }
+      }
 
-    // Se for URL relativa, adicionar base URL
-    if (imageUrl.startsWith('/uploads/')) {
-      imageUrl = `${API_BASE_URL}${imageUrl}`;
+      if (!imageUrl || typeof imageUrl !== 'string') {
+        return null;
+      }
+
+      // Corrigir URLs problemáticas
+      if (imageUrl.includes('flacalhost')) {
+        imageUrl = imageUrl.replace('flacalhost', 'localhost');
+      }
+      if (imageUrl.includes('lobshttp')) {
+        imageUrl = imageUrl.replace('lobshttp', 'http');
+      }
+
+      // Se for URL relativa, adicionar base URL
+      if (imageUrl.startsWith('/uploads/')) {
+        imageUrl = `${API_URL}${imageUrl}`;
+      }
+
+      // Se for Base64, usar diretamente
+      if (imageUrl.startsWith('data:image')) {
+        return { uri: imageUrl };
+      }
+
+      // Verificar se é uma URL válida
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        return { uri: imageUrl };
+      }
+
+      console.log('❌ URL de imagem inválida:', imageUrl);
+      return null;
+
+    } catch (error) {
+      console.error('❌ Erro ao processar imagem:', error);
+      return null;
     }
+  };
 
-    // Se for Base64, usar diretamente
-    if (imageUrl.startsWith('data:image')) {
-      return imageUrl;
-    }
-
-    // Verificar se é uma URL válida
-    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-      return imageUrl;
-    }
-
-    console.log('❌ URL de imagem inválida:', imageUrl);
-    return null;
-
-  } catch (error) {
-    console.error('❌ Erro ao processar imagem:', error);
-    return null;
-  }
-};
   // ⭐⭐ FUNÇÃO PARA FORMATAR PREÇO ⭐⭐
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -252,11 +252,33 @@ const getProductImage = (imagens: string[]) => {
     ));
   }
 
+  // ⭐⭐ CORREÇÃO DA FUNÇÃO calculateTotal ⭐⭐
   function calculateTotal() {
-    return cartItems.reduce((total, item) => {
-      const price = parseFloat(item.price.replace('R$ ', '').replace(',', '.'));
-      return total + (price * item.quantity);
-    }, 0).toFixed(2).replace('.', ',');
+    const total = cartItems.reduce((total, item) => {
+      // Extrair o valor numérico do preço formatado
+      let precoString = item.price;
+      
+      // Remover "R$ " se existir
+      if (precoString.includes('R$')) {
+        precoString = precoString.replace('R$', '').trim();
+      }
+      
+      // Substituir vírgula por ponto e converter para número
+      const precoNumerico = parseFloat(
+        precoString.replace('.', '').replace(',', '.')
+      );
+      
+      // Se for NaN, usar 0
+      const precoValido = isNaN(precoNumerico) ? 0 : precoNumerico;
+      
+      return total + (precoValido * item.quantity);
+    }, 0);
+    
+    // Formatar para o padrão brasileiro
+    return total.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   }
 
   function handleCategoryPress(categoryId: string, categoryName: string) {
@@ -637,7 +659,7 @@ const getProductImage = (imagens: string[]) => {
   );
 }
 
-// ESTILOS
+// ESTILOS (mantenha os mesmos estilos que você já tem)
 const { width, height } = Dimensions.get('window');
 const categoryCardSize = (width - 60) / 2;
 

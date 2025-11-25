@@ -25,7 +25,7 @@ interface ProdutoFarmacia {
   };
 }
 
-const API_URL = 'http://192.168.0.3:3000';
+const API_URL = 'http://192.168.0.2:3000';
 
 export default function ListarProdutosScreen() {
   const router = useRouter();
@@ -149,7 +149,7 @@ export default function ListarProdutosScreen() {
 
       setFarmaciaNome(farmaciaNome);
 
-      const url = `http://192.168.0.3:3000/api/farmacia-produtos/minha-farmacia`;
+      const url = `http://192.168.0.2:3000/api/farmacia-produtos/minha-farmacia`;
       console.log('📡 URL da requisição:', url);
 
       const response = await fetch(url, {

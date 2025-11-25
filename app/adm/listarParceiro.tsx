@@ -50,7 +50,7 @@ export default function ListarParceirosScreen() {
     }
 
     // ⭐⭐ CORREÇÃO: USE O IP DA REDE ⭐⭐
-    const response = await fetch('http://192.168.0.3:3000/api/farmacias/parceiros/todos', {
+    const response = await fetch('http://192.168.0.2:3000/api/farmacias/parceiros/todos', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

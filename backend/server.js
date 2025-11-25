@@ -31,8 +31,8 @@ async function syncDatabase() {
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Servidor rodando na porta ${PORT}`);
       console.log(`📱 Acesse: http://localhost:${PORT}`);
-      console.log(`🌐 Acesse: http://192.168.0.3:${PORT}`);
-      console.log(`📁 Uploads: http://192.168.0.3:${PORT}/uploads`);
+      console.log(`🌐 Acesse: http://192.168.0.2:${PORT}`);
+      console.log(`📁 Uploads: http://192.168.0.2:${PORT}/uploads`);
     });
     
   } catch (error) {

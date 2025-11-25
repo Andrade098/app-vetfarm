@@ -6,7 +6,7 @@ const fs = require('fs'); // ✅ Adicionar isso
 const categoriaProdutoRoutes = require('./src/routes/categoriaProdutoRoutes');
 
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://192.168.0.3:3000', 'exp://192.168.0.3:8081', 'http://localhost:8081'],
+  origin: ['http://localhost:3000', 'http://192.168.0.2:3000', 'exp://192.168.0.2:8081', 'http://localhost:8081'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
@@ -34,7 +34,8 @@ app.use('/api/clientes', require('./src/routes/clienteRoutes'));
 app.use('/api/farmacias', require('./src/routes/farmaciaRoutes'));
 app.use('/api/produtos', require('./src/routes/produtoRoutes'));
 app.use('/api/farmacia-produtos', require('./src/routes/farmaciaProdutoRoutes'));
-
+// No seu app.js, adicione esta linha nas rotas:
+app.use('/api/enderecos', require('./src/routes/enderecoRoutes'));
 app.use('/api/categoria-produto', categoriaProdutoRoutes);
 
 

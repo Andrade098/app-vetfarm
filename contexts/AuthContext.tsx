@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true); // ⭐⭐ ESTADO DE CARREGAMENTO
 
   // ⭐⭐ MESMO IP DO LOGIN - IMPORTANTE PARA ANDROID ⭐⭐
-  const API_URL = 'http://192.168.0.6:3000';
+  const API_URL = 'http://192.168.0.2:3000';
 
   // ⭐⭐ CARREGAR DADOS DO ASYNCSTORAGE QUANDO O APP INICIA ⭐⭐
   useEffect(() => {

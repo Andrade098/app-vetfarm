@@ -61,30 +61,30 @@ const popularCategorias = async () => {
 
       // ============ Antiparasitários ===================
     
-      { categoria_id: categorias[0].id, nome: 'Bovinos', descricao: 'Antiparasitários para bovinos' },
-      { categoria_id: categorias[0].id, nome: 'Suínos', descricao: 'Antiparasitários para suínos' },
-      { categoria_id: categorias[0].id, nome: 'Ovinos', descricao: 'Antiparasitários para ovinos' },
-      { categoria_id: categorias[0].id, nome: 'Peixes', descricao: 'Antiparasitários para peixes' },
-      { categoria_id: categorias[0].id, nome: 'Aves', descricao: 'Antiparasitários para aves' },
-      { categoria_id: categorias[0].id, nome: 'Equinos', descricao: 'Antiparasitários para equinos' },
+      { categoria_id: categorias[4].id, nome: 'Bovinos', descricao: 'Antiparasitários para bovinos' },
+      { categoria_id: categorias[4].id, nome: 'Suínos', descricao: 'Antiparasitários para suínos' },
+      { categoria_id: categorias[4].id, nome: 'Ovinos', descricao: 'Antiparasitários para ovinos' },
+      { categoria_id: categorias[4].id, nome: 'Peixes', descricao: 'Antiparasitários para peixes' },
+      { categoria_id: categorias[4].id, nome: 'Aves', descricao: 'Antiparasitários para aves' },
+      { categoria_id: categorias[4].id, nome: 'Equinos', descricao: 'Antiparasitários para equinos' },
 
       // ================ Antibióticos ======================
 
-      { categoria_id: categorias[0].id, nome: 'Bovinos', descricao: 'Antibióticos para bovinos' },
-      { categoria_id: categorias[0].id, nome: 'Suínos', descricao: 'Antibióticos para suínos' },
-      { categoria_id: categorias[0].id, nome: 'Ovinos', descricao: 'Antibióticos para ovinos' },
-      { categoria_id: categorias[0].id, nome: 'Peixes', descricao: 'Antibióticos para peixes' },
-      { categoria_id: categorias[0].id, nome: 'Aves', descricao: 'Antibióticos para aves' },
-      { categoria_id: categorias[0].id, nome: 'Equinos', descricao: 'Antibióticos para equinos' },
+      { categoria_id: categorias[5].id, nome: 'Bovinos', descricao: 'Antibióticos para bovinos' },
+      { categoria_id: categorias[5].id, nome: 'Suínos', descricao: 'Antibióticos para suínos' },
+      { categoria_id: categorias[5].id, nome: 'Ovinos', descricao: 'Antibióticos para ovinos' },
+      { categoria_id: categorias[5].id, nome: 'Peixes', descricao: 'Antibióticos para peixes' },
+      { categoria_id: categorias[5].id, nome: 'Aves', descricao: 'Antibióticos para aves' },
+      { categoria_id: categorias[5].id, nome: 'Equinos', descricao: 'Antibióticos para equinos' },
 
       // ============= Nutrição ================
 
-      { categoria_id: categorias[0].id, nome: 'Bovinos', descricao: 'Nutrição para bovinos' },
-      { categoria_id: categorias[0].id, nome: 'Suínos', descricao: 'Nutrição para suínos' },
-      { categoria_id: categorias[0].id, nome: 'Ovinos', descricao: 'Nutrição para ovinos' },
-      { categoria_id: categorias[0].id, nome: 'Peixes', descricao: 'Nutrição para peixes' },
-      { categoria_id: categorias[0].id, nome: 'Aves', descricao: 'Nutrição para aves' },
-      { categoria_id: categorias[0].id, nome: 'Equinos', descricao: 'Nutrição para equinos' }
+      { categoria_id: categorias[6].id, nome: 'Bovinos', descricao: 'Nutrição para bovinos' },
+      { categoria_id: categorias[6].id, nome: 'Suínos', descricao: 'Nutrição para suínos' },
+      { categoria_id: categorias[6].id, nome: 'Ovinos', descricao: 'Nutrição para ovinos' },
+      { categoria_id: categorias[6].id, nome: 'Peixes', descricao: 'Nutrição para peixes' },
+      { categoria_id: categorias[6].id, nome: 'Aves', descricao: 'Nutrição para aves' },
+      { categoria_id: categorias[6].id, nome: 'Equinos', descricao: 'Nutrição para equinos' }
     ];
 
     await Subcategoria.bulkCreate(subcategorias);

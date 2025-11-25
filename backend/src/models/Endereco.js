@@ -1,5 +1,5 @@
-const { DataTypes, Sequelize } = require ('sequelize');
-const  db = require ('../config/db'); // ajuste conforme o caminho do seu arquivo db.ts
+const { DataTypes } = require('sequelize');
+const db = require('../config/db');
 
 const Endereco = db.define('Endereco', {
   id: {
@@ -8,7 +8,6 @@ const Endereco = db.define('Endereco', {
     autoIncrement: true,
     unique: true,
     primaryKey: true
-    
   },
   usuario_id: {
     type: DataTypes.INTEGER.UNSIGNED,
@@ -26,7 +25,11 @@ const Endereco = db.define('Endereco', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  complemento:  {
+  complemento: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  bairro: {
     type: DataTypes.STRING,
     allowNull: false,
   },
@@ -38,16 +41,18 @@ const Endereco = db.define('Endereco', {
     type: DataTypes.STRING,
     allowNull: false,
   },
-   cep: {
+  cep: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-   principal: {
+  principal: {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: false,
-},
-
+  },
+}, {
+  tableName: 'enderecos',
+  timestamps: true,
 });
 
 module.exports = Endereco;

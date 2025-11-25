@@ -6,7 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = 'http://192.168.0.3:3000';
+const API_URL = 'http://192.168.0.2:3000';
 
 export default function EditProductScreen() {
   const router = useRouter();
