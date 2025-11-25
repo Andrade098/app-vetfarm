@@ -1,7 +1,8 @@
+// JS Compra.js - ARQUIVO COMPLETO
 const { DataTypes, Sequelize } = require ('sequelize');
 const  db = require ('../config/db');
 
-  const Compra = db.define('Compra',{
+const Compra = db.define('Compra',{
   id: {
     type: DataTypes.INTEGER.UNSIGNED,
     autoIncrement: true,
@@ -31,10 +32,16 @@ const  db = require ('../config/db');
     allowNull: true,
     defaultValue: 0,
   },
+  // ⭐⭐ NOVO CAMPO PARA DESCONTO APLICADO ⭐⭐
+  desconto_fidelidade_aplicado: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: true,
+    defaultValue: 0,
+  },
   forma_pagamento_id: {
     type: DataTypes.INTEGER.UNSIGNED,
     allowNull: true,
   },
 });
 
-  module.exports = Compra;
+module.exports = Compra;

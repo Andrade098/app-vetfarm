@@ -1,3 +1,4 @@
+// home/finalizacompra.tsx - ARQUIVO COMPLETO ATUALIZADO
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -6,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEnderecos } from '../../contexts/EnderecoContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePedidos } from '../../contexts/PedidoContext';
+import { useCart } from '../../contexts/CartContext';
 
 export default function FinalizarCompra() {
   const router = useRouter();
@@ -13,29 +15,43 @@ export default function FinalizarCompra() {
   const { enderecoPrincipal, loading } = useEnderecos();
   const { user } = useAuth();
   const { criarPedido, carregarPedidos } = usePedidos();
+  const { 
+  pontosGanhos, 
+  descontoFidelidade, 
+  descontoAplicado, 
+  aplicarDescontoFidelidade, 
+  removerDescontoFidelidade,
+  calcularTotalComDesconto,
+  clearCart,
+  getTotalPontosUsuario // ⭐⭐ ADICIONE ESTA LINHA
+} = useCart();
   
-  // RECEBE OS ITENS DO CARRINHO E TOTAL
   const cartItems = params.cartItems ? JSON.parse(params.cartItems as string) : [];
   
-  // ⭐⭐ FUNÇÃO PARA CALCULAR TOTAL CORRETAMENTE ⭐⭐
   const calcularTotal = () => {
     if (cartItems.length === 0) return '0,00';
     
-    const totalCalculado = cartItems.reduce((acc: number, item: any) => {
-      let precoString = item.price;
-      
-      if (precoString.includes('R$')) {
-        precoString = precoString.replace('R$', '').trim();
-      }
-      
-      const precoNumerico = parseFloat(
-        precoString.replace('.', '').replace(',', '.')
-      );
-      
-      const precoValido = isNaN(precoNumerico) ? 0 : precoNumerico;
-      
-      return acc + (precoValido * item.quantity);
-    }, 0);
+    let totalCalculado;
+    
+    if (descontoAplicado) {
+      totalCalculado = calcularTotalComDesconto();
+    } else {
+      totalCalculado = cartItems.reduce((acc: number, item: any) => {
+        let precoString = item.price;
+        
+        if (precoString.includes('R$')) {
+          precoString = precoString.replace('R$', '').trim();
+        }
+        
+        const precoNumerico = parseFloat(
+          precoString.replace('.', '').replace(',', '.')
+        );
+        
+        const precoValido = isNaN(precoNumerico) ? 0 : precoNumerico;
+        
+        return acc + (precoValido * item.quantity);
+      }, 0);
+    }
     
     return totalCalculado.toLocaleString('pt-BR', {
       minimumFractionDigits: 2,
@@ -49,7 +65,6 @@ export default function FinalizarCompra() {
   const [formaPagamento, setFormaPagamento] = useState('pix');
   const [finalizando, setFinalizando] = useState(false);
 
-  // ✅ DADOS PESSOAIS AGORA PEGAM AUTOMATICAMENTE DO USUÁRIO LOGADO
   const [dadosPagamento, setDadosPagamento] = useState({
     nome: user?.nome || '',
     email: user?.email || '',
@@ -58,7 +73,6 @@ export default function FinalizarCompra() {
     emailNotaFiscal: user?.email || ''
   });
 
-  // DADOS DO PEDIDO CONFIRMADO
   const [pedidoConfirmado, setPedidoConfirmado] = useState({
     numeroPedido: Math.floor(100000 + Math.random() * 900000).toString(),
     codigoRastreio: `VF${Math.floor(100000000 + Math.random() * 900000000)}BR`,
@@ -66,12 +80,13 @@ export default function FinalizarCompra() {
     dataPedido: new Date().toLocaleDateString('pt-BR')
   });
 
-  // ✅ FORMAS DE PAGAMENTO - AGORA SÓ PIX
   const formasPagamento = [
     { id: 'pix', nome: 'PIX', icon: '📱' },
   ];
 
-  // Verificar se tem endereço principal quando chegar na etapa 1
+  const temDescontoDisponivel = user?.desconto_proxima_compra > 0 && 
+    (!user.data_expiracao_desconto || new Date(user.data_expiracao_desconto) > new Date());
+
   useEffect(() => {
     if (currentStep === 1 && !loading && !enderecoPrincipal) {
       Alert.alert(
@@ -88,7 +103,6 @@ export default function FinalizarCompra() {
     }
   }, [currentStep, loading, enderecoPrincipal]);
 
-  // ✅ ATUALIZAR DADOS QUANDO USUÁRIO MUDAR
   useEffect(() => {
     if (user) {
       setDadosPagamento(prev => ({
@@ -143,17 +157,27 @@ export default function FinalizarCompra() {
     }
   };
 
-  // ✅✅✅ FUNÇÃO CORRIGIDA - AGORA CRIA PEDIDO REAL NA API
   const handleFinalizarCompra = async () => {
     try {
       setFinalizando(true);
 
-      // Criar objeto do pedido para a API
+      const totalSemDesconto = cartItems.reduce((acc: number, item: any) => {
+        let precoString = item.price;
+        if (precoString.includes('R$')) {
+          precoString = precoString.replace('R$', '').trim();
+        }
+        const precoNumerico = parseFloat(precoString.replace('.', '').replace(',', '.'));
+        return acc + (precoNumerico * item.quantity);
+      }, 0);
+      
+      const descontoPercentual = descontoAplicado ? 
+        (descontoFidelidade / totalSemDesconto) * 100 : 0;
+
       const pedidoData = {
         numero_pedido: pedidoConfirmado.numeroPedido,
         codigo_rastreio: pedidoConfirmado.codigoRastreio,
-        status: 'pendente', // Status inicial
-        total: total.replace('.', '').replace(',', '.'), // Converter para formato numérico
+        status: 'pendente',
+        total: total.replace('.', '').replace(',', '.'),
         endereco_entrega: enderecoPrincipal,
         forma_pagamento: 'pix',
         itens: cartItems.map(item => ({
@@ -163,25 +187,26 @@ export default function FinalizarCompra() {
           quantity: item.quantity,
           image: item.image
         })),
-        data_entrega_prevista: pedidoConfirmado.dataEntrega
+        data_entrega_prevista: pedidoConfirmado.dataEntrega,
+        pontos_ganhos: pontosGanhos,
+        desconto_fidelidade_aplicado: descontoFidelidade,
+        desconto_percentual: descontoPercentual,
+        valor_total_sem_desconto: totalSemDesconto
       };
 
-      console.log('📦 Criando pedido na API:', pedidoData);
+      console.log('📦 Criando pedido na API com pontos:', pedidoData);
 
-      // Criar pedido na API
       await criarPedido(pedidoData);
-      
-      // Recarregar a lista de pedidos para atualizar o menu
       await carregarPedidos();
+      clearCart();
 
       Alert.alert(
         '🎉 Compra Finalizada com Sucesso!',
-        `Seu pedido #${pedidoConfirmado.numeroPedido} foi processado com sucesso!\n\n📦 Será entregue no endereço: ${enderecoPrincipal?.apelido}\n📮 Código de rastreio: ${pedidoConfirmado.codigoRastreio}\n\nVocê pode acompanhar seus pedidos no menu "Meus Pedidos".`,
+        `Seu pedido #${pedidoConfirmado.numeroPedido} foi processado com sucesso!\n\n📦 Será entregue no endereço: ${enderecoPrincipal?.apelido}\n⭐ Você ganhou ${pontosGanhos} pontos de fidelidade!\n💰 Total: R$ ${total}\n\nVocê pode acompanhar seus pedidos no menu "Meus Pedidos".`,
         [
           {
             text: '🏠 Voltar à Loja',
             onPress: () => {
-              // Limpar carrinho e voltar para home
               router.replace('/home/');
             }
           }
@@ -198,27 +223,85 @@ export default function FinalizarCompra() {
     }
   };
 
-  // 🔥 RENDER DAS ETAPAS 
   const renderStep1 = () => (
-    <>
-      {/* Resumo do Pedido */}
-      <View style={styles.resumo}>
-        <Text style={styles.subtitulo}>Resumo do Pedido</Text>
-        {cartItems.map((item: any, index: number) => (
-          <View key={index} style={styles.item}>
-            <View>
-              <Text style={styles.itemNome}>{item.name}</Text>
-              <Text style={styles.itemQuantidade}>Quantidade: {item.quantity}</Text>
-            </View>
-            <Text style={styles.itemPreco}>{item.price}</Text>
+  <>
+    {temDescontoDisponivel && !descontoAplicado && (
+      <View style={styles.fidelidadeSection}>
+        <View style={styles.fidelidadeHeader}>
+          <Ionicons name="trophy" size={24} color="#FFD700" />
+          <Text style={styles.fidelidadeTitle}>Desconto de Fidelidade Disponível!</Text>
+        </View>
+        <Text style={styles.fidelidadeText}>
+          Você tem {user.desconto_proxima_compra}% de desconto para esta compra!
+        </Text>
+        <TouchableOpacity 
+          style={styles.aplicarDescontoButton}
+          onPress={() => aplicarDescontoFidelidade(user.desconto_proxima_compra)}
+        >
+          <Ionicons name="sparkles" size={16} color="white" />
+          <Text style={styles.aplicarDescontoText}>Aplicar {user.desconto_proxima_compra}% de Desconto</Text>
+        </TouchableOpacity>
+      </View>
+    )}
+
+    {descontoAplicado && (
+      <View style={styles.descontoAplicadoSection}>
+        <View style={styles.descontoAplicadoHeader}>
+          <Ionicons name="checkmark-circle" size={20} color="#27ae60" />
+          <Text style={styles.descontoAplicadoText}>
+            Desconto de {user.desconto_proxima_compra}% aplicado!
+          </Text>
+        </View>
+        <Text style={styles.descontoValorText}>
+          Economia de R$ {descontoFidelidade.toFixed(2)}
+        </Text>
+        <TouchableOpacity 
+          style={styles.removerDescontoButton}
+          onPress={removerDescontoFidelidade}
+        >
+          <Text style={styles.removerDescontoText}>Remover desconto</Text>
+        </TouchableOpacity>
+      </View>
+    )}
+
+    {/* ⭐⭐ SEÇÃO DE PONTOS CORRIGIDA */}
+    <View style={styles.pontosSection}>
+      <View style={styles.pontosHeader}>
+        <Ionicons name="star" size={20} color="#FFD700" />
+        <Text style={styles.pontosTitle}>Pontos de Fidelidade</Text>
+      </View>
+      <Text style={styles.pontosText}>
+        Com esta compra você ganhará: <Text style={styles.pontosDestaque}>{pontosGanhos} pontos</Text>
+      </Text>
+      <Text style={styles.pontosInfo}>
+        Seus pontos totais: {getTotalPontosUsuario()} {/* ⭐⭐ CORREÇÃO AQUI */}
+      </Text>
+    </View> {/* ⭐⭐ FECHE A VIEW DE PONTOS AQUI */}
+
+    <View style={styles.resumo}>
+      <Text style={styles.subtitulo}>Resumo do Pedido</Text>
+      {cartItems.map((item: any, index: number) => (
+        <View key={index} style={styles.item}>
+          <View>
+            <Text style={styles.itemNome}>{item.name}</Text>
+            <Text style={styles.itemQuantidade}>Quantidade: {item.quantity}</Text>
           </View>
-        ))}
+          <Text style={styles.itemPreco}>{item.price}</Text>
+        </View>
+      ))}
+      
+      {descontoAplicado && (
+        <View style={styles.item}>
+          <Text style={styles.itemNome}>Desconto Fidelidade:</Text>
+          <Text style={styles.descontoItemPreco}>- R$ {descontoFidelidade.toFixed(2)}</Text>
+        </View>
+      )}
+        
         <View style={styles.total}>
           <Text style={styles.totalTexto}>Total: R$ {total}</Text>
         </View>
       </View>
 
-      {/* Endereço de Entrega */}
       <View style={styles.secao}>
         <View style={styles.sectionHeader}>
           <Text style={styles.subtitulo}>Endereço de Entrega</Text>
@@ -265,7 +348,6 @@ export default function FinalizarCompra() {
         )}
       </View>
 
-      {/* Dados Pessoais */}
       <View style={styles.secao}>
         <Text style={styles.subtitulo}>Dados Pessoais</Text>
         <TextInput
@@ -290,7 +372,6 @@ export default function FinalizarCompra() {
         />
       </View>
 
-      {/* Forma de Pagamento */}
       <View style={styles.secao}>
         <Text style={styles.subtitulo}>Forma de Pagamento</Text>
         <Text style={styles.instrucao}>Pagamento rápido e seguro via PIX</Text>
@@ -324,7 +405,6 @@ export default function FinalizarCompra() {
 
   const renderStep2 = () => (
     <>
-      {/* Resumo com forma de pagamento */}
       <View style={styles.resumo}>
         <Text style={styles.subtitulo}>Resumo do Pedido</Text>
         {cartItems.map((item: any, index: number) => (
@@ -345,7 +425,6 @@ export default function FinalizarCompra() {
         </View>
       </View>
 
-      {/* Dados de Pagamento */}
       <View style={styles.secao}>
         <Text style={styles.subtitulo}>Pagamento via PIX</Text>
         
@@ -355,13 +434,11 @@ export default function FinalizarCompra() {
             Escaneie o QR Code abaixo ou copie a chave PIX para realizar o pagamento
           </Text>
           
-          {/* QR Code Placeholder */}
           <View style={styles.qrCodePlaceholder}>
             <Text style={styles.qrCodeText}>QR CODE PIX</Text>
             <Text style={styles.qrCodeSubtext}>Aponte a câmera do seu app bancário</Text>
           </View>
           
-          {/* Chave PIX */}
           <View style={styles.chavePixContainer}>
             <Text style={styles.chavePixLabel}>Chave PIX (Copie e Cole):</Text>
             <TouchableOpacity style={styles.chavePixBox}>
@@ -405,12 +482,10 @@ export default function FinalizarCompra() {
 
   const renderStep3 = () => (
     <>
-      {/* REVISÃO COMPLETA DO PEDIDO */}
       <View style={styles.secao}>
         <Text style={styles.subtitulo}>Revise seu Pedido</Text>
         <Text style={styles.instrucao}>Confirme todas as informações antes de finalizar</Text>
         
-        {/* Dados Pessoais */}
         <View style={styles.revisaoGrupo}>
           <Text style={styles.revisaoTitulo}>Dados Pessoais</Text>
           <Text style={styles.revisaoTexto}>{dadosPagamento.nome}</Text>
@@ -418,7 +493,6 @@ export default function FinalizarCompra() {
           <Text style={styles.revisaoTexto}>{dadosPagamento.telefone}</Text>
         </View>
 
-        {/* Endereço */}
         <View style={styles.revisaoGrupo}>
           <Text style={styles.revisaoTitulo}>Endereço de Entrega</Text>
           {enderecoPrincipal ? (
@@ -440,14 +514,12 @@ export default function FinalizarCompra() {
           )}
         </View>
 
-        {/* Pagamento */}
         <View style={styles.revisaoGrupo}>
           <Text style={styles.revisaoTitulo}>Forma de Pagamento</Text>
           <Text style={styles.revisaoTexto}>PIX</Text>
           <Text style={styles.revisaoTextoPixInfo}>Pagamento instantâneo e seguro</Text>
         </View>
 
-        {/* Itens do Pedido */}
         <View style={styles.revisaoGrupo}>
           <Text style={styles.revisaoTitulo}>Itens do Pedido</Text>
           {cartItems.map((item: any, index: number) => (
@@ -456,13 +528,24 @@ export default function FinalizarCompra() {
               <Text style={styles.revisaoTexto}>{item.price}</Text>
             </View>
           ))}
+          {descontoAplicado && (
+            <View style={styles.revisaoItem}>
+              <Text style={styles.revisaoTexto}>Desconto Fidelidade:</Text>
+              <Text style={styles.revisaoTextoDesconto}>- R$ {descontoFidelidade.toFixed(2)}</Text>
+            </View>
+          )}
           <View style={styles.revisaoTotal}>
             <Text style={styles.revisaoTotalTexto}>Total: R$ {total}</Text>
           </View>
         </View>
+
+        <View style={styles.revisaoGrupo}>
+          <Text style={styles.revisaoTitulo}>Pontos de Fidelidade</Text>
+          <Text style={styles.revisaoTexto}>Pontos a ganhar: <Text style={styles.revisaoPontosDestaque}>{pontosGanhos} pontos</Text></Text>
+          <Text style={styles.revisaoTexto}>Total após compra: <Text style={styles.revisaoPontosDestaque}>{(user?.pontos_fidelidade || 0) + pontosGanhos} pontos</Text></Text>
+        </View>
       </View>
 
-      {/* Termos e Condições */}
       <View style={styles.termosContainer}>
         <Text style={styles.termosTexto}>
           Ao confirmar o pedido, você concorda com nossos{' '}
@@ -475,7 +558,6 @@ export default function FinalizarCompra() {
 
   const renderStep4 = () => (
     <>
-      {/* NOTA FISCAL */}
       <View style={styles.secao}>
         <Text style={styles.subtitulo}>Nota Fiscal</Text>
         <Text style={styles.instrucao}>
@@ -520,7 +602,6 @@ export default function FinalizarCompra() {
 
   const renderStep5 = () => (
     <>
-      {/* CONFIRMAÇÃO SIMPLES - SEM RASTREAMENTO */}
       <View style={styles.secao}>
         <View style={styles.confirmacaoHeader}>
           <Ionicons name="checkmark-circle" size={60} color="#27ae60" />
@@ -530,7 +611,19 @@ export default function FinalizarCompra() {
           </Text>
         </View>
 
-        {/* Dados do Pedido */}
+        <View style={styles.pontosGanhosSection}>
+          <View style={styles.pontosGanhosHeader}>
+            <Ionicons name="trophy" size={24} color="#FFD700" />
+            <Text style={styles.pontosGanhosTitle}>Pontos Ganhos!</Text>
+          </View>
+          <Text style={styles.pontosGanhosText}>
+            Você ganhou <Text style={styles.pontosGanhosDestaque}>{pontosGanhos} pontos</Text> com esta compra!
+          </Text>
+          <Text style={styles.pontosGanhosInfo}>
+            Seus pontos totais: {(user?.pontos_fidelidade || 0) + pontosGanhos}
+          </Text>
+        </View>
+
         <View style={styles.pedidoInfoContainer}>
           <View style={styles.pedidoInfo}>
             <Text style={styles.pedidoInfoLabel}>Número do Pedido</Text>
@@ -547,28 +640,31 @@ export default function FinalizarCompra() {
             <Text style={styles.pedidoInfoValor}>{pedidoConfirmado.dataEntrega}</Text>
           </View>
 
-          {/* Endereço de Entrega na Confirmação */}
           <View style={styles.pedidoInfo}>
             <Text style={styles.pedidoInfoLabel}>Endereço de Entrega</Text>
             <Text style={styles.pedidoInfoValor}>{enderecoPrincipal?.apelido}</Text>
           </View>
 
-          {/* Forma de Pagamento na Confirmação */}
           <View style={styles.pedidoInfo}>
             <Text style={styles.pedidoInfoLabel}>Forma de Pagamento</Text>
             <Text style={styles.pedidoInfoValor}>PIX</Text>
           </View>
         </View>
 
-        {/* ✅ REMOVIDA A SEÇÃO DE RASTREAMENTO */}
-
-        {/* Resumo Final */}
         <View style={styles.resumoFinal}>
           <Text style={styles.resumoFinalTitulo}>Resumo da Compra</Text>
           <View style={styles.resumoFinalItem}>
             <Text style={styles.resumoFinalLabel}>Itens:</Text>
             <Text style={styles.resumoFinalValor}>{cartItems.length} produto(s)</Text>
           </View>
+          
+          {descontoAplicado && (
+            <View style={styles.resumoFinalItem}>
+              <Text style={styles.resumoFinalLabel}>Desconto Fidelidade:</Text>
+              <Text style={styles.resumoFinalDesconto}>- R$ {descontoFidelidade.toFixed(2)}</Text>
+            </View>
+          )}
+          
           <View style={styles.resumoFinalItem}>
             <Text style={styles.resumoFinalLabel}>Total:</Text>
             <Text style={styles.resumoFinalValor}>R$ {total}</Text>
@@ -581,9 +677,13 @@ export default function FinalizarCompra() {
             <Text style={styles.resumoFinalLabel}>Endereço:</Text>
             <Text style={styles.resumoFinalValor}>{enderecoPrincipal?.apelido}</Text>
           </View>
+          
+          <View style={styles.resumoFinalItem}>
+            <Text style={styles.resumoFinalLabel}>Pontos Ganhos:</Text>
+            <Text style={styles.resumoFinalPontos}>+{pontosGanhos} pontos</Text>
+          </View>
         </View>
 
-        {/* ✅ MENSAGEM INFORMATIVA SOBRE ACOMPANHAMENTO */}
         <View style={styles.infoAcompanhamento}>
           <Ionicons name="information-circle" size={20} color="#126b1a" />
           <Text style={styles.infoAcompanhamentoTexto}>
@@ -616,7 +716,6 @@ export default function FinalizarCompra() {
     }
   };
 
-  // Se estiver carregando e não tem endereço principal
   if (loading && !enderecoPrincipal && currentStep === 1) {
     return (
       <View style={styles.fullContainer}>
@@ -643,7 +742,6 @@ export default function FinalizarCompra() {
     <View style={styles.fullContainer}>
       <Stack.Screen options={{ headerShown: false }} />
       
-      {/* HEADER FIXO */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -655,7 +753,6 @@ export default function FinalizarCompra() {
         <View style={styles.headerPlaceholder} />
       </View>
 
-      {/* INDICADOR DE STEPS EXPANDIDO */}
       <View style={styles.stepsContainer}>
         {[1, 2, 3, 4, 5].map((step) => (
           <React.Fragment key={step}>
@@ -676,7 +773,6 @@ export default function FinalizarCompra() {
         ))}
       </View>
 
-      {/* CONTEÚDO SCROLLABLE */}
       <ScrollView 
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -688,7 +784,6 @@ export default function FinalizarCompra() {
         {currentStep === 4 && renderStep4()}
         {currentStep === 5 && renderStep5()}
 
-        {/* Botões - Não mostrar na etapa final */}
         {currentStep !== 5 && (
           <View style={styles.botoes}>
             <TouchableOpacity 
@@ -715,7 +810,6 @@ export default function FinalizarCompra() {
           </View>
         )}
 
-        {/* ✅ BOTÃO SIMPLES NA ETAPA FINAL - APENAS "VOLTAR À LOJA" */}
         {currentStep === 5 && (
           <View style={styles.botoesFinal}>
             <TouchableOpacity 
@@ -739,7 +833,6 @@ export default function FinalizarCompra() {
   );
 }
 
-// 🔥 ESTILOS 
 const styles = StyleSheet.create({
   fullContainer: {
     flex: 1,
@@ -1247,7 +1340,6 @@ const styles = StyleSheet.create({
     color: '#2c3e50',
     fontWeight: '500',
   },
-  // ✅ NOVO ESTILO PARA INFORMAÇÃO DE ACOMPANHAMENTO
   infoAcompanhamento: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1376,4 +1468,165 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-});
+  fidelidadeSection: {
+    backgroundColor: '#FFF9E6',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFD700',
+  },
+  fidelidadeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  fidelidadeTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E67E22',
+  },
+  fidelidadeText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+  },
+  aplicarDescontoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#27ae60',
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  aplicarDescontoText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  descontoAplicadoSection: {
+    backgroundColor: '#E8F5E9',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#27ae60',
+  },
+  descontoAplicadoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+    gap: 8,
+  },
+  descontoAplicadoText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#27ae60',
+  },
+  descontoValorText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 10,
+  },
+  removerDescontoButton: {
+    alignSelf: 'flex-start',
+  },
+  removerDescontoText: {
+    color: '#e74c3c',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  pontosSection: {
+    backgroundColor: '#F0F8FF',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4A90E2',
+  },
+  pontosHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  pontosTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+  },
+  pontosText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  pontosDestaque: {
+    fontWeight: 'bold',
+    color: '#E67E22',
+  },
+  pontosInfo: {
+    fontSize: 12,
+    color: '#7F8C8D',
+  },
+  descontoItemPreco: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#e74c3c',
+  },
+  pontosGanhosSection: {
+    backgroundColor: '#FFF9E6',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFD700',
+  },
+  pontosGanhosHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  pontosGanhosTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#E67E22',
+  },
+  pontosGanhosText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 4,
+  },
+  pontosGanhosDestaque: {
+    fontWeight: 'bold',
+    color: '#E67E22',
+    fontSize: 18,
+  },
+  pontosGanhosInfo: {
+    fontSize: 14,
+    color: '#7F8C8D',
+  },
+  resumoFinalDesconto: {
+    fontSize: 14,
+    color: '#e74c3c',
+    fontWeight: 'bold',
+  },
+  resumoFinalPontos: {
+    fontSize: 14,
+    color: '#E67E22',
+    fontWeight: 'bold',
+  },
+  revisaoTextoDesconto: {
+    fontSize: 14,
+    color: '#e74c3c',
+    fontWeight: 'bold',
+  },
+    revisaoPontosDestaque: {
+    fontWeight: 'bold',
+    color: '#E67E22',
+  },
+}); // ⭐⭐ FIM DO StyleSheet
+
+export default FinalizarCompra; // ⭐⭐ EXPORT FORA DO StyleSheet

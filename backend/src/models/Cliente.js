@@ -1,3 +1,4 @@
+// JS Cliente.js - ARQUIVO COMPLETO ATUALIZADO
 const { DataTypes } = require('sequelize');
 const db = require('../config/db');
 
@@ -30,9 +31,7 @@ const Cliente = db.define('Cliente', {
     allowNull: false,
     unique: true,
     validate: {
-      // ⭐⭐ CORREÇÃO: Remova ou ajuste a validação do CPF ⭐⭐
-      // is: /^\d{3}\.\d{3}\.\d{3}\-\d{2}$/, // ❌ FORMATAÇÃO COM PONTOS E TRAÇO
-      len: [11, 14] // ✅ ACEITA CPF COM OU SEM FORMATAÇÃO
+      len: [11, 14]
     }
   },
   telefone: {
@@ -64,6 +63,22 @@ const Cliente = db.define('Cliente', {
       isDate: true
     }
   },
+  // ⭐⭐ NOVOS CAMPOS PARA FIDELIDADE - ADICIONADOS AQUI ⭐⭐
+  pontos_fidelidade: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+    allowNull: false
+  },
+  desconto_proxima_compra: {
+    type: DataTypes.DECIMAL(5, 2),
+    defaultValue: 0,
+    allowNull: false
+  },
+  data_expiracao_desconto: {
+    type: DataTypes.DATE,
+    allowNull: true
+  }
+  // ⭐⭐ FIM DOS NOVOS CAMPOS ⭐⭐
 }, {
   tableName: 'clientes',
   timestamps: false,

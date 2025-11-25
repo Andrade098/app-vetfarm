@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// home/resumoconta.tsx - ARQUIVO COMPLETO ATUALIZADO
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -21,6 +22,14 @@ const calcularPontos = (valor: number) => {
   if (valor >= 250) return 20;
   if (valor >= 100) return 10;
   return Math.floor(valor / 10);
+};
+
+// Função para calcular nível baseado nos pontos
+const calcularNivel = (pontos: number) => {
+  if (pontos >= 1000) return 'Diamante';
+  if (pontos >= 500) return 'Ouro';
+  if (pontos >= 250) return 'Prata';
+  return 'Bronze';
 };
 
 // Componente de Loading
@@ -63,59 +72,104 @@ export default function ResumoContaScreen() {
   const { user, loading } = useAuth();
 
   const [showHistorico, setShowHistorico] = useState(false);
+  const [historicoPontos, setHistoricoPontos] = useState([]);
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
 
-  // Dados do programa de fidelidade
+  // ⭐⭐ DADOS REAIS DO PROGRAMA DE FIDELIDADE ⭐⭐
   const [pontosData, setPontosData] = useState({
-    pontos: 245,
+    pontos: 0,
     meta: 1000,
-    nivel: 'Prata',
+    nivel: 'Bronze',
     consultasGratis: 0,
-    expiracao: '15/12/2025'
+    expiracao: 'Não definida',
+    descontoAtivo: 0,
+    dataExpiracaoDesconto: ''
   });
 
-  // Histórico de pontos
-  const [historicoPontos, setHistoricoPontos] = useState([
-    {
-      id: '1',
-      data: '15/03/2024',
-      descricao: 'Compra - Vermífugo Bovino',
-      valor: 45.90,
-      pontos: calcularPontos(45.90),
-      tipo: 'ganho'
-    },
-    {
-      id: '2',
-      data: '10/03/2024',
-      descricao: 'Compra - Cela Equina',
-      valor: 289.90,
-      pontos: calcularPontos(289.90),
-      tipo: 'ganho'
-    },
-    {
-      id: '3',
-      data: '05/03/2024',
-      descricao: 'Compra - Vacina Febre Aftosa',
-      valor: 89.90,
-      pontos: calcularPontos(89.90),
-      tipo: 'ganho'
-    },
-    {
-      id: '4',
-      data: '28/02/2024',
-      descricao: 'Compra - Suplemento Animais',
-      valor: 149.90,
-      pontos: calcularPontos(149.90),
-      tipo: 'ganho'
-    },
-    {
-      id: '5',
-      data: '20/02/2024',
-      descricao: 'Bônus - Primeira Compra',
-      valor: 0,
-      pontos: 25,
-      tipo: 'bonus'
-    },
-  ]);
+  // ⭐⭐ ATUALIZAR DADOS QUANDO O USUÁRIO MUDAR ⭐⭐
+  useEffect(() => {
+    if (user) {
+      const pontosUsuario = user.pontos_fidelidade || 0;
+      const descontoUsuario = user.desconto_proxima_compra || 0;
+      
+      console.log('👤 Dados do usuário:', {
+        pontos_fidelidade: pontosUsuario,
+        desconto_proxima_compra: descontoUsuario,
+        data_expiracao_desconto: user.data_expiracao_desconto
+      });
+
+      setPontosData({
+        pontos: pontosUsuario,
+        meta: 1000,
+        nivel: calcularNivel(pontosUsuario),
+        consultasGratis: Math.floor(pontosUsuario / 1000),
+        expiracao: '31/12/2025', // Data fixa de expiração
+        descontoAtivo: descontoUsuario,
+        dataExpiracaoDesconto: user.data_expiracao_desconto ? 
+          new Date(user.data_expiracao_desconto).toLocaleDateString('pt-BR') : 
+          'Não definida'
+      });
+      
+      // Carregar histórico de pontos (simulado por enquanto)
+      carregarHistoricoPontos();
+    }
+  }, [user]);
+
+  // ⭐⭐ FUNÇÃO PARA CARREGAR HISTÓRICO DE PONTOS ⭐⭐
+  const carregarHistoricoPontos = async () => {
+    setCarregandoHistorico(true);
+    try {
+      // Simular carregamento de histórico
+      // Posteriormente, você vai buscar da API
+      const historicoSimulado = [
+        {
+          id: '1',
+          data: '15/03/2024',
+          descricao: 'Compra - Vermífugo Bovino',
+          valor: 45.90,
+          pontos: calcularPontos(45.90),
+          tipo: 'ganho'
+        },
+        {
+          id: '2',
+          data: '10/03/2024',
+          descricao: 'Compra - Cela Equina',
+          valor: 289.90,
+          pontos: calcularPontos(289.90),
+          tipo: 'ganho'
+        },
+        {
+          id: '3',
+          data: '05/03/2024',
+          descricao: 'Compra - Vacina Febre Aftosa',
+          valor: 89.90,
+          pontos: calcularPontos(89.90),
+          tipo: 'ganho'
+        },
+        {
+          id: '4',
+          data: '28/02/2024',
+          descricao: 'Compra - Suplemento Animais',
+          valor: 149.90,
+          pontos: calcularPontos(149.90),
+          tipo: 'ganho'
+        },
+        {
+          id: '5',
+          data: '20/02/2024',
+          descricao: 'Bônus - Primeira Compra',
+          valor: 0,
+          pontos: 25,
+          tipo: 'bonus'
+        },
+      ];
+      setHistoricoPontos(historicoSimulado);
+    } catch (error) {
+      console.error('Erro ao carregar histórico:', error);
+    } finally {
+      setCarregandoHistorico(false);
+    }
+  };
 
   // ⭐⭐ LOADING STATE
   if (loading) {
@@ -141,7 +195,7 @@ export default function ResumoContaScreen() {
   };
 
   const pontosRestantes = () => {
-    return pontosData.meta - pontosData.pontos;
+    return Math.max(0, pontosData.meta - pontosData.pontos);
   };
 
   const getCategoriaPontos = (valor: number) => {
@@ -150,6 +204,24 @@ export default function ResumoContaScreen() {
     if (valor >= 250) return 'Média (20 pts)';
     if (valor >= 100) return 'Básica (10 pts)';
     return `Padrão (${Math.floor(valor / 10)} pts)`;
+  };
+
+  // ⭐⭐ FUNÇÃO PARA VERIFICAR SE TEM DESCONTO ATIVO ⭐⭐
+  const temDescontoAtivo = () => {
+    const hoje = new Date();
+    const dataExpiracao = user.data_expiracao_desconto ? new Date(user.data_expiracao_desconto) : null;
+    
+    const descontoValido = pontosData.descontoAtivo > 0 && 
+      (!dataExpiracao || dataExpiracao > hoje);
+    
+    console.log('🎫 Verificando desconto:', {
+      descontoAtivo: pontosData.descontoAtivo,
+      dataExpiracao: dataExpiracao,
+      hoje: hoje,
+      descontoValido: descontoValido
+    });
+    
+    return descontoValido;
   };
 
   const renderItemHistorico = ({ item }) => (
@@ -226,6 +298,24 @@ export default function ResumoContaScreen() {
         <View style={styles.fidelidadeContainer}>
           <Text style={styles.sectionTitle}>Seus Pontos de Fidelidade</Text>
 
+          {/* ⭐⭐ CARD DE DESCONTO ATIVO ⭐⭐ */}
+          {temDescontoAtivo() && (
+            <View style={styles.descontoAtivoCard}>
+              <View style={styles.descontoAtivoHeader}>
+                <Ionicons name="sparkles" size={24} color="#FFD700" />
+                <Text style={styles.descontoAtivoTitulo}>Desconto Ativo!</Text>
+              </View>
+              <Text style={styles.descontoAtivoTexto}>
+                Você tem {pontosData.descontoAtivo}% de desconto na próxima compra
+              </Text>
+              {pontosData.dataExpiracaoDesconto !== 'Não definida' && (
+                <Text style={styles.descontoExpiracao}>
+                  Válido até: {pontosData.dataExpiracaoDesconto}
+                </Text>
+              )}
+            </View>
+          )}
+
           {/* Card de Tabela de Pontos */}
           <View style={styles.tabelaPontosCard}>
             <Text style={styles.tabelaTitulo}>Como Ganhar Pontos</Text>
@@ -269,7 +359,7 @@ export default function ResumoContaScreen() {
                 <View
                   style={[
                     styles.progressoPreenchido,
-                    { width: `${calcularProgresso()}%` }
+                    { width: `${Math.min(calcularProgresso(), 100)}%` }
                   ]}
                 />
               </View>
@@ -340,17 +430,34 @@ export default function ResumoContaScreen() {
               </View>
             </View>
 
-            {/* Lista do Histórico */}
-            <FlatList
-              data={historicoPontos}
-              renderItem={renderItemHistorico}
-              keyExtractor={item => item.id}
-              style={styles.historicoList}
-              showsVerticalScrollIndicator={false}
-              ListHeaderComponent={
-                <Text style={styles.historicoTitulo}>Últimas Transações</Text>
-              }
-            />
+            {/* Loading do Histórico */}
+            {carregandoHistorico ? (
+              <View style={styles.historicoLoading}>
+                <ActivityIndicator size="small" color="#126b1a" />
+                <Text style={styles.historicoLoadingText}>Carregando histórico...</Text>
+              </View>
+            ) : (
+              /* Lista do Histórico */
+              <FlatList
+                data={historicoPontos}
+                renderItem={renderItemHistorico}
+                keyExtractor={item => item.id}
+                style={styles.historicoList}
+                showsVerticalScrollIndicator={false}
+                ListHeaderComponent={
+                  <Text style={styles.historicoTitulo}>Últimas Transações</Text>
+                }
+                ListEmptyComponent={
+                  <View style={styles.historicoVazio}>
+                    <Ionicons name="receipt-outline" size={48} color="#ccc" />
+                    <Text style={styles.historicoVazioTexto}>Nenhuma transação encontrada</Text>
+                    <Text style={styles.historicoVazioSubtexto}>
+                      Suas compras aparecerão aqui
+                    </Text>
+                  </View>
+                }
+              />
+            )}
 
             {/* Botão Fechar */}
             <TouchableOpacity
@@ -505,6 +612,36 @@ const styles = StyleSheet.create({
   },
   fidelidadeContainer: {
     marginBottom: 30,
+  },
+  // ⭐⭐ NOVO ESTILO PARA CARD DE DESCONTO ATIVO ⭐⭐
+  descontoAtivoCard: {
+    backgroundColor: '#FFF9E6',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFD700',
+  },
+  descontoAtivoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  descontoAtivoTitulo: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E67E22',
+  },
+  descontoAtivoTexto: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  descontoExpiracao: {
+    fontSize: 12,
+    color: '#7F8C8D',
+    fontStyle: 'italic',
   },
   tabelaPontosCard: {
     backgroundColor: '#fff',
@@ -770,5 +907,34 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // ⭐⭐ NOVOS ESTILOS PARA LOADING E ESTADO VAZIO ⭐⭐
+  historicoLoading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  historicoLoadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#666',
+  },
+  historicoVazio: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  historicoVazioTexto: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  historicoVazioSubtexto: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
   },
 });
