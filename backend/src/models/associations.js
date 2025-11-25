@@ -3,6 +3,9 @@ const Categoria = require('./Categoria');
 const Subcategoria = require('./Subcategoria');
 const Farmacia = require('./Farmacia');
 const FarmaciaProduto = require('./FarmaciaProduto');
+const Cliente = require('./Cliente');
+const Pedido = require('./Pedido');
+const Endereco = require('./Endereco');
 
 // ASSOCIAÇÕES EXISTENTES (Categoria, Subcategoria, Produto)
 // Produto pertence a uma Categoria (Tipo de Produto)
@@ -79,10 +82,41 @@ FarmaciaProduto.belongsTo(Produto, {
   as: 'produto'
 });
 
+// ✅ NOVAS ASSOCIAÇÕES PARA PEDIDOS E ENDEREÇOS
+
+// Cliente tem muitos Pedidos
+Cliente.hasMany(Pedido, {
+  foreignKey: 'usuario_id',
+  as: 'pedidos'
+});
+
+// Pedido pertence a um Cliente
+Pedido.belongsTo(Cliente, {
+  foreignKey: 'usuario_id',
+  as: 'cliente'
+});
+
+// Cliente tem muitos Endereços
+Cliente.hasMany(Endereco, {
+  foreignKey: 'usuario_id',
+  as: 'enderecos'
+});
+
+// Endereço pertence a um Cliente
+Endereco.belongsTo(Cliente, {
+  foreignKey: 'usuario_id',
+  as: 'cliente'
+});
+
+console.log('✅ Todas as associações carregadas com sucesso!');
+
 module.exports = {
   Produto,
   Categoria,
   Subcategoria,
   Farmacia,
-  FarmaciaProduto
+  FarmaciaProduto,
+  Cliente,
+  Pedido,
+  Endereco
 };

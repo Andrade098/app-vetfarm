@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useEnderecos } from '../../contexts/EnderecoContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { usePedidos } from '../../contexts/PedidoContext';
 
 export default function FinalizarCompra() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { enderecoPrincipal, loading } = useEnderecos();
+  const { user } = useAuth();
+  const { criarPedido, carregarPedidos } = usePedidos();
   
   // RECEBE OS ITENS DO CARRINHO E TOTAL
   const cartItems = params.cartItems ? JSON.parse(params.cartItems as string) : [];
@@ -18,26 +22,21 @@ export default function FinalizarCompra() {
     if (cartItems.length === 0) return '0,00';
     
     const totalCalculado = cartItems.reduce((acc: number, item: any) => {
-      // Extrair o valor numérico do preço formatado
       let precoString = item.price;
       
-      // Remover "R$ " se existir
       if (precoString.includes('R$')) {
         precoString = precoString.replace('R$', '').trim();
       }
       
-      // Substituir vírgula por ponto e converter para número
       const precoNumerico = parseFloat(
         precoString.replace('.', '').replace(',', '.')
       );
       
-      // Se for NaN, usar 0
       const precoValido = isNaN(precoNumerico) ? 0 : precoNumerico;
       
       return acc + (precoValido * item.quantity);
     }, 0);
     
-    // Formatar para o padrão brasileiro
     return totalCalculado.toLocaleString('pt-BR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
@@ -47,17 +46,16 @@ export default function FinalizarCompra() {
   const total = calcularTotal();
 
   const [currentStep, setCurrentStep] = useState(1);
-  const [formaPagamento, setFormaPagamento] = useState('');
+  const [formaPagamento, setFormaPagamento] = useState('pix');
+  const [finalizando, setFinalizando] = useState(false);
+
+  // ✅ DADOS PESSOAIS AGORA PEGAM AUTOMATICAMENTE DO USUÁRIO LOGADO
   const [dadosPagamento, setDadosPagamento] = useState({
-    nome: '',
-    email: '',
-    telefone: '',
-    cartao: '',
-    validade: '',
-    cvv: '',
-    nomeTitular: '',
+    nome: user?.nome || '',
+    email: user?.email || '',
+    telefone: user?.telefone || '',
     cpfNotaFiscal: '',
-    emailNotaFiscal: ''
+    emailNotaFiscal: user?.email || ''
   });
 
   // DADOS DO PEDIDO CONFIRMADO
@@ -68,9 +66,8 @@ export default function FinalizarCompra() {
     dataPedido: new Date().toLocaleDateString('pt-BR')
   });
 
+  // ✅ FORMAS DE PAGAMENTO - AGORA SÓ PIX
   const formasPagamento = [
-    { id: 'credito', nome: 'Cartão de Crédito', icon: '💳' },
-    { id: 'debito', nome: 'Cartão de Débito', icon: '💳' },
     { id: 'pix', nome: 'PIX', icon: '📱' },
   ];
 
@@ -90,6 +87,19 @@ export default function FinalizarCompra() {
       );
     }
   }, [currentStep, loading, enderecoPrincipal]);
+
+  // ✅ ATUALIZAR DADOS QUANDO USUÁRIO MUDAR
+  useEffect(() => {
+    if (user) {
+      setDadosPagamento(prev => ({
+        ...prev,
+        nome: user.nome || '',
+        email: user.email || '',
+        telefone: user.telefone || '',
+        emailNotaFiscal: user.email || ''
+      }));
+    }
+  }, [user]);
 
   const handleSelecionarPagamento = (forma: string) => {
     setFormaPagamento(forma);
@@ -111,19 +121,8 @@ export default function FinalizarCompra() {
         );
         return;
       }
-      if (!formaPagamento) {
-        Alert.alert('Atenção', 'Por favor, selecione uma forma de pagamento');
-        return;
-      }
       setCurrentStep(2);
     } else if (currentStep === 2) {
-      // Validação dos dados de pagamento
-      if (formaPagamento !== 'pix') {
-        if (!dadosPagamento.cartao || !dadosPagamento.validade || !dadosPagamento.cvv || !dadosPagamento.nomeTitular) {
-          Alert.alert('Erro', 'Por favor, preencha todos os dados do cartão');
-          return;
-        }
-      }
       setCurrentStep(3);
     } else if (currentStep === 3) {
       setCurrentStep(4);
@@ -144,24 +143,62 @@ export default function FinalizarCompra() {
     }
   };
 
-  const handleFinalizarCompra = () => {
-    // Simular processamento do pedido
-    Alert.alert(
-      'Compra Finalizada com Sucesso!',
-      `Seu pedido #${pedidoConfirmado.numeroPedido} foi processado.\nSerá entregue no endereço: ${enderecoPrincipal?.apelido}\nCódigo de rastreio: ${pedidoConfirmado.codigoRastreio}`,
-      [
-        {
-          text: 'Acompanhar Pedido',
-          onPress: () => router.push('/home/rastrearpedido')
-        },
-        {
-          text: 'Voltar à Loja',
-          onPress: () => router.push('/home/')
-        }
-      ]
-    );
+  // ✅✅✅ FUNÇÃO CORRIGIDA - AGORA CRIA PEDIDO REAL NA API
+  const handleFinalizarCompra = async () => {
+    try {
+      setFinalizando(true);
+
+      // Criar objeto do pedido para a API
+      const pedidoData = {
+        numero_pedido: pedidoConfirmado.numeroPedido,
+        codigo_rastreio: pedidoConfirmado.codigoRastreio,
+        status: 'pendente', // Status inicial
+        total: total.replace('.', '').replace(',', '.'), // Converter para formato numérico
+        endereco_entrega: enderecoPrincipal,
+        forma_pagamento: 'pix',
+        itens: cartItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price.replace('R$', '').trim(),
+          quantity: item.quantity,
+          image: item.image
+        })),
+        data_entrega_prevista: pedidoConfirmado.dataEntrega
+      };
+
+      console.log('📦 Criando pedido na API:', pedidoData);
+
+      // Criar pedido na API
+      await criarPedido(pedidoData);
+      
+      // Recarregar a lista de pedidos para atualizar o menu
+      await carregarPedidos();
+
+      Alert.alert(
+        '🎉 Compra Finalizada com Sucesso!',
+        `Seu pedido #${pedidoConfirmado.numeroPedido} foi processado com sucesso!\n\n📦 Será entregue no endereço: ${enderecoPrincipal?.apelido}\n📮 Código de rastreio: ${pedidoConfirmado.codigoRastreio}\n\nVocê pode acompanhar seus pedidos no menu "Meus Pedidos".`,
+        [
+          {
+            text: '🏠 Voltar à Loja',
+            onPress: () => {
+              // Limpar carrinho e voltar para home
+              router.replace('/home/');
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('❌ Erro ao finalizar compra:', error);
+      Alert.alert(
+        'Erro', 
+        'Não foi possível finalizar a compra. Tente novamente.'
+      );
+    } finally {
+      setFinalizando(false);
+    }
   };
 
+  // 🔥 RENDER DAS ETAPAS 
   const renderStep1 = () => (
     <>
       {/* Resumo do Pedido */}
@@ -181,7 +218,7 @@ export default function FinalizarCompra() {
         </View>
       </View>
 
-      {/* Endereço de Entrega - AGORA USANDO O ENDEREÇO PRINCIPAL DO CONTEXTO */}
+      {/* Endereço de Entrega */}
       <View style={styles.secao}>
         <View style={styles.sectionHeader}>
           <Text style={styles.subtitulo}>Endereço de Entrega</Text>
@@ -256,7 +293,7 @@ export default function FinalizarCompra() {
       {/* Forma de Pagamento */}
       <View style={styles.secao}>
         <Text style={styles.subtitulo}>Forma de Pagamento</Text>
-        <Text style={styles.instrucao}>Selecione como deseja pagar:</Text>
+        <Text style={styles.instrucao}>Pagamento rápido e seguro via PIX</Text>
         
         {formasPagamento.map((forma) => (
           <TouchableOpacity
@@ -274,6 +311,13 @@ export default function FinalizarCompra() {
             )}
           </TouchableOpacity>
         ))}
+
+        <View style={styles.pixInfo}>
+          <Ionicons name="information-circle-outline" size={16} color="#126b1a" />
+          <Text style={styles.pixInfoText}>
+            Pagamento instantâneo • Disponível 24h • Sem taxas
+          </Text>
+        </View>
       </View>
     </>
   );
@@ -294,97 +338,67 @@ export default function FinalizarCompra() {
         ))}
         <View style={styles.item}>
           <Text style={styles.itemNome}>Forma de Pagamento:</Text>
-          <Text style={styles.itemPreco}>
-            {formaPagamento === 'credito' && 'Cartão de Crédito'}
-            {formaPagamento === 'debito' && 'Cartão de Débito'}
-            {formaPagamento === 'pix' && 'PIX'}
-          </Text>
+          <Text style={styles.itemPreco}>PIX</Text>
         </View>
         <View style={styles.total}>
           <Text style={styles.totalTexto}>Total: R$ {total}</Text>
         </View>
       </View>
 
-      {/* Dados de Pagamento Específicos */}
+      {/* Dados de Pagamento */}
       <View style={styles.secao}>
-        <Text style={styles.subtitulo}>Dados de Pagamento</Text>
+        <Text style={styles.subtitulo}>Pagamento via PIX</Text>
         
-        {formaPagamento === 'pix' ? (
-          // TELA PIX
-          <View style={styles.pixContainer}>
-            <Text style={styles.pixTitulo}>Pagamento via PIX</Text>
-            <Text style={styles.pixInstrucao}>
-              Escaneie o QR Code abaixo ou copie a chave PIX para realizar o pagamento
-            </Text>
-            
-            {/* QR Code Placeholder */}
-            <View style={styles.qrCodePlaceholder}>
-              <Text style={styles.qrCodeText}>QR CODE PIX</Text>
-              <Text style={styles.qrCodeSubtext}>Aponte a câmera do seu app bancário</Text>
-            </View>
-            
-            {/* Chave PIX */}
-            <View style={styles.chavePixContainer}>
-              <Text style={styles.chavePixLabel}>Chave PIX (Copie e Cole):</Text>
-              <TouchableOpacity style={styles.chavePixBox}>
-                <Text style={styles.chavePixText}>
-                  00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-1234-567890abcdef5204000053039865406{total.replace(',', '')}5802BR5913VET FARM LTDA6008SAO PAULO62070503***6304A1B2
-                </Text>
-                <Ionicons name="copy-outline" size={20} color="#126b1a" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.botaoCopiar}>
-                <Text style={styles.botaoCopiarTexto}>Copiar Chave PIX</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <Text style={styles.pixAviso}>
-              ✅ Pagamento aprovado automaticamente após a confirmação
-            </Text>
+        <View style={styles.pixContainer}>
+          <Text style={styles.pixTitulo}>Pague com PIX</Text>
+          <Text style={styles.pixInstrucao}>
+            Escaneie o QR Code abaixo ou copie a chave PIX para realizar o pagamento
+          </Text>
+          
+          {/* QR Code Placeholder */}
+          <View style={styles.qrCodePlaceholder}>
+            <Text style={styles.qrCodeText}>QR CODE PIX</Text>
+            <Text style={styles.qrCodeSubtext}>Aponte a câmera do seu app bancário</Text>
           </View>
-        ) : (
-          // TELA CARTÃO (CRÉDITO/DÉBITO)
-          <>
-            <TextInput
-              style={styles.input}
-              placeholder="Número do Cartão*"
-              keyboardType="numeric"
-              value={dadosPagamento.cartao}
-              onChangeText={(text) => setDadosPagamento({...dadosPagamento, cartao: text})}
-            />
-            <View style={styles.linha}>
-              <TextInput
-                style={[styles.input, styles.inputMedio]}
-                placeholder="Validade (MM/AA)*"
-                value={dadosPagamento.validade}
-                onChangeText={(text) => setDadosPagamento({...dadosPagamento, validade: text})}
-              />
-              <TextInput
-                style={[styles.input, styles.inputPequeno]}
-                placeholder="CVV*"
-                keyboardType="numeric"
-                secureTextEntry
-                value={dadosPagamento.cvv}
-                onChangeText={(text) => setDadosPagamento({...dadosPagamento, cvv: text})}
-              />
+          
+          {/* Chave PIX */}
+          <View style={styles.chavePixContainer}>
+            <Text style={styles.chavePixLabel}>Chave PIX (Copie e Cole):</Text>
+            <TouchableOpacity style={styles.chavePixBox}>
+              <Text style={styles.chavePixText}>
+                00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-1234-567890abcdef5204000053039865406{total.replace(',', '')}5802BR5913VET FARM LTDA6008SAO PAULO62070503***6304A1B2
+              </Text>
+              <Ionicons name="copy-outline" size={20} color="#126b1a" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.botaoCopiar}>
+              <Text style={styles.botaoCopiarTexto}>Copiar Chave PIX</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <Text style={styles.pixAviso}>
+            ✅ Pagamento aprovado automaticamente após a confirmação
+          </Text>
+
+          <View style={styles.instrucoesPix}>
+            <Text style={styles.instrucoesTitulo}>Como pagar:</Text>
+            <View style={styles.instrucaoItem}>
+              <Text style={styles.instrucaoNumero}>1</Text>
+              <Text style={styles.instrucaoTexto}>Abra seu app bancário</Text>
             </View>
-            <TextInput
-              style={styles.input}
-              placeholder="Nome do Titular*"
-              value={dadosPagamento.nomeTitular}
-              onChangeText={(text) => setDadosPagamento({...dadosPagamento, nomeTitular: text})}
-            />
-            
-            {formaPagamento === 'credito' && (
-              <View style={styles.parcelamento}>
-                <Text style={styles.parcelamentoLabel}>Parcelas:</Text>
-                <TouchableOpacity style={styles.parcelamentoSelect}>
-                  <Text>1x de R$ {total} (sem juros)</Text>
-                  <Ionicons name="chevron-down" size={16} color="#666" />
-                </TouchableOpacity>
-              </View>
-            )}
-          </>
-        )}
+            <View style={styles.instrucaoItem}>
+              <Text style={styles.instrucaoNumero}>2</Text>
+              <Text style={styles.instrucaoTexto}>Escaneie o QR Code ou cole a chave PIX</Text>
+            </View>
+            <View style={styles.instrucaoItem}>
+              <Text style={styles.instrucaoNumero}>3</Text>
+              <Text style={styles.instrucaoTexto}>Confirme o pagamento</Text>
+            </View>
+            <View style={styles.instrucaoItem}>
+              <Text style={styles.instrucaoNumero}>4</Text>
+              <Text style={styles.instrucaoTexto}>Pronto! Seu pedido será processado</Text>
+            </View>
+          </View>
+        </View>
       </View>
     </>
   );
@@ -404,7 +418,7 @@ export default function FinalizarCompra() {
           <Text style={styles.revisaoTexto}>{dadosPagamento.telefone}</Text>
         </View>
 
-        {/* Endereço - AGORA USANDO O ENDEREÇO PRINCIPAL */}
+        {/* Endereço */}
         <View style={styles.revisaoGrupo}>
           <Text style={styles.revisaoTitulo}>Endereço de Entrega</Text>
           {enderecoPrincipal ? (
@@ -429,14 +443,8 @@ export default function FinalizarCompra() {
         {/* Pagamento */}
         <View style={styles.revisaoGrupo}>
           <Text style={styles.revisaoTitulo}>Forma de Pagamento</Text>
-          <Text style={styles.revisaoTexto}>
-            {formaPagamento === 'credito' && 'Cartão de Crédito'}
-            {formaPagamento === 'debito' && 'Cartão de Débito'}
-            {formaPagamento === 'pix' && 'PIX'}
-          </Text>
-          {formaPagamento !== 'pix' && dadosPagamento.cartao && (
-            <Text style={styles.revisaoTexto}>Final {dadosPagamento.cartao?.slice(-4)}</Text>
-          )}
+          <Text style={styles.revisaoTexto}>PIX</Text>
+          <Text style={styles.revisaoTextoPixInfo}>Pagamento instantâneo e seguro</Text>
         </View>
 
         {/* Itens do Pedido */}
@@ -512,7 +520,7 @@ export default function FinalizarCompra() {
 
   const renderStep5 = () => (
     <>
-      {/* CONFIRMAÇÃO E RASTREAMENTO */}
+      {/* CONFIRMAÇÃO SIMPLES - SEM RASTREAMENTO */}
       <View style={styles.secao}>
         <View style={styles.confirmacaoHeader}>
           <Ionicons name="checkmark-circle" size={60} color="#27ae60" />
@@ -544,31 +552,15 @@ export default function FinalizarCompra() {
             <Text style={styles.pedidoInfoLabel}>Endereço de Entrega</Text>
             <Text style={styles.pedidoInfoValor}>{enderecoPrincipal?.apelido}</Text>
           </View>
-        </View>
 
-        {/* Código de Rastreio */}
-        <View style={styles.rastreioContainer}>
-          <Text style={styles.rastreioTitulo}>Acompanhe seu Pedido</Text>
-          <View style={styles.codigoRastreioBox}>
-            <Text style={styles.codigoRastreio}>{pedidoConfirmado.codigoRastreio}</Text>
-            <TouchableOpacity style={styles.botaoCopiarRastreio}>
-              <Ionicons name="copy-outline" size={16} color="#126b1a" />
-              <Text style={styles.botaoCopiarRastreioTexto}>Copiar</Text>
-            </TouchableOpacity>
+          {/* Forma de Pagamento na Confirmação */}
+          <View style={styles.pedidoInfo}>
+            <Text style={styles.pedidoInfoLabel}>Forma de Pagamento</Text>
+            <Text style={styles.pedidoInfoValor}>PIX</Text>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.botaoRastrear}
-            onPress={() => router.push('/home/rastrearpedido')}
-          >
-            <Ionicons name="search-outline" size={20} color="white" />
-            <Text style={styles.botaoRastrearTexto}>Rastrear Pedido Agora</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.rastreioAviso}>
-            Você receberá atualizações por email e WhatsApp
-          </Text>
         </View>
+
+        {/* ✅ REMOVIDA A SEÇÃO DE RASTREAMENTO */}
 
         {/* Resumo Final */}
         <View style={styles.resumoFinal}>
@@ -583,16 +575,20 @@ export default function FinalizarCompra() {
           </View>
           <View style={styles.resumoFinalItem}>
             <Text style={styles.resumoFinalLabel}>Forma de Pagamento:</Text>
-            <Text style={styles.resumoFinalValor}>
-              {formaPagamento === 'credito' && 'Cartão de Crédito'}
-              {formaPagamento === 'debito' && 'Cartão de Débito'}
-              {formaPagamento === 'pix' && 'PIX'}
-            </Text>
+            <Text style={styles.resumoFinalValor}>PIX</Text>
           </View>
           <View style={styles.resumoFinalItem}>
             <Text style={styles.resumoFinalLabel}>Endereço:</Text>
             <Text style={styles.resumoFinalValor}>{enderecoPrincipal?.apelido}</Text>
           </View>
+        </View>
+
+        {/* ✅ MENSAGEM INFORMATIVA SOBRE ACOMPANHAMENTO */}
+        <View style={styles.infoAcompanhamento}>
+          <Ionicons name="information-circle" size={20} color="#126b1a" />
+          <Text style={styles.infoAcompanhamentoTexto}>
+            Você pode acompanhar seus pedidos no menu "Meus Pedidos"
+          </Text>
         </View>
       </View>
     </>
@@ -601,7 +597,7 @@ export default function FinalizarCompra() {
   const getStepTitle = () => {
     switch(currentStep) {
       case 1: return 'Finalizar Compra';
-      case 2: return 'Pagamento';
+      case 2: return 'Pagamento PIX';
       case 3: return 'Revisão do Pedido';
       case 4: return 'Nota Fiscal';
       case 5: return 'Confirmação';
@@ -611,11 +607,11 @@ export default function FinalizarCompra() {
 
   const getButtonText = () => {
     switch(currentStep) {
-      case 1: return 'Avançar para Pagamento';
+      case 1: return 'Pagar com PIX';
       case 2: return 'Revisar Pedido';
       case 3: return 'Continuar para Nota Fiscal';
       case 4: return 'Confirmar e Finalizar';
-      case 5: return 'Acompanhar Pedido';
+      case 5: return finalizando ? 'Finalizando...' : 'Voltar à Loja';
       default: return 'Avançar';
     }
   };
@@ -645,7 +641,6 @@ export default function FinalizarCompra() {
 
   return (
     <View style={styles.fullContainer}>
-      {/* REMOVE O HEADER PADRÃO */}
       <Stack.Screen options={{ headerShown: false }} />
       
       {/* HEADER FIXO */}
@@ -670,7 +665,7 @@ export default function FinalizarCompra() {
               </Text>
               <Text style={[styles.stepLabel, currentStep === step && styles.stepLabelAtivo]}>
                 {step === 1 && 'Dados'}
-                {step === 2 && 'Pagamento'}
+                {step === 2 && 'PIX'}
                 {step === 3 && 'Revisão'}
                 {step === 4 && 'Nota Fiscal'}
                 {step === 5 && 'Confirmação'}
@@ -720,23 +715,22 @@ export default function FinalizarCompra() {
           </View>
         )}
 
-        {/* Botões específicos para etapa final */}
+        {/* ✅ BOTÃO SIMPLES NA ETAPA FINAL - APENAS "VOLTAR À LOJA" */}
         {currentStep === 5 && (
           <View style={styles.botoesFinal}>
             <TouchableOpacity 
-              style={styles.botaoSecundario}
-              onPress={() => router.push('/home/rastrearpedido')}
-            >
-              <Ionicons name="search-outline" size={20} color="#126b1a" />
-              <Text style={styles.botaoSecundarioTexto}>Acompanhar Pedido</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.botaoPrimario}
+              style={[styles.botaoPrimario, finalizando && styles.botaoPrimarioDisabled]}
               onPress={handleFinalizarCompra}
+              disabled={finalizando}
             >
-              <Ionicons name="home-outline" size={20} color="white" />
-              <Text style={styles.botaoPrimarioTexto}>Voltar à Loja</Text>
+              {finalizando ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Ionicons name="home-outline" size={20} color="white" />
+              )}
+              <Text style={styles.botaoPrimarioTexto}>
+                {finalizando ? 'Finalizando...' : 'Voltar à Loja'}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -745,6 +739,7 @@ export default function FinalizarCompra() {
   );
 }
 
+// 🔥 ESTILOS 
 const styles = StyleSheet.create({
   fullContainer: {
     flex: 1,
@@ -791,9 +786,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 5,
   },
-  stepAtivo: {
-    // Estilo quando step está ativo
-  },
+  stepAtivo: {},
   stepText: {
     width: 30,
     height: 30,
@@ -907,18 +900,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: '#fafafa',
   },
-  linha: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  inputPequeno: {
-    width: '30%',
-  },
-  inputMedio: {
-    width: '65%',
-  },
-  
-  // Estilos para formas de pagamento
   pagamentoOption: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -943,8 +924,20 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#333',
   },
-  
-  // Estilos para PIX
+  pixInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f9f0',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 10,
+    gap: 8,
+  },
+  pixInfoText: {
+    fontSize: 12,
+    color: '#126b1a',
+    flex: 1,
+  },
   pixContainer: {
     alignItems: 'center',
   },
@@ -1028,29 +1021,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 10,
   },
-  
-  // Estilos para parcelamento
-  parcelamento: {
-    marginTop: 10,
+  instrucoesPix: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
   },
-  parcelamentoLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+  instrucoesTitulo: {
+    fontSize: 16,
+    fontWeight: 'bold',
     color: '#333',
+    marginBottom: 10,
+  },
+  instrucaoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  parcelamentoSelect: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: '#fafafa',
+  instrucaoNumero: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#126b1a',
+    color: 'white',
+    textAlign: 'center',
+    lineHeight: 24,
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginRight: 10,
   },
-  
-  // Botões
+  instrucaoTexto: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+  },
   botoes: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1086,10 +1090,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-
-  // NOVOS ESTILOS PARA AS ETAPAS ADICIONAIS
-
-  // Estilos para revisão (etapa 3)
   revisaoGrupo: {
     marginBottom: 20,
     paddingBottom: 15,
@@ -1110,6 +1110,11 @@ const styles = StyleSheet.create({
   revisaoTextoErro: {
     fontSize: 14,
     color: '#e74c3c',
+    fontStyle: 'italic',
+  },
+  revisaoTextoPixInfo: {
+    fontSize: 12,
+    color: '#666',
     fontStyle: 'italic',
   },
   revisaoItem: {
@@ -1144,8 +1149,6 @@ const styles = StyleSheet.create({
     color: '#126b1a',
     fontWeight: '500',
   },
-
-  // Estilos para nota fiscal (etapa 4)
   notaFiscalContainer: {
     alignItems: 'center',
   },
@@ -1181,8 +1184,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
   },
-
-  // Estilos para confirmação (etapa 5)
   confirmacaoHeader: {
     alignItems: 'center',
     marginBottom: 30,
@@ -1220,73 +1221,11 @@ const styles = StyleSheet.create({
     color: '#2c3e50',
     fontWeight: 'bold',
   },
-  rastreioContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  rastreioTitulo: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2c3e50',
-    marginBottom: 15,
-  },
-  codigoRastreioBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#126b1a',
-    marginBottom: 15,
-    width: '100%',
-  },
-  codigoRastreio: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#126b1a',
-    fontFamily: 'monospace',
-  },
-  botaoCopiarRastreio: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f0f9f0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  botaoCopiarRastreioTexto: {
-    fontSize: 12,
-    color: '#126b1a',
-    fontWeight: '500',
-    marginLeft: 4,
-  },
-  botaoRastrear: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#126b1a',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-    width: '100%',
-    justifyContent: 'center',
-  },
-  botaoRastrearTexto: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  rastreioAviso: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
   resumoFinal: {
     backgroundColor: '#f8f9fa',
     padding: 15,
     borderRadius: 10,
+    marginBottom: 20,
   },
   resumoFinalTitulo: {
     fontSize: 16,
@@ -1308,28 +1247,25 @@ const styles = StyleSheet.create({
     color: '#2c3e50',
     fontWeight: '500',
   },
-
-  // Botões da etapa final
+  // ✅ NOVO ESTILO PARA INFORMAÇÃO DE ACOMPANHAMENTO
+  infoAcompanhamento: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f9f0',
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 10,
+    gap: 10,
+  },
+  infoAcompanhamentoTexto: {
+    fontSize: 14,
+    color: '#126b1a',
+    flex: 1,
+    fontWeight: '500',
+  },
   botoesFinal: {
     marginTop: 20,
     marginBottom: 40,
-  },
-  botaoSecundario: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-    padding: 15,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#126b1a',
-    marginBottom: 10,
-  },
-  botaoSecundarioTexto: {
-    color: '#126b1a',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
   },
   botaoPrimario: {
     flexDirection: 'row',
@@ -1339,14 +1275,15 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 8,
   },
+  botaoPrimarioDisabled: {
+    backgroundColor: '#bdc3c7',
+  },
   botaoPrimarioTexto: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
   },
-
-  // NOVOS ESTILOS PARA O SISTEMA DE ENDEREÇOS
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

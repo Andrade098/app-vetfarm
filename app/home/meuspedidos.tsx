@@ -1,80 +1,32 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { usePedidos } from '../../contexts/PedidoContext';
 
-type Pedido = {
-  id: string;
-  numero: string;
-  data: string;
-  status: 'entregue' | 'processando' | 'cancelado' | 'transporte';
-  total: string;
-  items: number;
-  itemsDetails: {
-    nome: string;
-    quantidade: number;
-    preco: string;
-  }[];
-};
 type FiltroStatus = 'todos' | 'entregue' | 'pendentes';
-export default function MeusPedidosScreen() {
+
+export default function MeusPedidos() {
   const router = useRouter();
+  const { pedidos, loading, carregarPedidos } = usePedidos();
   const [filtroAtivo, setFiltroAtivo] = useState<FiltroStatus>('todos');
-  // Dados de exemplo - pedidos do usuário
-  const [pedidos, setPedidos] = useState<Pedido[]>([
-    {
-      id: '1',
-      numero: '#VF00123',
-      data: '15/11/2024',
-      status: 'entregue',
-      total: 'R$ 289,90',
-      items: 3,
-      itemsDetails: [
-        { nome: 'Vacina Febre Aftosa', quantidade: 2, preco: 'R$ 89,90' },
-        { nome: 'Vermífugo Bovino', quantidade: 1, preco: 'R$ 45,90' },
-        { nome: 'Suplemento Mineral', quantidade: 1, preco: 'R$ 149,90' }
-      ]
-    },
-    {
-      id: '2',
-      numero: '#VF00119',
-      data: '10/11/2024',
-      status: 'transporte',
-      total: 'R$ 149,90',
-      items: 1,
-      itemsDetails: [
-        { nome: 'Suplemento Mineral', quantidade: 1, preco: 'R$ 149,90' }
-      ]
-    },
-    {
-      id: '3',
-      numero: '#VF00105',
-      data: '05/11/2024',
-      status: 'processando',
-      total: 'R$ 89,90',
-      items: 1,
-      itemsDetails: [
-        { nome: 'Vacina Febre Aftosa', quantidade: 1, preco: 'R$ 89,90' }
-      ]
-    },
-    {
-      id: '4',
-      numero: '#VF00098',
-      data: '25/10/2024',
-      status: 'cancelado',
-      total: 'R$ 45,90',
-      items: 1,
-      itemsDetails: [
-        { nome: 'Vermífugo Bovino', quantidade: 1, preco: 'R$ 45,90' }
-      ]
-    }
-  ]);
+
+  // Carregar pedidos quando a tela abre
+  useEffect(() => {
+    carregarPedidos();
+  }, []);
+
+  // Debug para verificar os pedidos
+  useEffect(() => {
+    console.log('📦 Pedidos carregados no MeusPedidos:', pedidos);
+  }, [pedidos]);
+
   // Filtrar pedidos baseado na aba selecionada
   const pedidosFiltrados = pedidos.filter(pedido => {
     if (filtroAtivo === 'todos') return true;
     if (filtroAtivo === 'entregue') return pedido.status === 'entregue';
     if (filtroAtivo === 'pendentes') {
-      return pedido.status === 'processando' || pedido.status === 'transporte';
+      return pedido.status === 'pendente' || pedido.status === 'processando' || pedido.status === 'enviado';
     }
     return true;
   });
@@ -83,7 +35,8 @@ export default function MeusPedidosScreen() {
     switch (status) {
       case 'entregue': return '#4CAF50';
       case 'processando': return '#FF9800';
-      case 'transporte': return '#2196F3';
+      case 'enviado': return '#2196F3';
+      case 'pendente': return '#FF9800';
       case 'cancelado': return '#F44336';
       default: return '#666';
     }
@@ -93,9 +46,23 @@ export default function MeusPedidosScreen() {
     switch (status) {
       case 'entregue': return 'Entregue';
       case 'processando': return 'Processando';
-      case 'transporte': return 'Em Transporte';
+      case 'enviado': return 'Enviado';
+      case 'pendente': return 'Pendente';
       case 'cancelado': return 'Cancelado';
       default: return status;
+    }
+  };
+
+  // Função para formatar o total corretamente
+  const formatarTotal = (total: string) => {
+    try {
+      const totalNumero = parseFloat(total);
+      return totalNumero.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      });
+    } catch {
+      return 'R$ 0,00';
     }
   };
 
@@ -112,6 +79,28 @@ export default function MeusPedidosScreen() {
     Alert.alert('Avaliar', `Avaliar pedido ${pedidoId}`);
     // router.push(`/home/avaliar-pedido/${pedidoId}`);
   };
+
+  // Mostrar loading enquanto carrega
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#126b1a" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Meus Pedidos</Text>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#126b1a" />
+          <Text style={styles.loadingText}>Carregando seus pedidos...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -167,15 +156,17 @@ export default function MeusPedidosScreen() {
           </Text>
         </View>
 
-        {/* Lista de Pedidos Filtrados */}
+        {/* Lista de Pedidos Reais da API */}
         <View style={styles.pedidosContainer}>
           {pedidosFiltrados.map((pedido) => (
             <View key={pedido.id} style={styles.pedidoCard}>
               {/* Cabeçalho do Pedido */}
               <View style={styles.pedidoHeader}>
                 <View>
-                  <Text style={styles.pedidoNumero}>{pedido.numero}</Text>
-                  <Text style={styles.pedidoData}>Data: {pedido.data}</Text>
+                  <Text style={styles.pedidoNumero}>Pedido #{pedido.numero_pedido}</Text>
+                  <Text style={styles.pedidoData}>
+                    Data: {new Date(pedido.createdAt).toLocaleDateString('pt-BR')}
+                  </Text>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(pedido.status) }]}>
                   <Text style={styles.statusText}>{getStatusText(pedido.status)}</Text>
@@ -186,26 +177,46 @@ export default function MeusPedidosScreen() {
               <View style={styles.pedidoDetails}>
                 <View style={styles.detailRow}>
                   <Ionicons name="cube" size={16} color="#666" />
-                  <Text style={styles.detailText}>{pedido.items} item(s)</Text>
+                  <Text style={styles.detailText}>
+                    {pedido.itens?.length || 0} item(s)
+                  </Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Ionicons name="cash" size={16} color="#666" />
-                  <Text style={styles.detailText}>Total: {pedido.total}</Text>
+                  <Text style={styles.detailText}>
+                    Total: {formatarTotal(pedido.total)}
+                  </Text>
                 </View>
               </View>
 
               {/* Itens do Pedido (Resumo) */}
               <View style={styles.itensContainer}>
-                {pedido.itemsDetails.slice(0, 2).map((item, index) => (
+                {pedido.itens?.slice(0, 2).map((item, index) => (
                   <Text key={index} style={styles.itemText}>
-                    • {item.quantidade}x {item.nome}
+                    • {item.quantity}x {item.name}
                   </Text>
                 ))}
-                {pedido.itemsDetails.length > 2 && (
+                {pedido.itens?.length > 2 && (
                   <Text style={styles.moreItemsText}>
-                    +{pedido.itemsDetails.length - 2} mais itens...
+                    +{pedido.itens.length - 2} mais itens...
                   </Text>
                 )}
+              </View>
+
+              {/* Informações de Entrega */}
+              <View style={styles.entregaInfo}>
+                <View style={styles.detailRow}>
+                  <Ionicons name="location" size={14} color="#666" />
+                  <Text style={styles.entregaText}>
+                    {pedido.endereco_entrega?.apelido || 'Endereço principal'}
+                  </Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Ionicons name="barcode" size={14} color="#666" />
+                  <Text style={styles.rastreioText}>
+                    Rastreio: {pedido.codigo_rastreio || 'Aguardando...'}
+                  </Text>
+                </View>
               </View>
 
               {/* Ações do Pedido */}
@@ -217,10 +228,10 @@ export default function MeusPedidosScreen() {
                   <Text style={styles.acaoButtonText}>Ver Detalhes</Text>
                 </TouchableOpacity>
                 
-                {pedido.status === 'transporte' && (
+                {(pedido.status === 'enviado' || pedido.status === 'processando') && (
                   <TouchableOpacity 
                     style={[styles.acaoButton, styles.rastrearButton]}
-                    onPress={() => handleRastrearPedido(pedido.id)}
+                    onPress={() => handleRastrearPedido(pedido.numero_pedido)}
                   >
                     <Text style={styles.acaoButtonText}>Rastrear</Text>
                   </TouchableOpacity>
@@ -251,10 +262,20 @@ export default function MeusPedidosScreen() {
             </Text>
             <Text style={styles.emptySubtext}>
               {filtroAtivo === 'todos' 
-                ? 'Seus pedidos aparecerão aqui' 
+                ? 'Suas compras aparecerão aqui' 
                 : 'Quando houver pedidos neste status, eles aparecerão aqui'
               }
             </Text>
+            
+            {/* Botão para fazer compras */}
+            {filtroAtivo === 'todos' && pedidos.length === 0 && (
+              <TouchableOpacity 
+                style={styles.comprarButton}
+                onPress={() => router.push('/home/')}
+              >
+                <Text style={styles.comprarButtonText}>Fazer Minha Primeira Compra</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>
@@ -290,6 +311,16 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 15,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
   filtersContainer: {
     marginBottom: 20,
@@ -396,7 +427,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   itensContainer: {
-    marginBottom: 15,
+    marginBottom: 10,
     padding: 10,
     backgroundColor: '#f9f9f9',
     borderRadius: 5,
@@ -411,6 +442,23 @@ const styles = StyleSheet.create({
     color: '#999',
     fontStyle: 'italic',
     marginTop: 4,
+  },
+  entregaInfo: {
+    marginBottom: 15,
+    padding: 10,
+    backgroundColor: '#f0f9f0',
+    borderRadius: 5,
+    borderLeftWidth: 3,
+    borderLeftColor: '#126b1a',
+  },
+  entregaText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  rastreioText: {
+    fontSize: 11,
+    color: '#126b1a',
+    fontWeight: '500',
   },
   acoesContainer: {
     flexDirection: 'row',
@@ -445,10 +493,23 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 16,
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
     color: '#999',
     textAlign: 'center',
+    marginBottom: 20,
+  },
+  comprarButton: {
+    backgroundColor: '#126b1a',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  comprarButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

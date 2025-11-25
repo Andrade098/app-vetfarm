@@ -296,15 +296,15 @@ export default function HomeScreen() {
   }
 
   function handleCheckout() {
-    setShowCart(false);
-    router.push({
-      pathname: '/home/finalizacompra',
-      params: {
-        cartItems: JSON.stringify(cartItems),
-        total: calculateTotal()
-      }
-    });
-  }
+  setShowCart(false);
+  router.push({
+    pathname: '/home/finalizacompra',
+    params: {
+      cartItems: JSON.stringify(cartItems),
+      total: calculateTotal()
+    }
+  });
+}
 
   // ⭐⭐ RENDERIZAR PRODUTO REAL ⭐⭐
   const renderProduct = ({ item }: { item: Produto }) => {

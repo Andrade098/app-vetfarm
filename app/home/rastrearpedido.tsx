@@ -1,159 +1,191 @@
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { TouchableOpacity } from 'react-native-gesture-handler';
+import { usePedidos } from '../../contexts/PedidoContext';
 
-type EtapaRastreio = {
-  id: string;
-  status: 'concluido' | 'ativo' | 'pendente';
-  data: string;
-  hora: string;
-  descricao: string;
-  localizacao: string;
-};
-export default function RastrearPedidoScreen() {
+export default function RastrearPedido() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const pedidoId = params.id as string;
-  // Dados de exemplo - etapas do rastreamento
-  const etapasRastreio: EtapaRastreio[] = [
-    {
-      id: '1',
-      status: 'concluido',
-      data: '15/11/2024',
-      hora: '08:30',
-      descricao: 'Pedido confirmado',
-      localizacao: 'Centro de Distribuição - SP'
-    },
-    {
-      id: '2',
-      status: 'concluido',
-      data: '15/11/2024',
-      hora: '10:15',
-      descricao: 'Pedido em separação',
-      localizacao: 'Centro de Distribuição - SP'
-    },
-    {
-      id: '3',
-      status: 'concluido',
-      data: '15/11/2024',
-      hora: '14:20',
-      descricao: 'Pedido embalado',
-      localizacao: 'Centro de Distribuição - SP'
-    },
-    {
-      id: '4',
-      status: 'concluido',
-      data: '16/11/2024',
-      hora: '09:00',
-      descricao: 'Pedido enviado para transporte',
-      localizacao: 'Transportadora FastDeliver'
-    },
-    {
-      id: '5',
-      status: 'ativo',
-      data: '16/11/2024',
-      hora: '15:45',
-      descricao: 'Em trânsito',
-      localizacao: 'Rodovia Presidente Dutra, KM 150'
-    },
-    {
-      id: '6',
-      status: 'pendente',
-      data: '17/11/2024',
-      hora: '08:00',
-      descricao: 'Previsão de entrega',
-      localizacao: 'Sua fazenda'
-    }
-  ];
+  const { pedidos, loading } = usePedidos();
+  const [pedido, setPedido] = useState(null);
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'concluido': return 'checkmark-circle';
-      case 'ativo': return 'ellipse';
-      case 'pendente': return 'time';
-      default: return 'ellipse';
+  useEffect(() => {
+    if (params.id && pedidos.length > 0) {
+      console.log('🔍 Procurando pedido com ID:', params.id);
+      console.log('📦 Pedidos disponíveis:', pedidos.map(p => p.numero_pedido));
+      
+      const pedidoEncontrado = pedidos.find(p => 
+        p.numero_pedido === params.id || p.id === params.id
+      );
+      
+      console.log('✅ Pedido encontrado:', pedidoEncontrado);
+      setPedido(pedidoEncontrado);
     }
+  }, [params.id, pedidos]);
+
+  // Status MUITO SIMPLIFICADO - APENAS "CONFIRMADO"
+  const getStatusSimples = () => {
+    return [
+      { status: 'Pedido confirmado', ativo: true, concluido: true }
+    ];
   };
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'concluido': return '#4CAF50';
-      case 'ativo': return '#2196F3';
-      case 'pendente': return '#FF9800';
-      default: return '#666';
-    }
+
+  const getStatusText = (status) => {
+    return 'Confirmado'; // SEMPRE RETORNA "CONFIRMADO"
   };
+
+  const getStatusColor = (status) => {
+    return '#126b1a'; // SEMPRE VERDE
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#126b1a" />
+          <Text style={styles.loadingText}>Carregando...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!pedido) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#126b1a" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Rastrear Pedido</Text>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={styles.notFoundContainer}>
+          <Ionicons name="document-outline" size={64} color="#bdc3c7" />
+          <Text style={styles.notFoundText}>Pedido não encontrado</Text>
+          <Text style={styles.notFoundSubtext}>
+            Verifique se o número do pedido está correto ou tente novamente mais tarde.
+          </Text>
+          <TouchableOpacity 
+            style={styles.backButtonStyle}
+            onPress={() => router.push('/home/menu')}
+          >
+            <Text style={styles.backButtonText}>Voltar ao Menu</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.secondaryButton}
+            onPress={() => router.push('/home/meuspedidos')}
+          >
+            <Text style={styles.secondaryButtonText}>Ver Meus Pedidos</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const statusList = getStatusSimples();
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Cabeçalho */}
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#126b1a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Rastrear Pedido</Text>
         <View style={styles.headerRight} />
       </View>
+
       <ScrollView style={styles.content}>
-        {/* Informações do Pedido */}
-        <View style={styles.infoContainer}>
-          <Text style={styles.pedidoNumero}>Pedido #{pedidoId}</Text>
-          <Text style={styles.statusGeral}>Em trânsito - Previsão de entrega: 17/11/2024</Text>
+        {/* ✅ CARTA DE CONFIRMAÇÃO SIMPLES */}
+        <View style={styles.confirmacaoCard}>
+          <View style={styles.confirmacaoIcon}>
+            <Ionicons name="checkmark-circle" size={60} color="#27ae60" />
+          </View>
+          <Text style={styles.confirmacaoTitulo}>Pedido Confirmado!</Text>
+          <Text style={styles.confirmacaoSubtitulo}>
+            Seu pedido foi recebido e está sendo processado
+          </Text>
         </View>
 
-        {/* Linha do Tempo do Rastreio */}
-        <View style={styles.timelineContainer}>
-          <Text style={styles.timelineTitle}>Status da Entrega</Text>
+        {/* Informações Básicas do Pedido */}
+        <View style={styles.pedidoInfoCard}>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Número do Pedido:</Text>
+            <Text style={styles.infoValue}>#{pedido.numero_pedido}</Text>
+          </View>
           
-          {etapasRastreio.map((etapa, index) => (
-            <View key={etapa.id} style={styles.timelineItem}>
-              {/* Linha vertical */}
-              {index < etapasRastreio.length - 1 && (
-                <View 
-                  style={[
-                    styles.timelineLine,
-                    { backgroundColor: etapa.status === 'concluido' ? '#4CAF50' : '#e0e0e0' }
-                  ]} 
-                />
-              )}
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Status:</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(pedido.status) }]}>
+              <Text style={styles.statusText}>{getStatusText(pedido.status)}</Text>
+            </View>
+          </View>
 
-              {/* Ícone da etapa */}
-              <View style={styles.timelineIconContainer}>
-                <Ionicons 
-                  name={getStatusIcon(etapa.status) as any} 
-                  size={20} 
-                  color={getStatusColor(etapa.status)} 
-                />
-              </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Data do Pedido:</Text>
+            <Text style={styles.infoValue}>
+              {new Date(pedido.createdAt).toLocaleDateString('pt-BR')}
+            </Text>
+          </View>
 
-              {/* Detalhes da etapa */}
-              <View style={styles.timelineContent}>
-                <Text style={[styles.etapaDescricao, 
-                  etapa.status === 'ativo' && styles.etapaAtiva]}>
-                  {etapa.descricao}
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Código de Rastreio:</Text>
+            <Text style={[styles.infoValue, styles.codigoRastreio]}>
+              {pedido.codigo_rastreio || 'Aguardando...'}
+            </Text>
+          </View>
+        </View>
+
+        {/* ✅ STATUS SUPER SIMPLIFICADO - APENAS UMA LINHA */}
+        <View style={styles.statusSimpleCard}>
+          <Text style={styles.statusSimpleTitle}>Situação do Pedido</Text>
+          <View style={styles.statusSimpleItem}>
+            <Ionicons name="checkmark-circle" size={24} color="#27ae60" />
+            <Text style={styles.statusSimpleText}>Pedido confirmado</Text>
+          </View>
+          <Text style={styles.statusSimpleAviso}>
+            Você receberá atualizações por email quando houver mudanças no status.
+          </Text>
+        </View>
+
+        {/* Informações de Entrega (Opcional) */}
+        {pedido.endereco_entrega && (
+          <View style={styles.infoCard}>
+            <Text style={styles.infoTitle}>Local de Entrega</Text>
+            <View style={styles.enderecoInfo}>
+              <Ionicons name="location-outline" size={20} color="#126b1a" />
+              <View style={styles.enderecoTexts}>
+                <Text style={styles.enderecoApelido}>{pedido.endereco_entrega.apelido}</Text>
+                <Text style={styles.enderecoDetails}>
+                  {pedido.endereco_entrega.logradouro}, {pedido.endereco_entrega.numero}
+                  {pedido.endereco_entrega.complemento && `, ${pedido.endereco_entrega.complemento}`}
                 </Text>
-                <Text style={styles.etapaData}>{etapa.data} às {etapa.hora}</Text>
-                <Text style={styles.etapaLocalizacao}>{etapa.localizacao}</Text>
+                <Text style={styles.enderecoDetails}>
+                  {pedido.endereco_entrega.bairro} - {pedido.endereco_entrega.cidade}/{pedido.endereco_entrega.estado}
+                </Text>
               </View>
             </View>
-          ))}
-        </View>
+          </View>
+        )}
 
-        {/* Informações de Contato */}
-        <View style={styles.contatoContainer}>
-          <Text style={styles.contatoTitle}>Precisa de ajuda?</Text>
-          <View style={styles.contatoItem}>
-            <Ionicons name="call" size={18} color="#126b1a" />
-            <Text style={styles.contatoText}>Transportadora: (11) 3333-4444</Text>
-          </View>
-          <View style={styles.contatoItem}>
-            <Ionicons name="chatbubble" size={18} color="#126b1a" />
-            <Text style={styles.contatoText}>Suporte VetFarm: (11) 9999-8888</Text>
-          </View>
+        {/* Botões de Ação */}
+        <View style={styles.botoesContainer}>
+          <TouchableOpacity 
+            style={styles.botaoPrincipal}
+            onPress={() => router.push('/home/menu')}
+          >
+            <Ionicons name="home-outline" size={20} color="white" />
+            <Text style={styles.botaoPrincipalTexto}>Voltar ao Menu</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.botaoSecundario}
+            onPress={() => router.push('/home/meuspedidos')}
+          >
+            <Ionicons name="list-outline" size={20} color="#126b1a" />
+            <Text style={styles.botaoSecundarioTexto}>Ver Todos os Pedidos</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -165,6 +197,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -172,7 +214,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 15,
     backgroundColor: '#fff',
-    paddingTop: 40,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
   backButton: {
     padding: 5,
@@ -189,7 +232,86 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 15,
   },
-  infoContainer: {
+  notFoundContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  notFoundText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#666',
+    marginTop: 15,
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  notFoundSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginBottom: 25,
+    lineHeight: 20,
+  },
+  backButtonStyle: {
+    backgroundColor: '#126b1a',
+    paddingHorizontal: 25,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    width: '100%',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  secondaryButton: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: 25,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#126b1a',
+    width: '100%',
+    alignItems: 'center',
+  },
+  secondaryButtonText: {
+    color: '#126b1a',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  // NOVOS ESTILOS SIMPLIFICADOS
+  confirmacaoCard: {
+    backgroundColor: '#fff',
+    padding: 30,
+    borderRadius: 15,
+    marginBottom: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  confirmacaoIcon: {
+    marginBottom: 15,
+  },
+  confirmacaoTitulo: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#27ae60',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  confirmacaoSubtitulo: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  pedidoInfoCard: {
     backgroundColor: '#fff',
     padding: 20,
     borderRadius: 10,
@@ -200,18 +322,37 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
-  pedidoNumero: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  statusGeral: {
+  infoLabel: {
     fontSize: 14,
-    color: '#2196F3',
+    color: '#666',
     fontWeight: '500',
   },
-  timelineContainer: {
+  infoValue: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: 'bold',
+  },
+  codigoRastreio: {
+    fontFamily: 'monospace',
+    color: '#126b1a',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  statusSimpleCard: {
     backgroundColor: '#fff',
     padding: 20,
     borderRadius: 10,
@@ -222,78 +363,101 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
-  timelineTitle: {
-    fontSize: 16,
+  statusSimpleTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 15,
   },
-  timelineItem: {
+  statusSimpleItem: {
     flexDirection: 'row',
-    marginBottom: 20,
-    minHeight: 50,
+    alignItems: 'center',
+    marginBottom: 10,
+    padding: 12,
+    backgroundColor: '#f0f9f0',
+    borderRadius: 8,
   },
-  timelineLine: {
-    width: 2,
-    backgroundColor: '#e0e0e0',
-    position: 'absolute',
-    top: 20,
-    bottom: -20,
-    left: 9,
-  },
-  timelineIconContainer: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#fff',
-    marginRight: 15,
-    zIndex: 1,
-  },
-  timelineContent: {
-    flex: 1,
-    paddingTop: 0,
-  },
-  etapaDescricao: {
-    fontSize: 14,
+  statusSimpleText: {
+    fontSize: 16,
+    color: '#27ae60',
     fontWeight: '500',
-    color: '#666',
-    marginBottom: 2,
+    marginLeft: 10,
   },
-  etapaAtiva: {
-    color: '#2196F3',
-    fontWeight: 'bold',
-  },
-  etapaData: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 2,
-  },
-  etapaLocalizacao: {
+  statusSimpleAviso: {
     fontSize: 12,
     color: '#666',
     fontStyle: 'italic',
+    marginTop: 10,
+    textAlign: 'center',
   },
-  contatoContainer: {
-    backgroundColor: '#e8f5e9',
+  infoCard: {
+    backgroundColor: '#fff',
     padding: 20,
     borderRadius: 10,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4CAF50',
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  contatoTitle: {
+  infoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+  },
+  enderecoInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  enderecoTexts: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  enderecoApelido: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 10,
+    marginBottom: 5,
   },
-  contatoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    gap: 10,
-  },
-  contatoText: {
+  enderecoDetails: {
     fontSize: 14,
     color: '#666',
+    marginBottom: 3,
+  },
+  botoesContainer: {
+    marginBottom: 20,
+  },
+  botaoPrincipal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#126b1a',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  botaoPrincipalTexto: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  botaoSecundario: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    padding: 15,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#126b1a',
+  },
+  botaoSecundarioTexto: {
+    color: '#126b1a',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });

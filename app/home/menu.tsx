@@ -1,41 +1,40 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Image, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePedidos } from '../../contexts/PedidoContext';
 
 export default function MenuScreen() {
   const router = useRouter();
-  const { user, logout, fetchUserData, loading } = useAuth();
+  const { user, logout, fetchUserData, loading: authLoading } = useAuth();
+  const { pedidos, carregarPedidos, loading: pedidosLoading } = usePedidos();
+  const [loading, setLoading] = useState(true);
 
   // Buscar dados atualizados quando a tela abre
   useEffect(() => {
-    if (!loading) {
-      const loadUserData = async () => {
-        await fetchUserData();
-      };
-      
-      loadUserData();
-    }
-  }, [loading]);
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        await Promise.all([
+          fetchUserData(),
+          carregarPedidos()
+        ]);
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+  }, []);
 
   // Debug para verificar os dados
   useEffect(() => {
     console.log('🔍 Dados do usuário no MenuScreen:', user);
-    console.log('🔍 Loading:', loading);
-  }, [user, loading]);
-
-  // Mostrar loading enquanto carrega
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#126b1a" />
-          <Text style={styles.loadingText}>Carregando...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+    console.log('🔍 Pedidos carregados:', pedidos.length);
+  }, [user, pedidos]);
 
   const menuItems = [
     { id: '1', title: 'Resumo da conta', icon: 'person-outline', screen: 'resumoconta' },
@@ -89,6 +88,18 @@ export default function MenuScreen() {
     return user.tipo || 'Tipo de usuário';
   };
 
+  // Mostrar loading enquanto carrega
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#126b1a" />
+          <Text style={styles.loadingText}>Carregando...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Cabeçalho */}
@@ -104,7 +115,7 @@ export default function MenuScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Perfil do usuário - AGORA COM DADOS REAIS DO CONTEXTO */}
+        {/* Perfil do usuário */}
         <View style={styles.profileSection}>
           <Image
             source={require('../../assets/images/logovetfarm.png')}
@@ -122,6 +133,8 @@ export default function MenuScreen() {
             </Text>
           </View>
         </View>
+
+        {/* ✅ REMOVIDA A SEÇÃO DE PEDIDOS RECENTES */}
 
         {/* Itens do menu */}
         <View style={styles.menuList}>
@@ -211,7 +224,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     backgroundColor: '#fff',
-    marginBottom: 10,
+    marginBottom: 20,
   },
   profileImage: {
     width: 60,
@@ -241,6 +254,14 @@ const styles = StyleSheet.create({
   menuList: {
     backgroundColor: '#fff',
     marginBottom: 20,
+    marginHorizontal: 15,
+    borderRadius: 10,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
   menuItem: {
     flexDirection: 'row',

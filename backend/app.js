@@ -2,8 +2,10 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs'); // ✅ Adicionar isso
-const categoriaProdutoRoutes = require('./src/routes/categoriaProdutoRoutes');
+const fs = require('fs');
+
+// ✅ CARREGAR ASSOCIAÇÕES DO BANCO DE DADOS
+require('./src/models/associations');
 
 app.use(cors({
   origin: ['http://localhost:3000', 'http://192.168.0.2:3000', 'exp://192.168.0.2:8081', 'http://localhost:8081'],
@@ -14,7 +16,7 @@ app.use(cors({
 
 app.use(express.json());
 
-// ✅✅✅ CORREÇÃO: Configuração correta para servir arquivos estáticos
+// ✅✅✅ CONFIGURAÇÃO CORRETA PARA SERVIR ARQUIVOS ESTÁTICOS
 const uploadsPath = path.join(__dirname, 'uploads');
 
 // Criar pasta uploads se não existir
@@ -29,20 +31,28 @@ app.use('/uploads', express.static(uploadsPath));
 console.log('📁 Servindo arquivos estáticos de:', uploadsPath);
 console.log('🌐 Acessível em: http://192.168.0.3:3000/uploads/');
 
-// ROTAS
+// ✅ ROTAS PRINCIPAIS
 app.use('/api/clientes', require('./src/routes/clienteRoutes'));
 app.use('/api/farmacias', require('./src/routes/farmaciaRoutes'));
 app.use('/api/produtos', require('./src/routes/produtoRoutes'));
 app.use('/api/farmacia-produtos', require('./src/routes/farmaciaProdutoRoutes'));
-// No seu app.js, adicione esta linha nas rotas:
 app.use('/api/enderecos', require('./src/routes/enderecoRoutes'));
-app.use('/api/categoria-produto', categoriaProdutoRoutes);
+app.use('/api/categoria-produto', require('./src/routes/categoriaProdutoRoutes'));
+app.use('/api/pedidos', require('./src/routes/pedidoRoutes'));
 
-
-// ✅ Rota de upload
+// ✅ ROTA DE UPLOAD
 app.use('/api', require('./src/routes/upload'));
 
-// ✅ Adicionar rota de debug para testar
+// ✅ ROTA DE HEALTH CHECK
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'API VetFarm funcionando corretamente',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// ✅ ROTA DE DEBUG PARA TESTAR UPLOADS
 app.get('/api/debug/uploads', (req, res) => {
   try {
     const files = fs.readdirSync(uploadsPath);
@@ -57,5 +67,27 @@ app.get('/api/debug/uploads', (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ✅ MIDDLEWARE DE TRATAMENTO DE ROTAS NÃO ENCONTRADAS
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Rota não encontrada',
+    path: req.originalUrl,
+    method: req.method
+  });
+});
+
+// ✅ MIDDLEWARE DE TRATAMENTO DE ERROS GLOBAIS
+app.use((error, req, res, next) => {
+  console.error('❌ Erro global:', error);
+  res.status(500).json({
+    error: 'Erro interno do servidor',
+    message: process.env.NODE_ENV === 'development' ? error.message : 'Algo deu errado'
+  });
+});
+
+console.log('🚀 API VetFarm inicializada com sucesso!');
+console.log(`📋 ${Object.keys(app._router.stack).length} rotas carregadas`);
+console.log('📍 Endpoint principal: http://192.168.0.3:3000/api');
 
 module.exports = app;
