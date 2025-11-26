@@ -1,3 +1,4 @@
+// models/Pedido.js
 const { DataTypes } = require('sequelize');
 const db = require('../config/db');
 
@@ -12,6 +13,10 @@ const Pedido = db.define('Pedido', {
     type: DataTypes.INTEGER.UNSIGNED,
     allowNull: false,
   },
+  farmacia_id: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    allowNull: false,
+  },
   numero_pedido: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -19,7 +24,7 @@ const Pedido = db.define('Pedido', {
   },
   codigo_rastreio: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true, // Mantido como true (pode ser nulo inicialmente)
     unique: true
   },
   status: {
@@ -27,9 +32,19 @@ const Pedido = db.define('Pedido', {
     allowNull: false,
     defaultValue: 'pendente'
   },
-  total: {
+  valor_total: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false
+  },
+  pontos_ganhos: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 0
+  },
+  desconto_fidelidade_aplicado: {
+    type: DataTypes.DECIMAL(10, 2),
+    allowNull: false,
+    defaultValue: 0
   },
   endereco_entrega: {
     type: DataTypes.TEXT,
@@ -39,14 +54,11 @@ const Pedido = db.define('Pedido', {
     type: DataTypes.STRING,
     allowNull: false
   },
-  itens: {
-    type: DataTypes.TEXT, // JSON string com os itens do pedido
-    allowNull: false
-  },
   data_entrega_prevista: {
     type: DataTypes.DATE,
     allowNull: false
   }
+  // REMOVI o campo 'itens' pois você já tem uma tabela ItemCompra separada
 }, {
   tableName: 'pedidos',
   timestamps: true,

@@ -1,5 +1,6 @@
+// src/models/Farmacia.js
 const { DataTypes } = require('sequelize');
-const db = require('../config/db');
+const db = require('../config/db'); // ✅ Agora está correto!
 
 const Farmacia = db.define('Farmacia', {
   id: {

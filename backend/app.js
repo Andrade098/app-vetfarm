@@ -1,3 +1,4 @@
+// app.js - ATUALIZADO
 const express = require('express');
 const app = express();
 const cors = require('cors');
@@ -39,6 +40,9 @@ app.use('/api/farmacia-produtos', require('./src/routes/farmaciaProdutoRoutes'))
 app.use('/api/enderecos', require('./src/routes/enderecoRoutes'));
 app.use('/api/categoria-produto', require('./src/routes/categoriaProdutoRoutes'));
 app.use('/api/pedidos', require('./src/routes/pedidoRoutes'));
+
+// ✅✅✅ NOVAS ROTAS DE FIDELIDADE
+app.use('/api/fidelidade', require('./src/routes/fidelidadeRoutes'));
 
 // ✅ ROTA DE UPLOAD
 app.use('/api', require('./src/routes/upload'));
@@ -87,7 +91,6 @@ app.use((error, req, res, next) => {
 });
 
 console.log('🚀 API VetFarm inicializada com sucesso!');
-console.log(`📋 ${Object.keys(app._router.stack).length} rotas carregadas`);
 console.log('📍 Endpoint principal: http://192.168.0.3:3000/api');
 
 module.exports = app;

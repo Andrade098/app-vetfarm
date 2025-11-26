@@ -1,7 +1,6 @@
 const { DataTypes, Sequelize } = require ('sequelize');
 const  db = require ('../config/db');
 
-
 const ItemCompra = db.define('ItemCompra',
   {
     id: {

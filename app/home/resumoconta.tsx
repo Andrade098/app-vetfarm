@@ -1,4 +1,4 @@
-// home/resumoconta.tsx - ARQUIVO COMPLETO ATUALIZADO
+// home/resumoconta.tsx - VERSÃO MESCLADA E FUNCIONAL
 import React, { useState, useEffect } from 'react';
 import { 
   View, 
@@ -9,11 +9,38 @@ import {
   SafeAreaView, 
   Modal, 
   FlatList,
-  ActivityIndicator 
+  ActivityIndicator,
+  Alert 
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+
+// Interface para os dados da API
+interface HistoricoPontos {
+  id: string;
+  data: string;
+  descricao: string;
+  valor: number;
+  pontos: number;
+  tipo: 'ganho' | 'bonus';
+}
+
+interface BeneficiosResponse {
+  success: boolean;
+  pontosAtuais: number;
+  descontoDisponivel: number;
+  dataExpiracaoDesconto: string | null;
+  pontosParaMeta: number;
+  premioLiberado: boolean;
+  progressoMeta: string;
+}
+
+interface HistoricoResponse {
+  success: boolean;
+  historico: HistoricoPontos[];
+  total: number;
+}
 
 // Função para calcular pontos baseada no valor da compra
 const calcularPontos = (valor: number) => {
@@ -69,33 +96,90 @@ const InfoItem = ({ label, value }: { label: string; value: string }) => (
 
 export default function ResumoContaScreen() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user } = useAuth(); // ⭐⭐ REMOVIDO loading PARA EVITAR LOOP
 
   const [showHistorico, setShowHistorico] = useState(false);
-  const [historicoPontos, setHistoricoPontos] = useState([]);
+  const [historicoPontos, setHistoricoPontos] = useState<HistoricoPontos[]>([]);
+  const [carregandoDados, setCarregandoDados] = useState(true);
   const [carregandoHistorico, setCarregandoHistorico] = useState(false);
+  const [erroCarregamento, setErroCarregamento] = useState(false);
 
-  // ⭐⭐ DADOS REAIS DO PROGRAMA DE FIDELIDADE ⭐⭐
+  // ⭐⭐ DADOS DO PROGRAMA DE FIDELIDADE - MESCLADO
   const [pontosData, setPontosData] = useState({
     pontos: 0,
     meta: 1000,
     nivel: 'Bronze',
     consultasGratis: 0,
-    expiracao: 'Não definida',
+    expiracao: '31/12/2025',
     descontoAtivo: 0,
-    dataExpiracaoDesconto: ''
+    dataExpiracaoDesconto: '',
+    premioLiberado: false,
+    progressoMeta: '0%'
   });
 
-  // ⭐⭐ ATUALIZAR DADOS QUANDO O USUÁRIO MUDAR ⭐⭐
-  useEffect(() => {
+  // ⭐⭐ BUSCAR DADOS REAIS DA API (OPCIONAL) - MESCLADO
+  const buscarDadosFidelidade = async () => {
+    if (!user?.id) {
+      // ⭐⭐ FALLBACK: Usar dados do usuário se API não estiver disponível
+      carregarDadosUsuario();
+      return;
+    }
+    
+    try {
+      setCarregandoDados(true);
+      setErroCarregamento(false);
+      
+      console.log('🔄 Buscando dados de fidelidade para cliente:', user.id);
+      
+      // Tentar buscar da API primeiro
+      const beneficiosResponse = await fetch(
+        `http://192.168.0.3:3000/api/fidelidade/clientes/${user.id}/saldo`
+      );
+      
+      if (beneficiosResponse.ok) {
+        const beneficiosData: BeneficiosResponse = await beneficiosResponse.json();
+        
+        if (beneficiosData.success) {
+          console.log('✅ Dados de fidelidade recebidos da API');
+          
+          setPontosData({
+            pontos: beneficiosData.pontosAtuais,
+            meta: 1000,
+            nivel: calcularNivel(beneficiosData.pontosAtuais),
+            consultasGratis: beneficiosData.premioLiberado ? 1 : 0,
+            expiracao: '31/12/2025',
+            descontoAtivo: beneficiosData.descontoDisponivel,
+            dataExpiracaoDesconto: beneficiosData.dataExpiracaoDesconto 
+              ? new Date(beneficiosData.dataExpiracaoDesconto).toLocaleDateString('pt-BR')
+              : '',
+            premioLiberado: beneficiosData.premioLiberado,
+            progressoMeta: beneficiosData.progressoMeta
+          });
+          return;
+        }
+      }
+      
+      // ⭐⭐ FALLBACK: Se API falhar, usar dados do usuário
+      carregarDadosUsuario();
+      
+    } catch (error) {
+      console.error('💥 Erro ao buscar dados da API, usando fallback:', error);
+      // ⭐⭐ FALLBACK: Usar dados do usuário em caso de erro
+      carregarDadosUsuario();
+    } finally {
+      setCarregandoDados(false);
+    }
+  };
+
+  // ⭐⭐ FUNÇÃO FALLBACK - USA DADOS DO USUÁRIO DIRETO
+  const carregarDadosUsuario = () => {
     if (user) {
       const pontosUsuario = user.pontos_fidelidade || 0;
       const descontoUsuario = user.desconto_proxima_compra || 0;
       
-      console.log('👤 Dados do usuário:', {
+      console.log('👤 Carregando dados do usuário (fallback):', {
         pontos_fidelidade: pontosUsuario,
-        desconto_proxima_compra: descontoUsuario,
-        data_expiracao_desconto: user.data_expiracao_desconto
+        desconto_proxima_compra: descontoUsuario
       });
 
       setPontosData({
@@ -103,25 +187,80 @@ export default function ResumoContaScreen() {
         meta: 1000,
         nivel: calcularNivel(pontosUsuario),
         consultasGratis: Math.floor(pontosUsuario / 1000),
-        expiracao: '31/12/2025', // Data fixa de expiração
+        expiracao: '31/12/2025',
         descontoAtivo: descontoUsuario,
         dataExpiracaoDesconto: user.data_expiracao_desconto ? 
           new Date(user.data_expiracao_desconto).toLocaleDateString('pt-BR') : 
-          'Não definida'
+          '',
+        premioLiberado: pontosUsuario >= 1000,
+        progressoMeta: `${Math.min((pontosUsuario / 1000) * 100, 100)}%`
       });
       
-      // Carregar histórico de pontos (simulado por enquanto)
+      // Carregar histórico de pontos (simulado)
       carregarHistoricoPontos();
     }
-  }, [user]);
+  };
 
-  // ⭐⭐ FUNÇÃO PARA CARREGAR HISTÓRICO DE PONTOS ⭐⭐
+  // ⭐⭐ CARREGAR DADOS QUANDO O COMPONENTE MONTAR - CORRIGIDO
+  useEffect(() => {
+    let mounted = true;
+
+    const loadData = async () => {
+      if (mounted && user?.id) {
+        await buscarDadosFidelidade();
+      } else if (mounted && user) {
+        // Se não tem ID mas tem user, usar fallback
+        carregarDadosUsuario();
+        setCarregandoDados(false);
+      } else if (mounted) {
+        setCarregandoDados(false);
+      }
+    };
+
+    loadData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [user]); // ⭐⭐ DEPENDÊNCIA APENAS NO user
+
+  // ⭐⭐ FUNÇÃO PARA CARREGAR HISTÓRICO DE PONTOS - MESCLADO
   const carregarHistoricoPontos = async () => {
     setCarregandoHistorico(true);
     try {
-      // Simular carregamento de histórico
-      // Posteriormente, você vai buscar da API
-      const historicoSimulado = [
+      // ⭐⭐ PRIMEIRO TENTA BUSCAR DA API
+      if (user?.id) {
+        try {
+          const historicoResponse = await fetch(
+            `http://192.168.0.3:3000/api/fidelidade/clientes/${user.id}/historico`
+          );
+          
+          if (historicoResponse.ok) {
+            const historicoData: HistoricoResponse = await historicoResponse.json();
+            
+            if (historicoData.success && historicoData.historico) {
+              console.log('✅ Histórico recebido da API:', historicoData.historico.length, 'itens');
+              
+              const historicoFormatado: HistoricoPontos[] = historicoData.historico.map(item => ({
+                id: item.id.toString(),
+                data: new Date(item.data).toLocaleDateString('pt-BR'),
+                descricao: item.descricao,
+                valor: item.valor || 0,
+                pontos: item.pontos,
+                tipo: item.tipo || 'ganho'
+              }));
+              
+              setHistoricoPontos(historicoFormatado);
+              return;
+            }
+          }
+        } catch (error) {
+          console.log('ℹ️ API de histórico não disponível, usando dados simulados');
+        }
+      }
+      
+      // ⭐⭐ FALLBACK: Dados simulados se API falhar
+      const historicoSimulado: HistoricoPontos[] = [
         {
           id: '1',
           data: '15/03/2024',
@@ -164,6 +303,7 @@ export default function ResumoContaScreen() {
         },
       ];
       setHistoricoPontos(historicoSimulado);
+      
     } catch (error) {
       console.error('Erro ao carregar histórico:', error);
     } finally {
@@ -171,13 +311,61 @@ export default function ResumoContaScreen() {
     }
   };
 
-  // ⭐⭐ LOADING STATE
-  if (loading) {
+  // ⭐⭐ CARREGAR HISTÓRICO QUANDO ABRIR MODAL
+  useEffect(() => {
+    if (showHistorico) {
+      carregarHistoricoPontos();
+    }
+  }, [showHistorico]);
+
+  // ⭐⭐ RESGATAR PRÊMIO - DO CÓDIGO DO SEU AMIGO
+  const handleResgatarPremio = async () => {
+    if (!user?.id) return;
+    
+    try {
+      Alert.alert(
+        'Resgatar Prêmio',
+        'Deseja resgatar sua visitação gratuita do veterinário?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { 
+            text: 'Resgatar', 
+            style: 'default',
+            onPress: async () => {
+              try {
+                const response = await fetch(
+                  `http://192.168.0.3:3000/api/fidelidade/clientes/${user.id}/resgatar`,
+                  { method: 'POST' }
+                );
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                  Alert.alert('Sucesso', result.message);
+                  // Recarregar dados atualizados
+                  buscarDadosFidelidade();
+                } else {
+                  Alert.alert('Erro', result.error || 'Falha ao resgatar prêmio');
+                }
+              } catch (error) {
+                Alert.alert('Erro', 'Falha ao resgatar prêmio. Tente novamente.');
+              }
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('💥 Erro ao resgatar prêmio:', error);
+    }
+  };
+
+  // ⭐⭐ LOADING STATE - APENAS CARREGANDO DADOS
+  if (carregandoDados) {
     return <LoadingScreen />;
   }
 
   // ⭐⭐ ERROR STATE
-  if (!user) {
+  if (!user || erroCarregamento) {
     return <ErrorScreen onRetry={() => router.back()} />;
   }
 
@@ -187,7 +375,9 @@ export default function ResumoContaScreen() {
     email: user?.email || 'email@exemplo.com',
     telefone: user?.telefone || 'Não informado',
     cpf: user?.cpf || 'Não informado',
-    dataNascimento: user?.data_nascimento || 'Não informada',
+    dataNascimento: user?.data_nascimento 
+      ? new Date(user.data_nascimento).toLocaleDateString('pt-BR')
+      : 'Não informada',
   };
 
   const calcularProgresso = () => {
@@ -206,25 +396,21 @@ export default function ResumoContaScreen() {
     return `Padrão (${Math.floor(valor / 10)} pts)`;
   };
 
-  // ⭐⭐ FUNÇÃO PARA VERIFICAR SE TEM DESCONTO ATIVO ⭐⭐
+  // ⭐⭐ FUNÇÃO PARA VERIFICAR SE TEM DESCONTO ATIVO - MESCLADO
   const temDescontoAtivo = () => {
-    const hoje = new Date();
-    const dataExpiracao = user.data_expiracao_desconto ? new Date(user.data_expiracao_desconto) : null;
+    if (pontosData.descontoAtivo <= 0) return false;
     
-    const descontoValido = pontosData.descontoAtivo > 0 && 
-      (!dataExpiracao || dataExpiracao > hoje);
+    // Verificar se a data de expiração é válida
+    if (pontosData.dataExpiracaoDesconto) {
+      const hoje = new Date();
+      const dataExpiracao = new Date(pontosData.dataExpiracaoDesconto);
+      return dataExpiracao > hoje;
+    }
     
-    console.log('🎫 Verificando desconto:', {
-      descontoAtivo: pontosData.descontoAtivo,
-      dataExpiracao: dataExpiracao,
-      hoje: hoje,
-      descontoValido: descontoValido
-    });
-    
-    return descontoValido;
+    return true; // Se não tem data de expiração, considera válido
   };
 
-  const renderItemHistorico = ({ item }) => (
+  const renderItemHistorico = ({ item }: { item: HistoricoPontos }) => (
     <View style={styles.historicoItem}>
       <View style={styles.historicoIcon}>
         <Ionicons
@@ -236,7 +422,7 @@ export default function ResumoContaScreen() {
       <View style={styles.historicoInfo}>
         <Text style={styles.historicoDescricao}>{item.descricao}</Text>
         <Text style={styles.historicoData}>{item.data}</Text>
-        {item.tipo === 'ganho' && (
+        {item.tipo === 'ganho' && item.valor > 0 && (
           <Text style={styles.historicoValorCompra}>R$ {item.valor.toFixed(2)}</Text>
         )}
       </View>
@@ -248,7 +434,7 @@ export default function ResumoContaScreen() {
           +{item.pontos}
         </Text>
         <Text style={styles.historicoLabel}>pontos</Text>
-        {item.tipo === 'ganho' && (
+        {item.tipo === 'ganho' && item.valor > 0 && (
           <Text style={styles.historicoCategoria}>
             {getCategoriaPontos(item.valor)}
           </Text>
@@ -308,7 +494,7 @@ export default function ResumoContaScreen() {
               <Text style={styles.descontoAtivoTexto}>
                 Você tem {pontosData.descontoAtivo}% de desconto na próxima compra
               </Text>
-              {pontosData.dataExpiracaoDesconto !== 'Não definida' && (
+              {pontosData.dataExpiracaoDesconto && (
                 <Text style={styles.descontoExpiracao}>
                   Válido até: {pontosData.dataExpiracaoDesconto}
                 </Text>
@@ -364,7 +550,7 @@ export default function ResumoContaScreen() {
                 />
               </View>
               <Text style={styles.progressoTexto}>
-                {Math.round(calcularProgresso())}% completo
+                {pontosData.progressoMeta} completo
               </Text>
             </View>
 
@@ -389,6 +575,15 @@ export default function ResumoContaScreen() {
               <Text style={styles.premioDescricao}>
                 Ao atingir {pontosData.meta} pontos, ganhe uma visitação gratuita do nosso veterinário parceiro!
               </Text>
+              
+              {pontosData.premioLiberado && (
+                <TouchableOpacity 
+                  style={styles.resgatarButton}
+                  onPress={handleResgatarPremio}
+                >
+                  <Text style={styles.resgatarButtonText}>Resgatar Prêmio</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
@@ -473,12 +668,12 @@ export default function ResumoContaScreen() {
   );
 }
 
+// ⭐⭐ ESTILOS MESCLADOS
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  // ⭐⭐ NOVOS ESTILOS PARA LOADING E ERROR
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -613,7 +808,6 @@ const styles = StyleSheet.create({
   fidelidadeContainer: {
     marginBottom: 30,
   },
-  // ⭐⭐ NOVO ESTILO PARA CARD DE DESCONTO ATIVO ⭐⭐
   descontoAtivoCard: {
     backgroundColor: '#FFF9E6',
     padding: 15,
@@ -758,7 +952,7 @@ const styles = StyleSheet.create({
   },
   premioCard: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: '#fff',
     padding: 15,
     borderRadius: 10,
@@ -782,7 +976,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  // Estilos do Modal do Histórico
+  resgatarButton: {
+    backgroundColor: '#126b1a',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  resgatarButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -908,7 +1114,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  // ⭐⭐ NOVOS ESTILOS PARA LOADING E ESTADO VAZIO ⭐⭐
   historicoLoading: {
     flex: 1,
     justifyContent: 'center',

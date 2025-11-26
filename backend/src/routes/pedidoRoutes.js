@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Pedido = require('../models/Pedido');
 const { authMiddleware } = require('../middlewares/authMiddleware');
+const pedidoController = require('../controllers/pedidoController');
 
+// ✅ ROTAS EXISTENTES (MANTIDAS)
 // GET /api/pedidos - Listar pedidos do usuário
 router.get('/', authMiddleware, async (req, res) => {
   try {
@@ -96,5 +98,25 @@ router.get('/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
+
+// ✅ NOVAS ROTAS PARA FIDELIDADE
+// POST /api/pedidos/calcular-pontos-preview - Calcular pontos antes de finalizar
+router.post('/calcular-pontos-preview', authMiddleware, pedidoController.calcularPontosPreview);
+
+// GET /api/pedidos/beneficios/:cliente_id - Ver benefícios do cliente
+router.get('/beneficios/:cliente_id', authMiddleware, pedidoController.verificarBeneficios);
+
+// ✅ ROTAS DO CONTROLLER (PARA COMPATIBILIDADE)
+// POST /api/pedidos/v2 - Nova versão com fidelidade
+router.post('/v2', authMiddleware, pedidoController.criar);
+
+// GET /api/pedidos/v2/cliente/:cliente_id - Listar pedidos com fidelidade
+router.get('/v2/cliente/:cliente_id', authMiddleware, pedidoController.listarPorCliente);
+
+// GET /api/pedidos/v2/:pedido_id - Detalhes do pedido com fidelidade
+router.get('/v2/:pedido_id', authMiddleware, pedidoController.obterDetalhes);
+
+// PUT /api/pedidos/v2/:pedido_id/status - Atualizar status
+router.put('/v2/:pedido_id/status', authMiddleware, pedidoController.atualizarStatus);
 
 module.exports = router;

@@ -31,6 +31,7 @@ interface CartContextType {
   calcularTotalComDesconto: () => number;
   getTotalPontosUsuario: () => number;
   calcularTotalCarrinho: () => number;
+  setPontosGanhos: (pontos: number) => void; // ✅ ADICIONADO ESTA LINHA
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -131,6 +132,12 @@ export const CartProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     const total = pontosUsuario + pontosGanhos;
     console.log('🎯 Pontos usuário:', pontosUsuario, ' + Pontos ganhos:', pontosGanhos, ' = Total:', total);
     return total;
+  };
+
+  // ⭐⭐ FUNÇÃO PARA SETAR PONTOS GANHOS (ADICIONADA)
+  const setPontosGanhosContext = (pontos: number) => {
+    console.log('🎯 Setando pontos ganhos:', pontos);
+    setPontosGanhos(pontos);
   };
 
   // Funções do carrinho
@@ -243,7 +250,8 @@ export const CartProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     removerDescontoFidelidade,
     calcularTotalComDesconto,
     getTotalPontosUsuario,
-    calcularTotalCarrinho
+    calcularTotalCarrinho,
+    setPontosGanhos: setPontosGanhosContext // ✅ ADICIONADO NO VALUE
   };
 
   return (
