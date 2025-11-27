@@ -4,7 +4,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
 ## Get started
 
-1. instale as dependências
+1. instale as dependências e configurações iniciais
 
    ```bash
    Vá na pasta raiz do projeto e digite:
@@ -31,21 +31,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
      logging: false,
      });
 
-   ```
-
-
-
-2. Start the app
-
-   ```bash
-   cd backend
-   node server.js
-   abra um novo terminal e digite: npx expo start
-
-
-   Depois de iniciar tudo:
-
-   Crie um schema diretamento no SGBD com o nome vetfarm
+     Crie um schema diretamento no SGBD com o nome vetfarm
    e posteriormente insere o comando a seguir:
 
    INSERT INTO farmacia (
@@ -77,6 +63,22 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
     NOW(), 
     NOW()
    );
+
+   ```
+
+
+
+2. Start the app
+
+   ```bash
+   cd backend
+   node server.js
+   abra um novo terminal e digite: npx expo start
+
+
+   Depois de iniciar tudo:
+
+   
 
    
    ```
