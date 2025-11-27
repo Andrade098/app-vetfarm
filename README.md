@@ -31,8 +31,14 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
      logging: false,
      });
 
+      digite cd backend/src/scripts no terminal,após isso digite node gerarHash.js para gerar um hash de uma senha
+
+
+
      Crie um schema diretamento no SGBD com o nome vetfarm
-   e posteriormente insere o comando a seguir:
+
+     
+   posteriormente insere o comando a seguir:
 
    INSERT INTO farmacia (
     nome, 
@@ -51,7 +57,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    ) VALUES (
     'Farmácia VetFarm Matriz', 
     'matriz@vetfarm.com', 
-    '', <- coloque sua senha hash criada pelo script gerarHash.js aqui
+    '', <- COLOQUE O HASH CRIADO PELO SCRIPT GERARHASH.JS AQUI
     '(11) 99999-9999', 
     'Rua Principal, 123', 
     'São Paulo', 
@@ -76,7 +82,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    abra um novo terminal e digite: npx expo start
 
 
-   Depois de iniciar tudo:
+   Faça login em farmacia com o email e senha criados no comando do passo anterior.
 
    
 
