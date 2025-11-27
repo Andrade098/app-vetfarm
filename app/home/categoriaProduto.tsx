@@ -16,6 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFavoritos } from '../../contexts/FavoritosContext'; // 🔥 NOVO IMPORT
 
 const API_BASE_URL = 'http://192.168.0.2:3000/api';
 
@@ -31,8 +32,13 @@ export default function CategoriaProdutoScreen() {
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
   const [carrinho, setCarrinho] = useState<string[]>([]);
-  const [favoritos, setFavoritos] = useState<string[]>([]);
   const [infoCategoria, setInfoCategoria] = useState(null);
+
+  // 🔥🔥🔥 NOVO HOOK DOS FAVORITOS
+  const { 
+    toggleFavorito, 
+    isFavorito 
+  } = useFavoritos();
 
   // Carregar produtos do servidor
   useEffect(() => {
@@ -152,14 +158,22 @@ export default function CategoriaProdutoScreen() {
     }
   };
 
-  const toggleFavorito = (produtoId: string) => {
-    setFavoritos(prev => {
-      if (prev.includes(produtoId)) {
-        return prev.filter(id => id !== produtoId);
-      } else {
-        return [...prev, produtoId];
-      }
-    });
+  // 🔥🔥🔥 FUNÇÃO ATUALIZADA PARA TOGGLE FAVORITO (AGORA USA O CONTEXT)
+  const handleToggleFavorito = (produto: any) => {
+    const produtoFavorito = {
+      id: `${produto.id}_${produto.FarmaciaProdutos?.[0]?.farmacia_id || '0'}`,
+      produto_id: produto.id,
+      farmacia_id: produto.FarmaciaProdutos?.[0]?.farmacia_id || '0',
+      nome: produto.nome,
+      descricao: produto.descricao,
+      categoria: produto.Categoria?.nome,
+      preco_venda: produto.FarmaciaProdutos?.[0]?.preco || 0,
+      estoque: produto.FarmaciaProdutos?.[0]?.estoque || 0,
+      farmacia_nome: produto.FarmaciaProdutos?.[0]?.Farmacia?.nome || 'Farmácia',
+      imagens: produto.imagem || []
+    };
+    
+    toggleFavorito(produtoFavorito);
   };
 
   // ✅✅✅ FUNÇÃO CORRIGIDA PARA OBTER IMAGEM DO PRODUTO ✅✅✅
@@ -232,6 +246,8 @@ export default function CategoriaProdutoScreen() {
   const ProdutoCard = ({ produto }) => {
     const imagemProduto = getImagemProduto(produto);
     const produtoCarrinhoId = `${produto.id}_${produto.FarmaciaProdutos?.[0]?.farmacia_id || '0'}`;
+    const produtoFavoritoId = `${produto.id}_${produto.FarmaciaProdutos?.[0]?.farmacia_id || '0'}`;
+    const produtoEstaFavoritado = isFavorito(produtoFavoritoId); // 🔥 USA O CONTEXT
     
     console.log('🔍 Debug Produto:', produto.nome);
     console.log('📸 Propriedade imagem:', produto.imagem);
@@ -246,14 +262,15 @@ export default function CategoriaProdutoScreen() {
               {produto.Categoria?.nome || categoriaNome}
             </Text>
           </View>
+          {/* 🔥🔥🔥 BOTÃO FAVORITO ATUALIZADO (AGORA USA O CONTEXT) */}
           <TouchableOpacity
             style={styles.favoritoButton}
-            onPress={() => toggleFavorito(produto.id)}
+            onPress={() => handleToggleFavorito(produto)}
           >
             <Ionicons
-              name={favoritos.includes(produto.id) ? "heart" : "heart-outline"}
+              name={produtoEstaFavoritado ? "heart" : "heart-outline"}
               size={20}
-              color={favoritos.includes(produto.id) ? "#FF4757" : "#64748B"}
+              color={produtoEstaFavoritado ? "#FF4757" : "#64748B"}
             />
           </TouchableOpacity>
         </View>

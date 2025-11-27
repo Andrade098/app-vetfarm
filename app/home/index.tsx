@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, FlatList, 
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFavoritos } from '../../contexts/FavoritosContext'; // 🔥 NOVO IMPORT
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ⭐⭐ CONSTANTE PARA IP DO SERVIDOR ⭐⭐
@@ -32,9 +33,15 @@ interface Produto {
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { 
+    favoritos, 
+    toggleFavorito, 
+    isFavorito, 
+    carregarFavoritos 
+  } = useFavoritos(); // 🔥 NOVO HOOK
+  
   const [showCart, setShowCart] = useState(false);
   const [cartItems, setCartItems] = useState([]);
-  const [favoritos, setFavoritos] = useState<string[]>([]);
   
   // ⭐⭐ NOVOS ESTADOS PARA PRODUTOS REAIS ⭐⭐
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -49,6 +56,7 @@ export default function HomeScreen() {
   // ⭐⭐ CARREGAR PRODUTOS REAIS DA API ⭐⭐
   useEffect(() => {
     loadProdutos();
+    carregarFavoritos(); // 🔥 CARREGAR FAVORITOS AO INICIAR
   }, []);
 
   // ⭐⭐ CARREGAR CARRINHO DO ASYNCSTORAGE QUANDO A TELA ABRE ⭐⭐
@@ -287,14 +295,22 @@ export default function HomeScreen() {
     }
   };
 
-  const toggleFavorito = (productId: string) => {
-    setFavoritos(prev => {
-      if (prev.includes(productId)) {
-        return prev.filter(id => id !== productId);
-      } else {
-        return [...prev, productId];
-      }
-    });
+  // 🔥🔥🔥 FUNÇÃO ATUALIZADA PARA TOGGLE FAVORITO (AGORA USA O CONTEXT) 🔥🔥🔥
+  const handleToggleFavorito = (product: Produto) => {
+    const produtoFavorito = {
+      id: `${product.produto_id}_${product.farmacia_id}`,
+      produto_id: product.produto_id,
+      farmacia_id: product.farmacia_id,
+      nome: product.nome,
+      descricao: product.descricao,
+      categoria: product.categoria,
+      preco_venda: product.preco_venda,
+      estoque: product.estoque,
+      farmacia_nome: product.farmacia_nome,
+      imagens: product.imagens
+    };
+    
+    toggleFavorito(produtoFavorito);
   };
 
   // ⭐⭐ FUNÇÕES ATUALIZADAS DO CARRINHO PARA SINCRONIZAR COM ASYNCSTORAGE ⭐⭐
@@ -400,22 +416,23 @@ export default function HomeScreen() {
     });
   }
 
-  // ⭐⭐ RENDERIZAR PRODUTO REAL ⭐⭐
+  // ⭐⭐ RENDERIZAR PRODUTO REAL (ATUALIZADO COM FAVORITOS) ⭐⭐
   const renderProduct = ({ item }: { item: Produto }) => {
     const productUniqueId = `${item.produto_id}_${item.farmacia_id}`;
     const imageSource = getProductImage(item.imagens);
+    const produtoEstaFavoritado = isFavorito(productUniqueId); // 🔥 USA O CONTEXT
     
     return (
       <TouchableOpacity style={styles.productCard}>
-        {/* BOTÃO FAVORITO */}
+        {/* 🔥🔥🔥 BOTÃO FAVORITO ATUALIZADO (AGORA USA O CONTEXT) 🔥🔥🔥 */}
         <TouchableOpacity
           style={styles.favoritoButton}
-          onPress={() => toggleFavorito(productUniqueId)}
+          onPress={() => handleToggleFavorito(item)}
         >
           <Ionicons
-            name={favoritos.includes(productUniqueId) ? "heart" : "heart-outline"}
+            name={produtoEstaFavoritado ? "heart" : "heart-outline"}
             size={20}
-            color={favoritos.includes(productUniqueId) ? "#ff3b30" : "#666"}
+            color={produtoEstaFavoritado ? "#ff3b30" : "#666"}
           />
         </TouchableOpacity>
 

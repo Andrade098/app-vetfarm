@@ -1,58 +1,89 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   View, 
   Text, 
-  ScrollView, 
   TouchableOpacity, 
   Image, 
   StyleSheet, 
   FlatList,
   Alert 
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
-// Dados de exemplo para produtos favoritos
-const initialFavorites = [
-  {
-    id: '1',
-    name: 'Vacina Febre Aftosa',
-    price: 'R$ 89,90',
-    category: 'Vacinas',
-    image: require('../../assets/images/produtos/vacina.png'),
-    inStock: true,
-  },
-  {
-    id: '2',
-    name: 'Suplemento Vitamínico',
-    price: 'R$ 149,90',
-    category: 'Suplementos',
-    image: require('../../assets/images/produtos/suplemento.png'),
-    inStock: true,
-  },
-  {
-    id: '3',
-    name: 'Vermífugo Bovino',
-    price: 'R$ 45,90',
-    category: 'Medicamentos',
-    image: require('../../assets/images/produtos/vermifugo.png'),
-    inStock: false,
-  },
-  {
-    id: '4',
-    name: 'Cela Equina Premium',
-    price: 'R$ 289,90',
-    category: 'Acessórios',
-    image: require('../../assets/images/produtos/celaesquina.png'),
-    inStock: true,
-  },
-];
+import { useFavoritos } from '../../contexts/FavoritosContext';
 
 export default function FavoritosScreen() {
   const router = useRouter();
-  const [favorites, setFavorites] = useState(initialFavorites);
+  const { 
+    favoritos, 
+    removerFavorito, 
+    limparFavoritos 
+  } = useFavoritos();
 
-  // Função para remover item dos favoritos - CORRIGIDA
+  // 🔥 FUNÇÃO PARA OBTER IMAGEM DO PRODUTO
+  const getProductImage = (imagens: string[]) => {
+    if (!imagens || imagens.length === 0) {
+      return null;
+    }
+
+    try {
+      let imageUrl = imagens[0];
+      
+      if (typeof imageUrl === 'string' && imageUrl.startsWith('[')) {
+        try {
+          const parsedImages = JSON.parse(imageUrl);
+          imageUrl = Array.isArray(parsedImages) && parsedImages.length > 0 ? parsedImages[0] : null;
+        } catch (parseError) {
+          console.log('❌ Erro ao parsear JSON de imagens:', parseError);
+          return null;
+        }
+      }
+
+      if (!imageUrl || typeof imageUrl !== 'string') {
+        return null;
+      }
+
+      // Corrigir URLs problemáticas
+      if (imageUrl.includes('flacalhost')) {
+        imageUrl = imageUrl.replace('flacalhost', 'localhost');
+      }
+      if (imageUrl.includes('lobshttp')) {
+        imageUrl = imageUrl.replace('lobshttp', 'http');
+      }
+
+      // Se for URL relativa, adicionar base URL
+      if (imageUrl.startsWith('/uploads/')) {
+        imageUrl = `http://192.168.0.2:3000${imageUrl}`;
+      }
+
+      // Se for Base64, usar diretamente
+      if (imageUrl.startsWith('data:image')) {
+        return { uri: imageUrl };
+      }
+
+      // Verificar se é uma URL válida
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        return { uri: imageUrl };
+      }
+
+      console.log('❌ URL de imagem inválida:', imageUrl);
+      return null;
+
+    } catch (error) {
+      console.error('❌ Erro ao processar imagem:', error);
+      return null;
+    }
+  };
+
+  // 🔥 FUNÇÃO PARA FORMATAR PREÇO
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(price);
+  };
+
+  // 🔥 FUNÇÃO PARA REMOVER ITEM DOS FAVORITOS
   const removeFromFavorites = (productId: string, productName: string) => {
     Alert.alert(
       'Remover dos favoritos',
@@ -61,130 +92,115 @@ export default function FavoritosScreen() {
         { 
           text: 'Cancelar', 
           style: 'cancel',
-          onPress: () => console.log('Cancelado')
         },
         { 
           text: 'Remover', 
           style: 'destructive',
           onPress: () => {
-            const updatedFavorites = favorites.filter(item => item.id !== productId);
-            setFavorites(updatedFavorites);
-            
-            // Feedback visual opcional
-            if (updatedFavorites.length === 0) {
-              // Se não houver mais favoritos, mostra mensagem
-              setTimeout(() => {
-                Alert.alert('Sucesso', 'Produto removido dos favoritos!');
-              }, 300);
-            }
+            removerFavorito(productId);
           }
         },
       ],
-      { cancelable: true } // Permite fechar clicando fora
+      { cancelable: true }
     );
   };
 
-  // Função alternativa mais simples (sem Alert)
-  const removeFromFavoritesDirect = (productId: string) => {
-    setFavorites(favorites.filter(item => item.id !== productId));
+  // 🔥 FUNÇÃO PARA LIMPAR TODOS OS FAVORITOS
+  const handleClearAllFavorites = () => {
+    if (favoritos.length === 0) return;
+    
+    Alert.alert(
+      'Limpar todos os favoritos',
+      `Deseja remover todos os ${favoritos.length} itens dos favoritos?`,
+      [
+        { 
+          text: 'Cancelar', 
+          style: 'cancel' 
+        },
+        { 
+          text: 'Limpar Tudo', 
+          style: 'destructive',
+          onPress: () => {
+            limparFavoritos();
+            Alert.alert('Sucesso', 'Todos os favoritos foram removidos!');
+          }
+        },
+      ]
+    );
   };
 
-  // Função para navegar para detalhes do produto
-  const goToProductDetails = (product: any) => {
-    Alert.alert('Detalhes', `Ver detalhes de ${product.name}`);
-  };
+  // 🔥 RENDERIZAR CADA ITEM FAVORITO (SEM BOTÃO DE CARRINHO)
+  const renderFavoriteItem = ({ item }: { item: any }) => {
+    const imageSource = getProductImage(item.imagens);
+    
+    return (
+      <View style={styles.favoriteCard}>
+        <View style={styles.productInfo}>
+          <View style={styles.imageContainer}>
+            {imageSource ? (
+              <Image
+                source={imageSource}
+                style={styles.productImage}
+                resizeMode="contain"
+              />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Ionicons name="image-outline" size={32} color="#ccc" />
+              </View>
+            )}
+          </View>
 
-  // Função para adicionar ao carrinho
-  const addToCart = (product: any) => {
-    Alert.alert('Sucesso', `${product.name} adicionado ao carrinho!`);
-  };
-
-  // Renderizar cada item favorito - CORRIGIDO
-  const renderFavoriteItem = ({ item }: { item: any }) => (
-    <View style={styles.favoriteCard}>
-      <TouchableOpacity 
-        style={styles.productInfo}
-        onPress={() => goToProductDetails(item)}
-      >
-        <View style={styles.imageContainer}>
-          {item.image ? (
-            <Image
-              source={item.image}
-              style={styles.productImage}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Ionicons name="image-outline" size={32} color="#ccc" />
+          <View style={styles.productDetails}>
+            <Text style={styles.productCategory}>{item.categoria}</Text>
+            <Text style={styles.productName} numberOfLines={2}>{item.nome}</Text>
+            <Text style={styles.productPrice}>{formatPrice(item.preco_venda)}</Text>
+            
+            <View style={styles.stockContainer}>
+              <View style={[
+                styles.stockIndicator, 
+                { backgroundColor: item.estoque > 0 ? '#4CAF50' : '#f44336' }
+              ]} />
+              <Text style={[
+                styles.stockText,
+                { color: item.estoque > 0 ? '#4CAF50' : '#f44336' }
+              ]}>
+                {item.estoque > 0 ? `${item.estoque} em estoque` : 'Fora de estoque'}
+              </Text>
             </View>
-          )}
-        </View>
 
-        <View style={styles.productDetails}>
-          <Text style={styles.productCategory}>{item.category}</Text>
-          <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
-          <Text style={styles.productPrice}>{item.price}</Text>
-          
-          <View style={styles.stockContainer}>
-            <View style={[
-              styles.stockIndicator, 
-              { backgroundColor: item.inStock ? '#4CAF50' : '#f44336' }
-            ]} />
-            <Text style={[
-              styles.stockText,
-              { color: item.inStock ? '#4CAF50' : '#f44336' }
-            ]}>
-              {item.inStock ? 'Em estoque' : 'Fora de estoque'}
+            <Text style={styles.farmaciaText}>
+              Farmácia: {item.farmacia_nome}
             </Text>
           </View>
         </View>
-      </TouchableOpacity>
 
-      <View style={styles.actionsContainer}>
+        {/* 🔥🔥🔥 REMOVIDO O BOTÃO DE CARRINHO - AGORA SÓ TEM REMOVER */}
         <TouchableOpacity 
-          style={[
-            styles.cartButton,
-            !item.inStock && styles.disabledButton
-          ]}
-          onPress={() => item.inStock && addToCart(item)}
-          disabled={!item.inStock}
-        >
-          <Ionicons 
-            name="cart-outline" 
-            size={20} 
-            color={item.inStock ? "white" : "#ccc"} 
-          />
-          <Text style={[
-            styles.cartButtonText,
-            !item.inStock && styles.disabledText
-          ]}>
-            {item.inStock ? 'Adicionar' : 'Indisponível'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.removeButton}
-          onPress={() => removeFromFavoritesDirect(item.id)}
-          // Alternativa direta (sem confirmação):
-          // onPress={() => removeFromFavoritesDirect(item.id)}
+          style={styles.removeButtonSingle}
+          onPress={() => removeFromFavorites(item.id, item.nome)}
         >
           <Ionicons name="heart-dislike-outline" size={20} color="#f44336" />
-          <Text style={styles.removeButtonText}>Remover</Text>
+          <Text style={styles.removeButtonText}>Remover dos favoritos</Text>
         </TouchableOpacity>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
-    <>
-      <Stack.Screen 
-        options={{ 
-          title: 'Meus Favoritos',
-          headerBackTitle: 'Voltar'
-        }} 
-      />
+    <View style={styles.container}>
+      {/* HEADER PERSONALIZADO - igual ao resumo da conta */}
+      <View style={styles.customHeader}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#126b1a" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Meus Favoritos</Text>
+        <View style={styles.headerRight} />
+      </View>
 
-      {favorites.length === 0 ? (
+      {favoritos.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="heart-outline" size={80} color="#ccc" />
           <Text style={styles.emptyTitle}>Nenhum favorito</Text>
@@ -199,16 +215,22 @@ export default function FavoritosScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <View style={styles.container}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Meus Favoritos</Text>
-            <Text style={styles.subtitle}>
-              {favorites.length} {favorites.length === 1 ? 'item' : 'itens'} salvos
+        <View style={styles.content}>
+          {/* INFO BAR - só mostra quando tem favoritos */}
+          <View style={styles.infoBar}>
+            <Text style={styles.itemCount}>
+              {favoritos.length} {favoritos.length === 1 ? 'item salvo' : 'itens salvos'}
             </Text>
+            <TouchableOpacity 
+              style={styles.clearAllButton}
+              onPress={handleClearAllFavorites}
+            >
+              <Text style={styles.clearAllText}>Limpar Todos</Text>
+            </TouchableOpacity>
           </View>
 
           <FlatList
-            data={favorites}
+            data={favoritos}
             renderItem={renderFavoriteItem}
             keyExtractor={item => item.id}
             showsVerticalScrollIndicator={false}
@@ -216,7 +238,7 @@ export default function FavoritosScreen() {
           />
         </View>
       )}
-    </>
+    </View>
   );
 }
 
@@ -225,21 +247,57 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  header: {
+  // 🔥 CUSTOM HEADER - igual ao resumo da conta
+  customHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingTop: 50, // 🔥 PADDING DE 50 CONFORME PEDIDO
+    paddingBottom: 15,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  backButton: {
+    padding: 5,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#126b1a',
+  },
+  headerRight: {
+    width: 34,
+  },
+  content: {
+    flex: 1,
+  },
+  // 🔥 INFO BAR - só aparece quando tem favoritos
+  infoBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     backgroundColor: 'white',
-    padding: 20,
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
-  subtitle: {
+  itemCount: {
     fontSize: 16,
     color: '#666',
+    fontWeight: '500',
+  },
+  clearAllButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#ffebee',
+    borderRadius: 6,
+  },
+  clearAllText: {
+    fontSize: 14,
+    color: '#f44336',
+    fontWeight: '500',
   },
   listContainer: {
     padding: 16,
@@ -302,9 +360,16 @@ const styles = StyleSheet.create({
     color: '#126b1a',
     marginBottom: 8,
   },
+  farmaciaText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
   stockContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 4,
   },
   stockIndicator: {
     width: 8,
@@ -316,44 +381,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  actionsContainer: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  cartButton: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#126b1a',
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  disabledButton: {
-    backgroundColor: '#f5f5f5',
-  },
-  cartButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    marginLeft: 6,
-  },
-  disabledText: {
-    color: '#ccc',
-  },
-  removeButton: {
-    flex: 1,
+  // 🔥🔥🔥 BOTÃO ÚNICO DE REMOVER (SEM CARRINHO)
+  removeButtonSingle: {
     flexDirection: 'row',
     backgroundColor: '#fff',
-    padding: 12,
+    padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderLeftWidth: 1,
-    borderLeftColor: '#f0f0f0',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
   },
   removeButtonText: {
     color: '#f44336',
     fontWeight: 'bold',
     marginLeft: 6,
+    fontSize: 14,
   },
   emptyContainer: {
     flex: 1,
