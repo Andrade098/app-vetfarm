@@ -84,6 +84,10 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
    Faça login em farmacia com o email e senha criados no comando do passo anterior.
 
+    Se não mudou nada em nenhum arquivo será 
+     Email:matriz@vetfarm.com
+     Senha:123456
+
    
 
    
