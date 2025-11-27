@@ -15,8 +15,9 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.0.3:3000/api'; // ✅ Mudei para o IP correto
+const API_BASE_URL = 'http://192.168.0.2:3000/api';
 
 export default function CategoriaProdutoScreen() {
   const router = useRouter();
@@ -59,7 +60,7 @@ export default function CategoriaProdutoScreen() {
 
       if (produtosResponse.ok) {
         const produtosData = await produtosResponse.json();
-        console.log('Dados dos produtos:', produtosData.data.produtos); // Para debug
+        console.log('Dados dos produtos:', produtosData.data.produtos);
         setProdutos(produtosData.data.produtos || []);
       } else {
         Alert.alert('Erro', 'Não foi possível carregar os produtos');
@@ -80,14 +81,75 @@ export default function CategoriaProdutoScreen() {
     carregarDados();
   };
 
-  const toggleCarrinho = (produtoId: string) => {
-    setCarrinho(prev => {
-      if (prev.includes(produtoId)) {
-        return prev.filter(id => id !== produtoId);
-      } else {
-        return [...prev, produtoId];
+  // ✅✅✅ FUNÇÃO CORRIGIDA PARA ADICIONAR AO CARRINHO ✅✅✅
+  const toggleCarrinho = async (produto: any) => {
+    try {
+      const imagemProduto = getImagemProduto(produto);
+      
+      console.log('🖼️ Imagem para carrinho:', imagemProduto);
+      
+      // Salvar no AsyncStorage para acessar na home
+      const produtoCarrinho = {
+        id: `${produto.id}_${produto.FarmaciaProdutos?.[0]?.farmacia_id || '0'}`,
+        produto_id: produto.id,
+        farmacia_id: produto.FarmaciaProdutos?.[0]?.farmacia_id || '0',
+        nome: produto.nome,
+        descricao: produto.descricao,
+        categoria: produto.Categoria?.nome,
+        preco_venda: produto.FarmaciaProdutos?.[0]?.preco || 0,
+        estoque: produto.FarmaciaProdutos?.[0]?.estoque || 0,
+        farmacia_nome: produto.FarmaciaProdutos?.[0]?.Farmacia?.nome || 'Farmácia',
+        imagens: produto.imagem || [],
+        price: `R$ ${(produto.FarmaciaProdutos?.[0]?.preco || 0).toFixed(2).replace('.', ',')}`,
+        // ✅ CORREÇÃO: ADICIONAR A IMAGEM NO FORMATO CORRETO PARA O CARRINHO
+        image: imagemProduto ? { uri: imagemProduto } : null
+      };
+
+      // Obter carrinho existente do AsyncStorage
+      const carrinhoExistente = await AsyncStorage.getItem('carrinhoItens');
+      let carrinhoArray = [];
+      
+      if (carrinhoExistente) {
+        carrinhoArray = JSON.parse(carrinhoExistente);
       }
-    });
+      
+      // Verificar se o produto já está no carrinho
+      const produtoExistente = carrinhoArray.find((item: any) => 
+        item.id === produtoCarrinho.id
+      );
+      
+      if (produtoExistente) {
+        // Se já existe, aumenta a quantidade
+        carrinhoArray = carrinhoArray.map((item: any) =>
+          item.id === produtoCarrinho.id
+            ? { ...item, quantity: (item.quantity || 1) + 1 }
+            : item
+        );
+      } else {
+        // Se não existe, adiciona novo
+        carrinhoArray.push({ ...produtoCarrinho, quantity: 1 });
+      }
+      
+      // Salvar no AsyncStorage
+      await AsyncStorage.setItem('carrinhoItens', JSON.stringify(carrinhoArray));
+      
+      // Atualizar estado local
+      setCarrinho(prev => {
+        if (prev.includes(produtoCarrinho.id)) {
+          return prev;
+        } else {
+          return [...prev, produtoCarrinho.id];
+        }
+      });
+      
+      Alert.alert('Sucesso', `${produto.nome} adicionado ao carrinho!`);
+      console.log('✅ Produto adicionado ao carrinho:', produto.nome);
+      console.log('📦 Dados do produto no carrinho:', produtoCarrinho);
+      
+    } catch (error) {
+      console.error('❌ Erro ao adicionar ao carrinho:', error);
+      Alert.alert('Erro', 'Não foi possível adicionar o produto ao carrinho');
+    }
   };
 
   const toggleFavorito = (produtoId: string) => {
@@ -100,34 +162,25 @@ export default function CategoriaProdutoScreen() {
     });
   };
 
-  const formatarPreco = (preco) => {
-    if (!preco && preco !== 0) {
-      return 'Consulte';
-    }
-    
-    const precoNumerico = parseFloat(preco);
-    
-    if (isNaN(precoNumerico)) {
-      return 'Consulte';
-    }
-    
-    return `R$ ${precoNumerico.toFixed(2).replace('.', ',')}`;
-  };
-
-  // ✅ FUNÇÃO PARA OBTER IMAGEM DO PRODUTO (COPIADA DA HOME SCREEN)
+  // ✅✅✅ FUNÇÃO CORRIGIDA PARA OBTER IMAGEM DO PRODUTO ✅✅✅
   const getImagemProduto = (produto) => {
-    if (!produto.imagens || produto.imagens.length === 0) {
+    // ✅ CORREÇÃO: usar 'imagem' em vez de 'imagens'
+    if (!produto.imagem || produto.imagem.length === 0) {
+      console.log('❌ Produto sem imagens:', produto.nome);
       return null;
     }
 
     try {
-      let imageUrl = produto.imagens[0];
+      let imageUrl = produto.imagem[0];
       
-      // Parsear se for string JSON
+      console.log('🖼️ Imagem original:', imageUrl);
+
+      // Se for string JSON, parsear
       if (typeof imageUrl === 'string' && imageUrl.startsWith('[')) {
         try {
           const parsedImages = JSON.parse(imageUrl);
           imageUrl = Array.isArray(parsedImages) && parsedImages.length > 0 ? parsedImages[0] : null;
+          console.log('📦 Imagem parseada do JSON:', imageUrl);
         } catch (parseError) {
           console.log('❌ Erro ao parsear JSON de imagens:', parseError);
           return null;
@@ -135,34 +188,35 @@ export default function CategoriaProdutoScreen() {
       }
 
       if (!imageUrl || typeof imageUrl !== 'string') {
+        console.log('❌ URL de imagem inválida após parse');
         return null;
       }
 
-      // Corrigir URLs problemáticas
-      if (imageUrl.includes('flacalhost')) {
-        imageUrl = imageUrl.replace('flacalhost', 'localhost');
-      }
-      if (imageUrl.includes('lobshttp')) {
-        imageUrl = imageUrl.replace('lobshttp', 'http');
-      }
-
-      // Se for URL relativa, adicionar base URL
-      if (imageUrl.startsWith('/uploads/')) {
-        imageUrl = `http://192.168.0.3:3000${imageUrl}`; // ✅ Usando o mesmo IP
-      }
-
-      // Se for Base64, usar diretamente
-      if (imageUrl.startsWith('data:image')) {
-        return imageUrl;
-      }
-
-      // Verificar se é uma URL válida
+      // ✅ CORREÇÃO PRINCIPAL: Verificar se já é uma URL completa
       if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        console.log('✅ URL completa encontrada:', imageUrl);
         return imageUrl;
       }
 
-      console.log('❌ URL de imagem inválida:', imageUrl);
-      return null;
+      // ✅ CORREÇÃO: Se for caminho relativo, adicionar base URL
+      if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
+        // Remove barras extras no início se houver
+        const caminhoLimpo = imageUrl.replace(/^\/+/, '');
+        const urlCompleta = `http://192.168.0.2:3000/${caminhoLimpo}`;
+        console.log('✅ URL construída do uploads:', urlCompleta);
+        return urlCompleta;
+      }
+
+      // ✅ Se for Base64, usar diretamente
+      if (imageUrl.startsWith('data:image')) {
+        console.log('✅ Imagem Base64 encontrada');
+        return imageUrl;
+      }
+
+      // ✅ Tentativa final: adicionar base URL para qualquer caminho relativo
+      const urlCompleta = `http://192.168.0.2:3000/${imageUrl.replace(/^\/+/, '')}`;
+      console.log('✅ URL final construída:', urlCompleta);
+      return urlCompleta;
 
     } catch (error) {
       console.error('❌ Erro ao processar imagem:', error);
@@ -170,11 +224,18 @@ export default function CategoriaProdutoScreen() {
     }
   };
 
+  // 🔥 NOVA FUNÇÃO: VOLTAR PARA HOME
+  const handleVoltarParaHome = () => {
+    router.replace('/home');
+  };
+
   const ProdutoCard = ({ produto }) => {
     const imagemProduto = getImagemProduto(produto);
+    const produtoCarrinhoId = `${produto.id}_${produto.FarmaciaProdutos?.[0]?.farmacia_id || '0'}`;
     
     console.log('🔍 Debug Produto:', produto.nome);
-    console.log('🖼️ Debug Imagem:', imagemProduto);
+    console.log('📸 Propriedade imagem:', produto.imagem);
+    console.log('🖼️ Debug Imagem Final:', imagemProduto);
     
     return (
       <View style={styles.produtoCard}>
@@ -255,29 +316,43 @@ export default function CategoriaProdutoScreen() {
             )}
           </View>
 
-          {/* Botão de Ação */}
+          {/* Botão de Ação - CORRIGIDO */}
           <TouchableOpacity
             style={[
               styles.botaoCarrinho,
-              carrinho.includes(produto.id) && styles.botaoCarrinhoAdicionado
+              carrinho.includes(produtoCarrinhoId) && styles.botaoCarrinhoAdicionado
             ]}
-            onPress={() => toggleCarrinho(produto.id)}
+            onPress={() => toggleCarrinho(produto)}
           >
             <Ionicons
-              name={carrinho.includes(produto.id) ? "checkmark-circle" : "cart-outline"}
+              name={carrinho.includes(produtoCarrinhoId) ? "checkmark-circle" : "cart-outline"}
               size={18}
-              color={carrinho.includes(produto.id) ? "#FFFFFF" : "#059669"}
+              color={carrinho.includes(produtoCarrinhoId) ? "#FFFFFF" : "#059669"}
             />
             <Text style={[
               styles.botaoCarrinhoTexto,
-              carrinho.includes(produto.id) && styles.botaoCarrinhoTextoAdicionado
+              carrinho.includes(produtoCarrinhoId) && styles.botaoCarrinhoTextoAdicionado
             ]}>
-              {carrinho.includes(produto.id) ? 'Adicionado' : 'Adicionar'}
+              {carrinho.includes(produtoCarrinhoId) ? 'Adicionado' : 'Adicionar'}
             </Text>
           </TouchableOpacity>
         </View>
       </View>
     );
+  };
+
+  const formatarPreco = (preco) => {
+    if (!preco && preco !== 0) {
+      return 'Consulte';
+    }
+    
+    const precoNumerico = parseFloat(preco);
+    
+    if (isNaN(precoNumerico)) {
+      return 'Consulte';
+    }
+    
+    return `R$ ${precoNumerico.toFixed(2).replace('.', ',')}`;
   };
 
   const LoadingSkeleton = () => (
@@ -355,6 +430,15 @@ export default function CategoriaProdutoScreen() {
             <Text style={styles.descricaoHeader}>
               {infoCategoria?.descricao || `Produtos de ${categoriaNome} para ${animalNome}`}
             </Text>
+            
+            {/* 🔥 NOVO BOTÃO VOLTAR PARA HOME */}
+            <TouchableOpacity 
+              style={styles.botaoVoltarHome}
+              onPress={handleVoltarParaHome}
+            >
+              <Ionicons name="home-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.botaoVoltarHomeTexto}>Voltar para Home</Text>
+            </TouchableOpacity>
           </View>
         }
         ListEmptyComponent={
@@ -364,18 +448,29 @@ export default function CategoriaProdutoScreen() {
             <Text style={styles.emptyStateTexto}>
               Não encontramos produtos de {categoriaNome.toLowerCase()} para {animalNome.toLowerCase()} no momento.
             </Text>
+            
+            {/* 🔥 BOTÃO VOLTAR PARA HOME NO EMPTY STATE */}
             <TouchableOpacity 
-              style={styles.botaoVoltar}
-              onPress={() => router.back()}
+              style={styles.botaoVoltarHome}
+              onPress={handleVoltarParaHome}
             >
-              <Ionicons name="arrow-back" size={16} color="#FFFFFF" />
-              <Text style={styles.botaoVoltarTexto}>Voltar para Animais</Text>
+              <Ionicons name="home-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.botaoVoltarHomeTexto}>Voltar para Home</Text>
             </TouchableOpacity>
           </View>
         }
         ListFooterComponent={
           produtos.length > 0 && (
             <View style={styles.footer}>
+              {/* 🔥 BOTÃO VOLTAR PARA HOME NO FOOTER */}
+              <TouchableOpacity 
+                style={styles.botaoVoltarHomeFooter}
+                onPress={handleVoltarParaHome}
+              >
+                <Ionicons name="home-outline" size={18} color="#FFFFFF" />
+                <Text style={styles.botaoVoltarHomeTexto}>Voltar para Home</Text>
+              </TouchableOpacity>
+              
               <Text style={styles.footerTexto}>
                 Mostrando {produtos.length} produtos
               </Text>
@@ -422,6 +517,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94A3B8',
     fontStyle: 'italic',
+    marginBottom: 16,
+  },
+  // 🔥 NOVO ESTILO PARA BOTÃO VOLTAR HOME
+  botaoVoltarHome: {
+    backgroundColor: '#059669',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 10,
+  },
+  botaoVoltarHomeFooter: {
+    backgroundColor: '#059669',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  botaoVoltarHomeTexto: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   produtoCard: {
     backgroundColor: '#FFFFFF',
@@ -595,6 +716,7 @@ const styles = StyleSheet.create({
   footerTexto: {
     fontSize: 14,
     color: '#94A3B8',
+    marginTop: 8,
   },
   skeletonContainer: {
     padding: 16,

@@ -19,7 +19,8 @@ interface AuthContextData {
   logout: () => void;
   updatePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   fetchUserData: () => Promise<void>;
-  loading: boolean; // ⭐⭐ ADICIONE ESTE ESTADO
+  verificarToken: () => Promise<boolean>; // 🔥 NOVA FUNÇÃO ADICIONADA
+  loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -27,7 +28,7 @@ const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userToken, setUserToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true); // ⭐⭐ ESTADO DE CARREGAMENTO
+  const [loading, setLoading] = useState(true);
 
   // ⭐⭐ MESMO IP DO LOGIN - IMPORTANTE PARA ANDROID ⭐⭐
   const API_URL = 'http://192.168.0.2:3000';
@@ -63,6 +64,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loadStoredData();
   }, []);
 
+  // 🔥 NOVA FUNÇÃO PARA VERIFICAR SE O TOKEN AINDA É VÁLIDO
+  const verificarToken = async (): Promise<boolean> => {
+    try {
+      if (!userToken) {
+        console.log('❌ Nenhum token disponível para verificar');
+        return false;
+      }
+
+      console.log('🔐 Verificando validade do token...');
+      
+      const response = await fetch(`${API_URL}/api/clientes/verificar-token`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${userToken}`,
+        },
+      });
+
+      console.log('📡 Status da verificação:', response.status);
+
+      if (response.ok) {
+        console.log('✅ Token válido');
+        return true;
+      } else {
+        console.log('❌ Token inválido ou expirado');
+        
+        // 🔥 SE O TOKEN ESTIVER INVÁLIDO, FAZ LOGOUT AUTOMÁTICO
+        if (response.status === 401) {
+          console.log('🔒 Token expirado, fazendo logout automático...');
+          await logout();
+        }
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Erro ao verificar token:', error);
+      return false;
+    }
+  };
+
   // ⭐⭐ NOVA FUNÇÃO PARA BUSCAR DADOS ATUALIZADOS DO USUÁRIO
   const fetchUserData = async (): Promise<void> => {
     try {
@@ -91,13 +130,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
       } else {
         console.log('❌ Erro ao buscar dados do usuário:', response.status);
+        
+        // 🔥 SE DER ERRO 401, O TOKEN PODE ESTAR INVÁLIDO
+        if (response.status === 401) {
+          console.log('🔒 Token pode estar expirado durante fetchUserData');
+          await verificarToken(); // 🔥 VERIFICA O TOKEN
+        }
       }
     } catch (error) {
       console.error('❌ Erro ao buscar dados do usuário:', error);
     }
   };
 
- const login = async (userData: User, token: string) => {
+  const login = async (userData: User, token: string) => {
     console.log('🔐 Login no AuthContext - Dados recebidos:', userData);
     console.log('🔐 Login no AuthContext - Sobrenome recebido:', userData.sobrenome);
     
@@ -116,7 +161,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     console.log('✅ Dados salvos no AuthContext e AsyncStorage');
     console.log('✅ Sobrenome salvo:', userData.sobrenome);
-};
+  };
 
   const logout = async () => {
     // ⭐⭐ LIMPAR CONTEXTO E ASYNCSTORAGE
@@ -137,6 +182,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!user || !userToken) {
         console.log('❌ Usuário não autenticado');
         return { success: false, message: 'Usuário não autenticado' };
+      }
+
+      // 🔥 OPICIONAL: VERIFICA SE O TOKEN AINDA É VÁLIDO ANTES DE TENTAR ALTERAR SENHA
+      const tokenValido = await verificarToken();
+      if (!tokenValido) {
+        return { success: false, message: 'Sessão expirada. Faça login novamente.' };
       }
 
       const response = await fetch(`${API_URL}/api/clientes/alterar-senha`, {
@@ -174,7 +225,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logout, 
       updatePassword, 
       fetchUserData,
-      loading // ⭐⭐ EXPORTE O LOADING
+      verificarToken, // 🔥 AGORA ESTÁ DISPONÍVEL NO CONTEXTO
+      loading
     }}>
       {children}
     </AuthContext.Provider>

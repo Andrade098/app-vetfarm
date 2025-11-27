@@ -3,10 +3,11 @@ import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, TextInput, Scro
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // 🔥 ADICIONE ESTA IMPORT
 
 export default function AlterarSenhaScreen() {
   const router = useRouter();
-  const { user, updatePassword } = useAuth();
+  const { user, updatePassword, logout } = useAuth(); // 🔥 ADICIONE logout AQUI
 
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
@@ -19,8 +20,8 @@ export default function AlterarSenhaScreen() {
   const [carregando, setCarregando] = useState(false);
 
   const handleAlterarSenha = async () => {
-    console.log('🔐 Iniciando alteração de senha no Android...');
-    console.log('📱 Platform: Android');
+    console.log('🔐 Iniciando alteração de senha...');
+    console.log('👤 Usuário:', user?.email);
 
     // Reset mensagens anteriores
     setMensagemErro('');
@@ -53,19 +54,23 @@ export default function AlterarSenhaScreen() {
       if (resultado.success) {
         setMensagemSucesso('Senha alterada com sucesso!');
 
-        // Limpa os campos
+        // 🔥 LIMPA OS CAMPOS
         setSenhaAtual('');
         setNovaSenha('');
         setConfirmarSenha('');
 
-        // Mostra alerta de sucesso
+        // 🔥 MOSTRA ALERTA DE SUCESSO COM OPÇÃO DE FAZER LOGOUT
         Alert.alert(
-          'Sucesso',
-          'Sua senha foi alterada com sucesso!',
+          'Senha Alterada com Sucesso!',
+          'Por segurança, faça login novamente com sua nova senha.',
           [
             {
-              text: 'OK',
-              onPress: () => router.back()
+              text: 'Fazer Login',
+              onPress: async () => {
+                // 🔥 FAZ LOGOUT E REDIRECIONA PARA LOGIN
+                await logout();
+                router.replace('/loginANDcadastro');
+              }
             }
           ]
         );
@@ -73,11 +78,29 @@ export default function AlterarSenhaScreen() {
         setMensagemErro(resultado.message || 'Erro ao alterar senha.');
       }
     } catch (error) {
+      console.error('❌ Erro ao alterar senha:', error);
       setMensagemErro('Erro ao conectar com o servidor. Tente novamente.');
-      console.error('Erro ao alterar senha:', error);
     } finally {
       setCarregando(false);
     }
+  };
+
+  // 🔥 FUNÇÃO PARA VERIFICAR SE O USUÁRIO ESTÁ AUTENTICADO
+  const verificarAutenticacao = () => {
+    if (!user) {
+      Alert.alert(
+        'Sessão Expirada',
+        'Por favor, faça login novamente.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/loginANDcadastro')
+          }
+        ]
+      );
+      return false;
+    }
+    return true;
   };
 
   return (
@@ -95,10 +118,17 @@ export default function AlterarSenhaScreen() {
       </View>
 
       <ScrollView style={styles.content}>
+        {/* Informações do usuário */}
+        <View style={styles.userInfoContainer}>
+          <Text style={styles.userInfoText}>
+            Alterando senha para: {user?.email || 'Usuário'}
+          </Text>
+        </View>
+
         {/* Instruções */}
         <View style={styles.infoContainer}>
           <Text style={styles.infoText}>
-            🔒 Para sua segurança, digite sua senha atual e crie uma nova senha.
+            🔒 Por segurança, após alterar a senha você será desconectado e precisará fazer login novamente.
           </Text>
         </View>
 
@@ -205,7 +235,7 @@ export default function AlterarSenhaScreen() {
             disabled={carregando}
           >
             <Text style={styles.saveButtonText}>
-              {carregando ? 'Alterando...' : 'Salvar Nova Senha'}
+              {carregando ? 'Alterando...' : 'Alterar Senha'}
             </Text>
           </TouchableOpacity>
 
@@ -251,6 +281,19 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 15,
+  },
+  userInfoContainer: {
+    backgroundColor: '#e8f5e8',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#126b1a',
+  },
+  userInfoText: {
+    fontSize: 14,
+    color: '#126b1a',
+    fontWeight: '500',
   },
   infoContainer: {
     backgroundColor: '#e3f2fd',

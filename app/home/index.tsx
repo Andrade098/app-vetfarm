@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Image, StyleSheet, FlatList, Dimensions, Modal, ActivityIndicator, TextInput } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -50,6 +50,43 @@ export default function HomeScreen() {
   useEffect(() => {
     loadProdutos();
   }, []);
+
+  // ⭐⭐ CARREGAR CARRINHO DO ASYNCSTORAGE QUANDO A TELA ABRE ⭐⭐
+  useEffect(() => {
+    const loadCarrinhoFromStorage = async () => {
+      try {
+        const carrinhoStorage = await AsyncStorage.getItem('carrinhoItens');
+        if (carrinhoStorage) {
+          const carrinhoItens = JSON.parse(carrinhoStorage);
+          setCartItems(carrinhoItens);
+          console.log('🛒 Carrinho carregado do AsyncStorage:', carrinhoItens.length, 'itens');
+        }
+      } catch (error) {
+        console.error('❌ Erro ao carregar carrinho:', error);
+      }
+    };
+
+    loadCarrinhoFromStorage();
+  }, []);
+
+  // ⭐⭐ ATUALIZAR CARRINHO SEMPRE QUE A TELA GANHA FOCO ⭐⭐
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadCarrinhoFromStorage = async () => {
+        try {
+          const carrinhoStorage = await AsyncStorage.getItem('carrinhoItens');
+          if (carrinhoStorage) {
+            const carrinhoItens = JSON.parse(carrinhoStorage);
+            setCartItems(carrinhoItens);
+            console.log('🔄 Carrinho atualizado ao focar na tela:', carrinhoItens.length, 'itens');
+          }
+        } catch (error) {
+          console.error('❌ Erro ao atualizar carrinho:', error);
+        }
+      };
+      loadCarrinhoFromStorage();
+    }, [])
+  );
 
   // ⭐⭐ FILTRAR PRODUTOS QUANDO A PESQUISA MUDAR ⭐⭐
   useEffect(() => {
@@ -195,31 +232,60 @@ export default function HomeScreen() {
     }
   }
 
-  // Função para adicionar produto ao carrinho (atualizada para produtos reais)
-  function handleAddToCart(product: Produto) {
-    const productWithId = {
-      ...product,
-      id: `${product.produto_id}_${product.farmacia_id}`, // ID único
-      price: formatPrice(product.preco_venda),
-      name: product.nome,
-      category: product.categoria,
-      image: getProductImage(product.imagens)
-    };
+  // ⭐⭐ FUNÇÃO ATUALIZADA PARA ADICIONAR PRODUTO AO CARRINHO ⭐⭐
+  const handleAddToCart = async (product: Produto) => {
+    try {
+      const productWithId = {
+        id: `${product.produto_id}_${product.farmacia_id}`,
+        produto_id: product.produto_id,
+        farmacia_id: product.farmacia_id,
+        nome: product.nome,
+        descricao: product.descricao,
+        categoria: product.categoria,
+        preco_venda: product.preco_venda,
+        estoque: product.estoque,
+        farmacia_nome: product.farmacia_nome,
+        imagens: product.imagens,
+        price: formatPrice(product.preco_venda),
+        image: getProductImage(product.imagens)
+      };
 
-    const existingItem = cartItems.find(item => item.id === productWithId.id);
+      // Carregar carrinho atual do AsyncStorage
+      const carrinhoExistente = await AsyncStorage.getItem('carrinhoItens');
+      let carrinhoArray = [];
+      
+      if (carrinhoExistente) {
+        carrinhoArray = JSON.parse(carrinhoExistente);
+      }
 
-    if (existingItem) {
-      setCartItems(cartItems.map(item =>
-        item.id === productWithId.id
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      ));
-    } else {
-      setCartItems([...cartItems, { ...productWithId, quantity: 1 }]);
+      const existingItem = carrinhoArray.find(item => item.id === productWithId.id);
+
+      if (existingItem) {
+        // Se já existe, aumenta a quantidade
+        carrinhoArray = carrinhoArray.map(item =>
+          item.id === productWithId.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      } else {
+        // Se não existe, adiciona novo
+        carrinhoArray.push({ ...productWithId, quantity: 1 });
+      }
+
+      // Salvar no AsyncStorage
+      await AsyncStorage.setItem('carrinhoItens', JSON.stringify(carrinhoArray));
+      
+      // Atualizar estado local
+      setCartItems(carrinhoArray);
+
+      alert(`${product.nome} adicionado ao carrinho!`);
+      console.log('✅ Produto adicionado ao carrinho na home:', product.nome);
+      
+    } catch (error) {
+      console.error('❌ Erro ao adicionar ao carrinho:', error);
+      alert('Erro ao adicionar produto ao carrinho');
     }
-
-    alert(`${product.nome} adicionado ao carrinho!`);
-  }
+  };
 
   const toggleFavorito = (productId: string) => {
     setFavoritos(prev => {
@@ -231,26 +297,54 @@ export default function HomeScreen() {
     });
   };
 
-  // Funções do carrinho (mantidas)
-  function handleRemoveFromCart(productId: string) {
-    setCartItems(cartItems.filter(item => item.id !== productId));
-  }
+  // ⭐⭐ FUNÇÕES ATUALIZADAS DO CARRINHO PARA SINCRONIZAR COM ASYNCSTORAGE ⭐⭐
+  const handleRemoveFromCart = async (productId: string) => {
+    try {
+      const novosItens = cartItems.filter(item => item.id !== productId);
+      setCartItems(novosItens);
+      await AsyncStorage.setItem('carrinhoItens', JSON.stringify(novosItens));
+    } catch (error) {
+      console.error('❌ Erro ao remover do carrinho:', error);
+    }
+  };
 
-  function handleIncreaseQuantity(productId: string) {
-    setCartItems(cartItems.map(item =>
-      item.id === productId
-        ? { ...item, quantity: item.quantity + 1 }
-        : item
-    ));
-  }
+  const handleIncreaseQuantity = async (productId: string) => {
+    try {
+      const novosItens = cartItems.map(item =>
+        item.id === productId
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      );
+      setCartItems(novosItens);
+      await AsyncStorage.setItem('carrinhoItens', JSON.stringify(novosItens));
+    } catch (error) {
+      console.error('❌ Erro ao aumentar quantidade:', error);
+    }
+  };
 
-  function handleDecreaseQuantity(productId: string) {
-    setCartItems(cartItems.map(item =>
-      item.id === productId && item.quantity > 1
-        ? { ...item, quantity: item.quantity - 1 }
-        : item
-    ));
-  }
+  const handleDecreaseQuantity = async (productId: string) => {
+    try {
+      const novosItens = cartItems.map(item =>
+        item.id === productId && item.quantity > 1
+          ? { ...item, quantity: item.quantity - 1 }
+          : item
+      );
+      setCartItems(novosItens);
+      await AsyncStorage.setItem('carrinhoItens', JSON.stringify(novosItens));
+    } catch (error) {
+      console.error('❌ Erro ao diminuir quantidade:', error);
+    }
+  };
+
+  // ⭐⭐ FUNÇÃO PARA LIMPAR CARRINHO ⭐⭐
+  const handleClearCart = async () => {
+    try {
+      setCartItems([]);
+      await AsyncStorage.removeItem('carrinhoItens');
+    } catch (error) {
+      console.error('❌ Erro ao limpar carrinho:', error);
+    }
+  };
 
   // ⭐⭐ CORREÇÃO DA FUNÇÃO calculateTotal ⭐⭐
   function calculateTotal() {
@@ -296,15 +390,15 @@ export default function HomeScreen() {
   }
 
   function handleCheckout() {
-  setShowCart(false);
-  router.push({
-    pathname: '/home/finalizacompra',
-    params: {
-      cartItems: JSON.stringify(cartItems),
-      total: calculateTotal()
-    }
-  });
-}
+    setShowCart(false);
+    router.push({
+      pathname: '/home/finalizacompra',
+      params: {
+        cartItems: JSON.stringify(cartItems),
+        total: calculateTotal()
+      }
+    });
+  }
 
   // ⭐⭐ RENDERIZAR PRODUTO REAL ⭐⭐
   const renderProduct = ({ item }: { item: Produto }) => {
@@ -390,7 +484,7 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.cartItemDetails}>
-        <Text style={styles.cartItemName} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.cartItemName} numberOfLines={1}>{item.nome}</Text>
         <Text style={styles.cartItemPrice}>{item.price}</Text>
 
         <View style={styles.quantityContainer}>
@@ -537,7 +631,7 @@ export default function HomeScreen() {
                   <View style={styles.cartActions}>
                     <TouchableOpacity
                       style={styles.clearCartButton}
-                      onPress={() => setCartItems([])}
+                      onPress={handleClearCart}
                     >
                       <Text style={styles.clearCartText}>Limpar </Text>
                     </TouchableOpacity>

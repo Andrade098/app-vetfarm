@@ -80,7 +80,7 @@ export default function MeusDadosScreen() {
       console.log('📦 Dados para enviar:', dadosEditados);
 
       // ⭐⭐ CORREÇÃO 2: Faz a requisição para atualizar no backend
-      const response = await fetch('http://192.168.0.6:3000/api/clientes/meus-dados', {
+      const response = await fetch('http://192.168.0.2:3000/api/clientes/meus-dados', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
