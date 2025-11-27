@@ -22,6 +22,8 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    DB_PASS='sua senha'
    DB_NAME=vetfarm
 
+
+   Posteriormente vá em src e em config e edite o arquivo db.js com seus dados
    ```
 
 
