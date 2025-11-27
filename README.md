@@ -25,11 +25,12 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 
    Posteriormente vá em src e em config e edite o arquivo db.js com seus dados
 
-const db = new Sequelize("vetfarm", "root", "mesma_senha_do_arquivo_.env", {
-    host: "localhost",
-    dialect: "mysql",
-    logging: false,
-});
+    const db = new Sequelize("vetfarm",     "root", "mesma_senha_do_arquivo_.env", {
+     host: "localhost",
+     dialect: "mysql",
+     logging: false,
+     });
+
    ```
 
 
