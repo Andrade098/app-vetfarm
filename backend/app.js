@@ -1,4 +1,4 @@
-// app.js - ATUALIZADO
+// app.js - VERSÃO SIMPLIFICADA (SEM PEDIDOS E FIDELIDADE NO BACKEND)
 const express = require('express');
 const app = express();
 const cors = require('cors');
@@ -32,19 +32,19 @@ app.use('/uploads', express.static(uploadsPath));
 console.log('📁 Servindo arquivos estáticos de:', uploadsPath);
 console.log('🌐 Acessível em: http://192.168.0.3:3000/uploads/');
 
-// ✅ ROTAS PRINCIPAIS
+// ✅✅✅ ROTAS ESSENCIAIS (MANTIDAS)
 app.use('/api/clientes', require('./src/routes/clienteRoutes'));
 app.use('/api/farmacias', require('./src/routes/farmaciaRoutes'));
 app.use('/api/produtos', require('./src/routes/produtoRoutes'));
 app.use('/api/farmacia-produtos', require('./src/routes/farmaciaProdutoRoutes'));
 app.use('/api/enderecos', require('./src/routes/enderecoRoutes'));
 app.use('/api/categoria-produto', require('./src/routes/categoriaProdutoRoutes'));
-app.use('/api/pedidos', require('./src/routes/pedidoRoutes'));
 
-// ✅✅✅ NOVAS ROTAS DE FIDELIDADE
-app.use('/api/fidelidade', require('./src/routes/fidelidadeRoutes'));
+// ❌❌❌ REMOVIDAS (AGORA SÃO LOCAIS NO MOBILE):
+// - /api/pedidos ❌ (agora no AsyncStorage)
+// - /api/fidelidade ❌ (agora no AsyncStorage)
 
-// ✅ ROTA DE UPLOAD
+// ✅ ROTA DE UPLOAD (MANTIDA - para imagens de produtos)
 app.use('/api', require('./src/routes/upload'));
 
 // ✅ ROTA DE HEALTH CHECK
@@ -52,7 +52,17 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     message: 'API VetFarm funcionando corretamente',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    features: {
+      produtos: true,
+      clientes: true, 
+      farmacias: true,
+      enderecos: true,
+      uploads: true,
+      // 🔥 PEDIDOS E FIDELIDADE AGORA SÃO LOCAIS NO MOBILE
+      pedidos: 'local_mobile',
+      fidelidade: 'local_mobile'
+    }
   });
 });
 
@@ -77,7 +87,8 @@ app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Rota não encontrada',
     path: req.originalUrl,
-    method: req.method
+    method: req.method,
+    note: 'Pedidos e Fidelidade agora são gerenciados localmente no mobile'
   });
 });
 
@@ -90,7 +101,9 @@ app.use((error, req, res, next) => {
   });
 });
 
-console.log('🚀 API VetFarm inicializada com sucesso!');
+console.log('🚀 API VetFarm SIMPLIFICADA inicializada com sucesso!');
 console.log('📍 Endpoint principal: http://192.168.0.3:3000/api');
+console.log('🎯 RECURSOS LOCAIS NO MOBILE: Pedidos e Pontos de Fidelidade');
+console.log('💾 RECURSOS NO BACKEND: Produtos, Clientes, Farmacias, Endereços');
 
 module.exports = app;

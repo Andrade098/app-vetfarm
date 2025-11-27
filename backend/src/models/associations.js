@@ -1,16 +1,15 @@
-// src/models/associations.js
+// src/models/associations.js - VERSÃO SIMPLIFICADA
 const Produto = require('./Produto');
 const Categoria = require('./Categoria');
 const Subcategoria = require('./Subcategoria');
 const Farmacia = require('./Farmacia');
 const FarmaciaProduto = require('./FarmaciaProduto');
 const Cliente = require('./Cliente');
-const Pedido = require('./Pedido');
 const Endereco = require('./Endereco');
-const ItemCompra = require('./ItemCompra');
 
-// ✅ REMOVER esta linha - não é necessária aqui
-// const db = require('../../config/db');
+// ❌ REMOVIDOS (AGORA SÃO LOCAIS NO MOBILE):
+// const Pedido = require('./Pedido');
+// const ItemCompra = require('./ItemCompra');
 
 // ASSOCIAÇÕES EXISTENTES (Categoria, Subcategoria, Produto)
 // Produto pertence a uma Categoria (Tipo de Produto)
@@ -87,19 +86,7 @@ FarmaciaProduto.belongsTo(Produto, {
   as: 'produto'
 });
 
-// ✅ ASSOCIAÇÕES EXISTENTES PARA PEDIDOS E ENDEREÇOS
-
-// Cliente tem muitos Pedidos
-Cliente.hasMany(Pedido, {
-  foreignKey: 'usuario_id',
-  as: 'pedidos'
-});
-
-// Pedido pertence a um Cliente
-Pedido.belongsTo(Cliente, {
-  foreignKey: 'usuario_id',
-  as: 'cliente'
-});
+// ✅ ASSOCIAÇÕES MANTIDAS (ESSENCIAIS)
 
 // Cliente tem muitos Endereços
 Cliente.hasMany(Endereco, {
@@ -113,47 +100,58 @@ Endereco.belongsTo(Cliente, {
   as: 'cliente'
 });
 
-// ✅ ASSOCIAÇÕES DO SEU AMIGO (INTEGRADAS)
+// ❌❌❌ ASSOCIAÇÕES REMOVIDAS (AGORA SÃO LOCAIS NO MOBILE):
 
-// Pedido tem muitos ItensCompra
-Pedido.hasMany(ItemCompra, {
-  foreignKey: 'compra_id',
-  as: 'itens'
-});
+// ❌ Cliente tem muitos Pedidos (REMOVER)
+// Cliente.hasMany(Pedido, {
+//   foreignKey: 'usuario_id',
+//   as: 'pedidos'
+// });
 
-// ItemCompra pertence a um Pedido
-ItemCompra.belongsTo(Pedido, {
-  foreignKey: 'compra_id',
-  as: 'pedido'
-});
+// ❌ Pedido pertence a um Cliente (REMOVER)
+// Pedido.belongsTo(Cliente, {
+//   foreignKey: 'usuario_id',
+//   as: 'cliente'
+// });
 
-// ItemCompra pertence a um Produto
-ItemCompra.belongsTo(Produto, {
-  foreignKey: 'produto_id',
-  as: 'produto'
-});
+// ❌ Pedido tem muitos ItensCompra (REMOVER)
+// Pedido.hasMany(ItemCompra, {
+//   foreignKey: 'compra_id',
+//   as: 'itens'
+// });
 
-// ✅ ASSOCIAÇÕES ADICIONAIS (PARA COMPLETAR)
+// ❌ ItemCompra pertence a um Pedido (REMOVER)
+// ItemCompra.belongsTo(Pedido, {
+//   foreignKey: 'compra_id',
+//   as: 'pedido'
+// });
 
-// Produto tem muitos ItemCompra (opcional)
-Produto.hasMany(ItemCompra, {
-  foreignKey: 'produto_id',
-  as: 'itensCompra'
-});
+// ❌ ItemCompra pertence a um Produto (REMOVER)
+// ItemCompra.belongsTo(Produto, {
+//   foreignKey: 'produto_id',
+//   as: 'produto'
+// });
 
-// Pedido pertence a uma Farmacia (se necessário)
-Pedido.belongsTo(Farmacia, {
-  foreignKey: 'farmacia_id',
-  as: 'farmacia'
-});
+// ❌ Produto tem muitos ItemCompra (REMOVER)
+// Produto.hasMany(ItemCompra, {
+//   foreignKey: 'produto_id',
+//   as: 'itensCompra'
+// });
 
-// Farmacia tem muitos Pedidos (se necessário)
-Farmacia.hasMany(Pedido, {
-  foreignKey: 'farmacia_id',
-  as: 'pedidos'
-});
+// ❌ Pedido pertence a uma Farmacia (REMOVER)
+// Pedido.belongsTo(Farmacia, {
+//   foreignKey: 'farmacia_id',
+//   as: 'farmacia'
+// });
+
+// ❌ Farmacia tem muitos Pedidos (REMOVER)
+// Farmacia.hasMany(Pedido, {
+//   foreignKey: 'farmacia_id',
+//   as: 'pedidos'
+// });
 
 console.log('✅ Todas as associações carregadas com sucesso!');
+console.log('🎯 PEDIDOS E FIDELIDADE: Agora gerenciados localmente no mobile');
 
 module.exports = {
   Produto,
@@ -162,7 +160,8 @@ module.exports = {
   Farmacia,
   FarmaciaProduto,
   Cliente,
-  Pedido,
-  Endereco,
-  ItemCompra
+  Endereco
+  // ❌ REMOVIDOS:
+  // Pedido,
+  // ItemCompra
 };

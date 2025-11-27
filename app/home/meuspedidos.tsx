@@ -1,3 +1,4 @@
+// home/meuspedidos.tsx - VERSÃO 100% LOCAL COMPLETA
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -11,17 +12,14 @@ export default function MeusPedidos() {
   const { pedidos, loading, carregarPedidos } = usePedidos();
   const [filtroAtivo, setFiltroAtivo] = useState<FiltroStatus>('todos');
 
-  // Carregar pedidos quando a tela abre
   useEffect(() => {
     carregarPedidos();
   }, []);
 
-  // Debug para verificar os pedidos
   useEffect(() => {
-    console.log('📦 Pedidos carregados no MeusPedidos:', pedidos);
+    console.log('📦 Pedidos carregados LOCALMENTE:', pedidos);
   }, [pedidos]);
 
-  // Filtrar pedidos baseado na aba selecionada
   const pedidosFiltrados = pedidos.filter(pedido => {
     if (filtroAtivo === 'todos') return true;
     if (filtroAtivo === 'entregue') return pedido.status === 'entregue';
@@ -53,9 +51,12 @@ export default function MeusPedidos() {
     }
   };
 
-  // Função para formatar o total corretamente
   const formatarTotal = (total: string) => {
     try {
+      if (total.includes('R$')) {
+        return total;
+      }
+      
       const totalNumero = parseFloat(total);
       return totalNumero.toLocaleString('pt-BR', {
         style: 'currency',
@@ -68,7 +69,6 @@ export default function MeusPedidos() {
 
   const handleDetalhesPedido = (pedidoId: string) => {
     Alert.alert('Detalhes', `Ver detalhes do pedido ${pedidoId}`);
-    // router.push(`/home/detalhes-pedido/${pedidoId}`);
   };
 
   const handleRastrearPedido = (pedidoId: string) => {
@@ -77,10 +77,8 @@ export default function MeusPedidos() {
 
   const handleAvaliarPedido = (pedidoId: string) => {
     Alert.alert('Avaliar', `Avaliar pedido ${pedidoId}`);
-    // router.push(`/home/avaliar-pedido/${pedidoId}`);
   };
 
-  // Mostrar loading enquanto carrega
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -104,7 +102,6 @@ export default function MeusPedidos() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Cabeçalho */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -117,7 +114,6 @@ export default function MeusPedidos() {
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Abas de Filtro */}
         <View style={styles.filtersContainer}>
           <Text style={styles.sectionTitle}>Histórico de Pedidos</Text>
           
@@ -150,17 +146,14 @@ export default function MeusPedidos() {
             </TouchableOpacity>
           </View>
 
-          {/* Contador de resultados */}
           <Text style={styles.contadorText}>
             {pedidosFiltrados.length} pedido(s) {filtroAtivo !== 'todos' ? `encontrado(s)` : 'no total'}
           </Text>
         </View>
 
-        {/* Lista de Pedidos Reais da API */}
         <View style={styles.pedidosContainer}>
           {pedidosFiltrados.map((pedido) => (
             <View key={pedido.id} style={styles.pedidoCard}>
-              {/* Cabeçalho do Pedido */}
               <View style={styles.pedidoHeader}>
                 <View>
                   <Text style={styles.pedidoNumero}>Pedido #{pedido.numero_pedido}</Text>
@@ -173,7 +166,6 @@ export default function MeusPedidos() {
                 </View>
               </View>
 
-              {/* Detalhes do Pedido */}
               <View style={styles.pedidoDetails}>
                 <View style={styles.detailRow}>
                   <Ionicons name="cube" size={16} color="#666" />
@@ -187,9 +179,16 @@ export default function MeusPedidos() {
                     Total: {formatarTotal(pedido.total)}
                   </Text>
                 </View>
+                {pedido.pontos_ganhos > 0 && (
+                  <View style={styles.detailRow}>
+                    <Ionicons name="star" size={16} color="#FFD700" />
+                    <Text style={styles.detailText}>
+                      Pontos ganhos: +{pedido.pontos_ganhos}
+                    </Text>
+                  </View>
+                )}
               </View>
 
-              {/* Itens do Pedido (Resumo) */}
               <View style={styles.itensContainer}>
                 {pedido.itens?.slice(0, 2).map((item, index) => (
                   <Text key={index} style={styles.itemText}>
@@ -203,7 +202,6 @@ export default function MeusPedidos() {
                 )}
               </View>
 
-              {/* Informações de Entrega */}
               <View style={styles.entregaInfo}>
                 <View style={styles.detailRow}>
                   <Ionicons name="location" size={14} color="#666" />
@@ -219,7 +217,6 @@ export default function MeusPedidos() {
                 </View>
               </View>
 
-              {/* Ações do Pedido */}
               <View style={styles.acoesContainer}>
                 <TouchableOpacity 
                   style={styles.acaoButton}
@@ -250,7 +247,6 @@ export default function MeusPedidos() {
           ))}
         </View>
 
-        {/* Mensagem se não houver pedidos */}
         {pedidosFiltrados.length === 0 && (
           <View style={styles.emptyContainer}>
             <Ionicons name="receipt" size={64} color="#ccc" />
@@ -267,7 +263,6 @@ export default function MeusPedidos() {
               }
             </Text>
             
-            {/* Botão para fazer compras */}
             {filtroAtivo === 'todos' && pedidos.length === 0 && (
               <TouchableOpacity 
                 style={styles.comprarButton}
@@ -513,3 +508,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+export default MeusPedidos;

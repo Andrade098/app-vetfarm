@@ -1,4 +1,4 @@
-// home/resumoconta.tsx - VERSÃO MESCLADA E FUNCIONAL
+// home/resumoconta.tsx - VERSÃO 100% LOCAL COMPLETA
 import React, { useState, useEffect } from 'react';
 import { 
   View, 
@@ -15,8 +15,9 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFidelidade } from '../../contexts/FidelidadeContext';
+import { usePedidos } from '../../contexts/PedidoContext';
 
-// Interface para os dados da API
 interface HistoricoPontos {
   id: string;
   data: string;
@@ -26,40 +27,6 @@ interface HistoricoPontos {
   tipo: 'ganho' | 'bonus';
 }
 
-interface BeneficiosResponse {
-  success: boolean;
-  pontosAtuais: number;
-  descontoDisponivel: number;
-  dataExpiracaoDesconto: string | null;
-  pontosParaMeta: number;
-  premioLiberado: boolean;
-  progressoMeta: string;
-}
-
-interface HistoricoResponse {
-  success: boolean;
-  historico: HistoricoPontos[];
-  total: number;
-}
-
-// Função para calcular pontos baseada no valor da compra
-const calcularPontos = (valor: number) => {
-  if (valor >= 500) return 50;
-  if (valor >= 350) return 35;
-  if (valor >= 250) return 20;
-  if (valor >= 100) return 10;
-  return Math.floor(valor / 10);
-};
-
-// Função para calcular nível baseado nos pontos
-const calcularNivel = (pontos: number) => {
-  if (pontos >= 1000) return 'Diamante';
-  if (pontos >= 500) return 'Ouro';
-  if (pontos >= 250) return 'Prata';
-  return 'Bronze';
-};
-
-// Componente de Loading
 const LoadingScreen = () => (
   <SafeAreaView style={styles.container}>
     <View style={styles.loadingContainer}>
@@ -69,42 +36,16 @@ const LoadingScreen = () => (
   </SafeAreaView>
 );
 
-// Componente de Error
-const ErrorScreen = ({ onRetry }: { onRetry: () => void }) => (
-  <SafeAreaView style={styles.container}>
-    <View style={styles.errorContainer}>
-      <Ionicons name="alert-circle-outline" size={48} color="#e74c3c" />
-      <Text style={styles.errorText}>Usuário não encontrado</Text>
-      <Text style={styles.errorSubtext}>Não foi possível carregar seus dados</Text>
-      <TouchableOpacity 
-        style={styles.retryButton}
-        onPress={onRetry}
-      >
-        <Text style={styles.retryButtonText}>Voltar</Text>
-      </TouchableOpacity>
-    </View>
-  </SafeAreaView>
-);
-
-// Componente auxiliar para Info Items
-const InfoItem = ({ label, value }: { label: string; value: string }) => (
-  <View style={styles.infoItem}>
-    <Text style={styles.infoLabel}>{label}</Text>
-    <Text style={styles.infoValue}>{value}</Text>
-  </View>
-);
-
 export default function ResumoContaScreen() {
   const router = useRouter();
-  const { user } = useAuth(); // ⭐⭐ REMOVIDO loading PARA EVITAR LOOP
+  const { user } = useAuth();
+  const { pontos, carregarPontos } = useFidelidade();
+  const { pedidos } = usePedidos();
 
   const [showHistorico, setShowHistorico] = useState(false);
   const [historicoPontos, setHistoricoPontos] = useState<HistoricoPontos[]>([]);
   const [carregandoDados, setCarregandoDados] = useState(true);
-  const [carregandoHistorico, setCarregandoHistorico] = useState(false);
-  const [erroCarregamento, setErroCarregamento] = useState(false);
 
-  // ⭐⭐ DADOS DO PROGRAMA DE FIDELIDADE - MESCLADO
   const [pontosData, setPontosData] = useState({
     pontos: 0,
     meta: 1000,
@@ -117,67 +58,23 @@ export default function ResumoContaScreen() {
     progressoMeta: '0%'
   });
 
-  // ⭐⭐ BUSCAR DADOS REAIS DA API (OPCIONAL) - MESCLADO
-  const buscarDadosFidelidade = async () => {
-    if (!user?.id) {
-      // ⭐⭐ FALLBACK: Usar dados do usuário se API não estiver disponível
-      carregarDadosUsuario();
-      return;
-    }
-    
-    try {
-      setCarregandoDados(true);
-      setErroCarregamento(false);
-      
-      console.log('🔄 Buscando dados de fidelidade para cliente:', user.id);
-      
-      // Tentar buscar da API primeiro
-      const beneficiosResponse = await fetch(
-        `http://192.168.0.3:3000/api/fidelidade/clientes/${user.id}/saldo`
-      );
-      
-      if (beneficiosResponse.ok) {
-        const beneficiosData: BeneficiosResponse = await beneficiosResponse.json();
-        
-        if (beneficiosData.success) {
-          console.log('✅ Dados de fidelidade recebidos da API');
-          
-          setPontosData({
-            pontos: beneficiosData.pontosAtuais,
-            meta: 1000,
-            nivel: calcularNivel(beneficiosData.pontosAtuais),
-            consultasGratis: beneficiosData.premioLiberado ? 1 : 0,
-            expiracao: '31/12/2025',
-            descontoAtivo: beneficiosData.descontoDisponivel,
-            dataExpiracaoDesconto: beneficiosData.dataExpiracaoDesconto 
-              ? new Date(beneficiosData.dataExpiracaoDesconto).toLocaleDateString('pt-BR')
-              : '',
-            premioLiberado: beneficiosData.premioLiberado,
-            progressoMeta: beneficiosData.progressoMeta
-          });
-          return;
-        }
-      }
-      
-      // ⭐⭐ FALLBACK: Se API falhar, usar dados do usuário
-      carregarDadosUsuario();
-      
-    } catch (error) {
-      console.error('💥 Erro ao buscar dados da API, usando fallback:', error);
-      // ⭐⭐ FALLBACK: Usar dados do usuário em caso de erro
-      carregarDadosUsuario();
-    } finally {
-      setCarregandoDados(false);
-    }
+  const calcularNivel = (pontos: number) => {
+    if (pontos >= 1000) return 'Diamante';
+    if (pontos >= 500) return 'Ouro';
+    if (pontos >= 250) return 'Prata';
+    return 'Bronze';
   };
 
-  // ⭐⭐ FUNÇÃO FALLBACK - USA DADOS DO USUÁRIO DIRETO
-  const carregarDadosUsuario = () => {
-    if (user) {
-      const pontosUsuario = user.pontos_fidelidade || 0;
-      const descontoUsuario = user.desconto_proxima_compra || 0;
+  const carregarDadosUsuario = async () => {
+    try {
+      setCarregandoDados(true);
       
-      console.log('👤 Carregando dados do usuário (fallback):', {
+      await carregarPontos();
+      
+      const pontosUsuario = pontos;
+      const descontoUsuario = user?.desconto_proxima_compra || 0;
+      
+      console.log('👤 Dados carregados LOCALMENTE:', {
         pontos_fidelidade: pontosUsuario,
         desconto_proxima_compra: descontoUsuario
       });
@@ -189,195 +86,88 @@ export default function ResumoContaScreen() {
         consultasGratis: Math.floor(pontosUsuario / 1000),
         expiracao: '31/12/2025',
         descontoAtivo: descontoUsuario,
-        dataExpiracaoDesconto: user.data_expiracao_desconto ? 
+        dataExpiracaoDesconto: user?.data_expiracao_desconto ? 
           new Date(user.data_expiracao_desconto).toLocaleDateString('pt-BR') : 
           '',
         premioLiberado: pontosUsuario >= 1000,
         progressoMeta: `${Math.min((pontosUsuario / 1000) * 100, 100)}%`
       });
       
-      // Carregar histórico de pontos (simulado)
-      carregarHistoricoPontos();
+    } catch (error) {
+      console.error('💥 Erro ao carregar dados locais:', error);
+    } finally {
+      setCarregandoDados(false);
     }
   };
 
-  // ⭐⭐ CARREGAR DADOS QUANDO O COMPONENTE MONTAR - CORRIGIDO
   useEffect(() => {
-    let mounted = true;
+    carregarDadosUsuario();
+  }, [user, pontos]);
 
-    const loadData = async () => {
-      if (mounted && user?.id) {
-        await buscarDadosFidelidade();
-      } else if (mounted && user) {
-        // Se não tem ID mas tem user, usar fallback
-        carregarDadosUsuario();
-        setCarregandoDados(false);
-      } else if (mounted) {
-        setCarregandoDados(false);
-      }
-    };
-
-    loadData();
-
-    return () => {
-      mounted = false;
-    };
-  }, [user]); // ⭐⭐ DEPENDÊNCIA APENAS NO user
-
-  // ⭐⭐ FUNÇÃO PARA CARREGAR HISTÓRICO DE PONTOS - MESCLADO
-  const carregarHistoricoPontos = async () => {
-    setCarregandoHistorico(true);
+  const carregarHistoricoPontos = () => {
     try {
-      // ⭐⭐ PRIMEIRO TENTA BUSCAR DA API
-      if (user?.id) {
-        try {
-          const historicoResponse = await fetch(
-            `http://192.168.0.3:3000/api/fidelidade/clientes/${user.id}/historico`
-          );
-          
-          if (historicoResponse.ok) {
-            const historicoData: HistoricoResponse = await historicoResponse.json();
-            
-            if (historicoData.success && historicoData.historico) {
-              console.log('✅ Histórico recebido da API:', historicoData.historico.length, 'itens');
-              
-              const historicoFormatado: HistoricoPontos[] = historicoData.historico.map(item => ({
-                id: item.id.toString(),
-                data: new Date(item.data).toLocaleDateString('pt-BR'),
-                descricao: item.descricao,
-                valor: item.valor || 0,
-                pontos: item.pontos,
-                tipo: item.tipo || 'ganho'
-              }));
-              
-              setHistoricoPontos(historicoFormatado);
-              return;
-            }
-          }
-        } catch (error) {
-          console.log('ℹ️ API de histórico não disponível, usando dados simulados');
+      console.log('📦 Gerando histórico a partir dos pedidos locais...');
+      
+      const historico: HistoricoPontos[] = [];
+      
+      pedidos.forEach(pedido => {
+        if (pedido.pontos_ganhos > 0) {
+          historico.push({
+            id: `pedido_${pedido.id}`,
+            data: new Date(pedido.createdAt).toLocaleDateString('pt-BR'),
+            descricao: `Compra - Pedido #${pedido.numero_pedido}`,
+            valor: parseFloat(pedido.total.replace('R$', '').replace('.', '').replace(',', '.')),
+            pontos: pedido.pontos_ganhos,
+            tipo: 'ganho'
+          });
         }
+      });
+      
+      historico.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+      
+      if (historico.length === 0) {
+        historico.push({
+          id: '1',
+          data: new Date().toLocaleDateString('pt-BR'),
+          descricao: 'Bem-vindo ao VetFarm!',
+          valor: 0,
+          pontos: 0,
+          tipo: 'bonus'
+        });
       }
       
-      // ⭐⭐ FALLBACK: Dados simulados se API falhar
+      setHistoricoPontos(historico);
+      console.log('✅ Histórico gerado:', historico.length, 'itens');
+      
+    } catch (error) {
+      console.error('❌ Erro ao gerar histórico:', error);
+      
       const historicoSimulado: HistoricoPontos[] = [
         {
           id: '1',
-          data: '15/03/2024',
-          descricao: 'Compra - Vermífugo Bovino',
-          valor: 45.90,
-          pontos: calcularPontos(45.90),
-          tipo: 'ganho'
-        },
-        {
-          id: '2',
-          data: '10/03/2024',
-          descricao: 'Compra - Cela Equina',
-          valor: 289.90,
-          pontos: calcularPontos(289.90),
-          tipo: 'ganho'
-        },
-        {
-          id: '3',
-          data: '05/03/2024',
-          descricao: 'Compra - Vacina Febre Aftosa',
-          valor: 89.90,
-          pontos: calcularPontos(89.90),
-          tipo: 'ganho'
-        },
-        {
-          id: '4',
-          data: '28/02/2024',
-          descricao: 'Compra - Suplemento Animais',
-          valor: 149.90,
-          pontos: calcularPontos(149.90),
-          tipo: 'ganho'
-        },
-        {
-          id: '5',
-          data: '20/02/2024',
-          descricao: 'Bônus - Primeira Compra',
+          data: new Date().toLocaleDateString('pt-BR'),
+          descricao: 'Bem-vindo ao VetFarm!',
           valor: 0,
-          pontos: 25,
+          pontos: 0,
           tipo: 'bonus'
-        },
+        }
       ];
       setHistoricoPontos(historicoSimulado);
-      
-    } catch (error) {
-      console.error('Erro ao carregar histórico:', error);
-    } finally {
-      setCarregandoHistorico(false);
     }
   };
 
-  // ⭐⭐ CARREGAR HISTÓRICO QUANDO ABRIR MODAL
   useEffect(() => {
     if (showHistorico) {
       carregarHistoricoPontos();
     }
-  }, [showHistorico]);
+  }, [showHistorico, pedidos]);
 
-  // ⭐⭐ RESGATAR PRÊMIO - DO CÓDIGO DO SEU AMIGO
   const handleResgatarPremio = async () => {
-    if (!user?.id) return;
-    
-    try {
-      Alert.alert(
-        'Resgatar Prêmio',
-        'Deseja resgatar sua visitação gratuita do veterinário?',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { 
-            text: 'Resgatar', 
-            style: 'default',
-            onPress: async () => {
-              try {
-                const response = await fetch(
-                  `http://192.168.0.3:3000/api/fidelidade/clientes/${user.id}/resgatar`,
-                  { method: 'POST' }
-                );
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                  Alert.alert('Sucesso', result.message);
-                  // Recarregar dados atualizados
-                  buscarDadosFidelidade();
-                } else {
-                  Alert.alert('Erro', result.error || 'Falha ao resgatar prêmio');
-                }
-              } catch (error) {
-                Alert.alert('Erro', 'Falha ao resgatar prêmio. Tente novamente.');
-              }
-            }
-          }
-        ]
-      );
-    } catch (error) {
-      console.error('💥 Erro ao resgatar prêmio:', error);
-    }
-  };
-
-  // ⭐⭐ LOADING STATE - APENAS CARREGANDO DADOS
-  if (carregandoDados) {
-    return <LoadingScreen />;
-  }
-
-  // ⭐⭐ ERROR STATE
-  if (!user || erroCarregamento) {
-    return <ErrorScreen onRetry={() => router.back()} />;
-  }
-
-  // ⭐⭐ DADOS FORMATADOS DO USUÁRIO
-  const userData = {
-    nomeCompleto: user?.nome ? `${user.nome} ${user.sobrenome || ''}`.trim() : 'Usuário',
-    email: user?.email || 'email@exemplo.com',
-    telefone: user?.telefone || 'Não informado',
-    cpf: user?.cpf || 'Não informado',
-    dataNascimento: user?.data_nascimento 
-      ? new Date(user.data_nascimento).toLocaleDateString('pt-BR')
-      : 'Não informada',
+    Alert.alert(
+      'Resgatar Prêmio',
+      'Funcionalidade disponível em breve!',
+      [{ text: 'OK', style: 'default' }]
+    );
   };
 
   const calcularProgresso = () => {
@@ -396,18 +186,16 @@ export default function ResumoContaScreen() {
     return `Padrão (${Math.floor(valor / 10)} pts)`;
   };
 
-  // ⭐⭐ FUNÇÃO PARA VERIFICAR SE TEM DESCONTO ATIVO - MESCLADO
   const temDescontoAtivo = () => {
     if (pontosData.descontoAtivo <= 0) return false;
     
-    // Verificar se a data de expiração é válida
     if (pontosData.dataExpiracaoDesconto) {
       const hoje = new Date();
       const dataExpiracao = new Date(pontosData.dataExpiracaoDesconto);
       return dataExpiracao > hoje;
     }
     
-    return true; // Se não tem data de expiração, considera válido
+    return true;
   };
 
   const renderItemHistorico = ({ item }: { item: HistoricoPontos }) => (
@@ -431,7 +219,7 @@ export default function ResumoContaScreen() {
           styles.historicoValor,
           { color: item.tipo === 'bonus' ? '#FF6B35' : '#126b1a' }
         ]}>
-          +{item.pontos}
+          {item.pontos > 0 ? `+${item.pontos}` : item.pontos}
         </Text>
         <Text style={styles.historicoLabel}>pontos</Text>
         {item.tipo === 'ganho' && item.valor > 0 && (
@@ -443,9 +231,22 @@ export default function ResumoContaScreen() {
     </View>
   );
 
+  if (carregandoDados) {
+    return <LoadingScreen />;
+  }
+
+  const userData = {
+    nomeCompleto: user?.nome ? `${user.nome} ${user.sobrenome || ''}`.trim() : 'Usuário',
+    email: user?.email || 'email@exemplo.com',
+    telefone: user?.telefone || 'Não informado',
+    cpf: user?.cpf || 'Não informado',
+    dataNascimento: user?.data_nascimento 
+      ? new Date(user.data_nascimento).toLocaleDateString('pt-BR')
+      : 'Não informada',
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Cabeçalho */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -458,33 +259,44 @@ export default function ResumoContaScreen() {
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Saudação - COM DADOS REAIS */}
         <View style={styles.saudacaoContainer}>
           <Text style={styles.saudacao}>Olá,</Text>
           <Text style={styles.nomeUsuario}>{userData.nomeCompleto}</Text>
           <Text style={styles.emailUsuario}>{userData.email}</Text>
         </View>
 
-        {/* Dados da Conta - SEM BOTÃO ALTERAR */}
         <View style={styles.dadosContainer}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Dados da conta</Text>
           </View>
 
           <View style={styles.infoCard}>
-            <InfoItem label="Nome completo" value={userData.nomeCompleto} />
-            <InfoItem label="E-mail" value={userData.email} />
-            <InfoItem label="Telefone" value={userData.telefone} />
-            <InfoItem label="CPF" value={userData.cpf} />
-            <InfoItem label="Data de nascimento" value={userData.dataNascimento} />
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Nome completo</Text>
+              <Text style={styles.infoValue}>{userData.nomeCompleto}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>E-mail</Text>
+              <Text style={styles.infoValue}>{userData.email}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Telefone</Text>
+              <Text style={styles.infoValue}>{userData.telefone}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>CPF</Text>
+              <Text style={styles.infoValue}>{userData.cpf}</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Data de nascimento</Text>
+              <Text style={styles.infoValue}>{userData.dataNascimento}</Text>
+            </View>
           </View>
         </View>
 
-        {/* Programa de Fidelidade */}
         <View style={styles.fidelidadeContainer}>
           <Text style={styles.sectionTitle}>Seus Pontos de Fidelidade</Text>
 
-          {/* ⭐⭐ CARD DE DESCONTO ATIVO ⭐⭐ */}
           {temDescontoAtivo() && (
             <View style={styles.descontoAtivoCard}>
               <View style={styles.descontoAtivoHeader}>
@@ -502,7 +314,6 @@ export default function ResumoContaScreen() {
             </View>
           )}
 
-          {/* Card de Tabela de Pontos */}
           <View style={styles.tabelaPontosCard}>
             <Text style={styles.tabelaTitulo}>Como Ganhar Pontos</Text>
             <View style={styles.tabelaLinha}>
@@ -539,7 +350,6 @@ export default function ResumoContaScreen() {
               </View>
             </View>
 
-            {/* Barra de progresso */}
             <View style={styles.progressoContainer}>
               <View style={styles.progressoBar}>
                 <View
@@ -567,7 +377,6 @@ export default function ResumoContaScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Prêmio */}
           <View style={styles.premioCard}>
             <Ionicons name="gift" size={24} color="#126b1a" />
             <View style={styles.premioInfo}>
@@ -589,7 +398,6 @@ export default function ResumoContaScreen() {
         </View>
       </ScrollView>
 
-      {/* MODAL DO HISTÓRICO */}
       <Modal
         visible={showHistorico}
         transparent={true}
@@ -598,7 +406,6 @@ export default function ResumoContaScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            {/* Header do Modal */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Histórico de Pontos</Text>
               <TouchableOpacity
@@ -609,7 +416,6 @@ export default function ResumoContaScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Resumo */}
             <View style={styles.resumoPontos}>
               <View style={styles.resumoItem}>
                 <Text style={styles.resumoValor}>{pontosData.pontos}</Text>
@@ -625,36 +431,26 @@ export default function ResumoContaScreen() {
               </View>
             </View>
 
-            {/* Loading do Histórico */}
-            {carregandoHistorico ? (
-              <View style={styles.historicoLoading}>
-                <ActivityIndicator size="small" color="#126b1a" />
-                <Text style={styles.historicoLoadingText}>Carregando histórico...</Text>
-              </View>
-            ) : (
-              /* Lista do Histórico */
-              <FlatList
-                data={historicoPontos}
-                renderItem={renderItemHistorico}
-                keyExtractor={item => item.id}
-                style={styles.historicoList}
-                showsVerticalScrollIndicator={false}
-                ListHeaderComponent={
-                  <Text style={styles.historicoTitulo}>Últimas Transações</Text>
-                }
-                ListEmptyComponent={
-                  <View style={styles.historicoVazio}>
-                    <Ionicons name="receipt-outline" size={48} color="#ccc" />
-                    <Text style={styles.historicoVazioTexto}>Nenhuma transação encontrada</Text>
-                    <Text style={styles.historicoVazioSubtexto}>
-                      Suas compras aparecerão aqui
-                    </Text>
-                  </View>
-                }
-              />
-            )}
+            <FlatList
+              data={historicoPontos}
+              renderItem={renderItemHistorico}
+              keyExtractor={item => item.id}
+              style={styles.historicoList}
+              showsVerticalScrollIndicator={false}
+              ListHeaderComponent={
+                <Text style={styles.historicoTitulo}>Últimas Transações</Text>
+              }
+              ListEmptyComponent={
+                <View style={styles.historicoVazio}>
+                  <Ionicons name="receipt-outline" size={48} color="#ccc" />
+                  <Text style={styles.historicoVazioTexto}>Nenhuma transação encontrada</Text>
+                  <Text style={styles.historicoVazioSubtexto}>
+                    Suas compras aparecerão aqui
+                  </Text>
+                </View>
+              }
+            />
 
-            {/* Botão Fechar */}
             <TouchableOpacity
               style={styles.fecharModalButton}
               onPress={() => setShowHistorico(false)}
@@ -668,7 +464,6 @@ export default function ResumoContaScreen() {
   );
 }
 
-// ⭐⭐ ESTILOS MESCLADOS
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -684,38 +479,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#e74c3c',
-    textAlign: 'center',
-    marginTop: 10,
-    marginBottom: 8,
-  },
-  errorSubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: '#126b1a',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   header: {
     flexDirection: 'row',
@@ -1114,17 +877,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  historicoLoading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  historicoLoadingText: {
-    marginTop: 10,
-    fontSize: 14,
-    color: '#666',
-  },
   historicoVazio: {
     flex: 1,
     justifyContent: 'center',
@@ -1143,3 +895,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+export default ResumoContaScreen;

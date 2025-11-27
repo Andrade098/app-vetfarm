@@ -1,5 +1,6 @@
-// contexts/CartContext.tsx - ARQUIVO COMPLETO CORRIGIDO
+// contexts/CartContext.tsx - ADICIONE ESTAS FUNÇÕES
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
 
 interface Product {
@@ -31,7 +32,10 @@ interface CartContextType {
   calcularTotalComDesconto: () => number;
   getTotalPontosUsuario: () => number;
   calcularTotalCarrinho: () => number;
-  setPontosGanhos: (pontos: number) => void; // ✅ ADICIONADO ESTA LINHA
+  setPontosGanhos: (pontos: number) => void;
+  // 🔥 NOVAS FUNÇÕES DE PERSISTÊNCIA
+  carregarCarrinho: () => Promise<void>;
+  salvarCarrinho: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -43,7 +47,54 @@ export const CartProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const [descontoAplicado, setDescontoAplicado] = useState(false);
   const { user } = useAuth();
 
-  // ⭐⭐ FUNÇÃO MELHORADA PARA CONVERTER PREÇO BRASILEIRO
+  // 🔥 FUNÇÃO PARA CARREGAR CARRINHO DO ASYNCSTORAGE
+  const carregarCarrinho = async () => {
+    try {
+      console.log('📦 Carregando carrinho do AsyncStorage...');
+      const carrinhoSalvo = await AsyncStorage.getItem('@carrinho');
+      if (carrinhoSalvo) {
+        const carrinhoParseado = JSON.parse(carrinhoSalvo);
+        setCart(carrinhoParseado);
+        console.log('✅ Carrinho carregado:', carrinhoParseado.length, 'itens');
+        
+        // Recalcular pontos baseado no carrinho carregado
+        if (carrinhoParseado.length > 0) {
+          const total = calcularTotalCarrinho();
+          const pontos = calcularPontos(total);
+          setPontosGanhos(pontos);
+        }
+      } else {
+        console.log('📦 Nenhum carrinho salvo encontrado');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar carrinho:', error);
+    }
+  };
+
+  // 🔥 FUNÇÃO PARA SALVAR CARRINHO NO ASYNCSTORAGE
+  const salvarCarrinho = async () => {
+    try {
+      console.log('💾 Salvando carrinho no AsyncStorage...', cart.length, 'itens');
+      await AsyncStorage.setItem('@carrinho', JSON.stringify(cart));
+      console.log('✅ Carrinho salvo com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao salvar carrinho:', error);
+    }
+  };
+
+  // 🔥 EFFECT PARA CARREGAR CARRINHO QUANDO O APP INICIA
+  useEffect(() => {
+    carregarCarrinho();
+  }, []);
+
+  // 🔥 EFFECT PARA SALVAR CARRINHO SEMPRE QUE ELE MUDAR
+  useEffect(() => {
+    if (cart.length > 0) {
+      salvarCarrinho();
+    }
+  }, [cart]);
+
+  // ⭐⭐ FUNÇÃO PARA CONVERTER PREÇO BRASILEIRO
   const converterPrecoBrasileiro = (precoString: string): number => {
     if (!precoString) return 0;
     
@@ -68,7 +119,6 @@ export const CartProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         precoProcessado = precoProcessado.replace(',', '.');
       }
     }
-    // Se não tem vírgula nem ponto, assume que já é número (formato "600")
     
     const precoNumerico = parseFloat(precoProcessado);
     const precoValido = isNaN(precoNumerico) ? 0 : precoNumerico;
@@ -77,18 +127,21 @@ export const CartProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     return precoValido;
   };
 
-  // ⭐⭐ FUNÇÃO CORRIGIDA PARA CALCULAR TOTAL DO CARRINHO
+  // ⭐⭐ FUNÇÃO PARA CALCULAR TOTAL DO CARRINHO
   const calcularTotalCarrinho = (): number => {
     if (cart.length === 0) {
       console.log('🛒 Carrinho vazio - Total: R$ 0');
       return 0;
     }
     
-    console.log('🛒 Itens no carrinho:', cart.length);
+    console.log('🛒 Itens no carrinho para cálculo de total:', cart.length);
     
     const totalCalculado = cart.reduce((acc: number, item: CartItem) => {
       // ⭐⭐ IMPORTANTE: Tenta ambos os campos (preco e price)
-      const precoValido = converterPrecoBrasileiro(item.preco || item.price || '0');
+      const precoString = item.preco || item.price || '0';
+      console.log(`🔍 Processando item: ${item.nome} - Preço: ${precoString}`);
+      
+      const precoValido = converterPrecoBrasileiro(precoString);
       const subtotal = precoValido * item.quantity;
       
       console.log(`📦 ${item.quantity}x ${item.nome}: R$ ${precoValido} = R$ ${subtotal}`);
@@ -100,7 +153,7 @@ export const CartProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     return totalCalculado;
   };
 
-  // ⭐⭐ FUNÇÃO CORRIGIDA PARA CALCULAR PONTOS
+  // ⭐⭐ FUNÇÃO PARA CALCULAR PONTOS
   const calcularPontos = (valorTotal: number): number => {
     console.log('🎯 CALCULANDO PONTOS PARA VALOR: R$', valorTotal);
     
@@ -134,56 +187,88 @@ export const CartProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     return total;
   };
 
-  // ⭐⭐ FUNÇÃO PARA SETAR PONTOS GANHOS (ADICIONADA)
+  // ⭐⭐ FUNÇÃO PARA SETAR PONTOS GANHOS
   const setPontosGanhosContext = (pontos: number) => {
     console.log('🎯 Setando pontos ganhos:', pontos);
     setPontosGanhos(pontos);
   };
 
-  // Funções do carrinho
-  const addToCart = (product: Product) => {
-    setCart(prev => {
-      const existingItem = prev.find(item => item.id === product.id);
-      if (existingItem) {
-        return prev.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      } else {
-        return [...prev, { ...product, quantity: 1 }];
-      }
-    });
-  };
+  // ⭐⭐ FUNÇÕES DO CARRINHO (ATUALIZADAS PARA SALVAR AUTOMATICAMENTE)
+ const addToCart = (product: Product) => {
+  console.log('🛒 ADICIONANDO AO CARRINHO:', product);
+  console.log('🔍 PRODUTO COMPLETO:', JSON.stringify(product, null, 2));
+  
+  setCart(prev => {
+    const existingItem = prev.find(item => item.id === product.id);
+    let newCart;
+    
+    if (existingItem) {
+      newCart = prev.map(item =>
+        item.id === product.id
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      );
+    } else {
+      newCart = [...prev, { ...product, quantity: 1 }];
+    }
+    
+    console.log('🛒 NOVO CARRINHO:', newCart);
+    console.log('🛒 QUANTIDADE DE ITENS:', newCart.length);
+    
+    return newCart;
+  });
+};
 
   const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.id !== productId));
+    console.log('🗑️ REMOVENDO DO CARRINHO:', productId);
+    setCart(prev => {
+      const newCart = prev.filter(item => item.id !== productId);
+      console.log('🗑️ Produto removido. Novo carrinho:', newCart);
+      return newCart;
+    });
   };
 
   const toggleCart = (product: Product) => {
+    console.log('🔁 TOGGLING CARRINHO:', product);
     setCart(prev => {
       const existingItem = prev.find(item => item.id === product.id);
+      let newCart;
+      
       if (existingItem) {
-        return prev.filter(item => item.id !== product.id);
+        newCart = prev.filter(item => item.id !== product.id);
       } else {
-        return [...prev, { ...product, quantity: 1 }];
+        newCart = [...prev, { ...product, quantity: 1 }];
       }
+      
+      console.log('🔁 Novo carrinho (toggle):', newCart);
+      return newCart;
     });
   };
 
-  const clearCart = () => {
+  const clearCart = async () => {
+    console.log('🗑️ LIMPANDO CARRINHO COMPLETAMENTE');
     setCart([]);
     setPontosGanhos(0);
     setDescontoFidelidade(0);
     setDescontoAplicado(false);
-    console.log('🗑️ Carrinho limpo');
+    
+    // 🔥 TAMBÉM LIMPA O ASYNCSTORAGE
+    try {
+      await AsyncStorage.removeItem('@carrinho');
+      console.log('✅ Carrinho removido do AsyncStorage');
+    } catch (error) {
+      console.error('❌ Erro ao limpar carrinho do AsyncStorage:', error);
+    }
   };
 
   const getTotalItems = (): number => {
-    return cart.reduce((total, item) => total + item.quantity, 0);
+    const total = cart.reduce((total, item) => total + item.quantity, 0);
+    console.log('📊 Total de itens no carrinho:', total);
+    return total;
   };
 
   const aplicarDescontoFidelidade = (descontoPercentual: number) => {
+    console.log('🎯 APLICANDO DESCONTO:', descontoPercentual + '%');
     const valorTotal = calcularTotalCarrinho();
     const desconto = (valorTotal * descontoPercentual) / 100;
     setDescontoFidelidade(desconto);
@@ -197,6 +282,7 @@ export const CartProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   };
 
   const removerDescontoFidelidade = () => {
+    console.log('🎯 REMOVENDO DESCONTO');
     setDescontoFidelidade(0);
     setDescontoAplicado(false);
     
@@ -216,23 +302,34 @@ export const CartProvider: React.FC<{children: ReactNode}> = ({ children }) => {
 
   // ⭐⭐ EFFECT PRINCIPAL - CALCULAR PONTOS SEMPRE QUE O CARRINHO MUDAR
   useEffect(() => {
-    console.log('🔄 EFEITO: Carrinho mudou, recalculando pontos...');
+    console.log('🔄🔄🔄 EFEITO: Carrinho mudou, recalculando pontos...');
+    console.log('📦 Itens no carrinho para cálculo:', cart);
+    
+    if (cart.length === 0) {
+      console.log('🛒 Carrinho vazio - Zerando pontos');
+      setPontosGanhos(0);
+      return;
+    }
+    
     const total = calcularTotalCarrinho();
+    console.log('💰 Total para cálculo de pontos:', total);
+    
     const pontos = calcularPontos(total);
+    console.log('🎯 Pontos calculados:', pontos);
+    
     setPontosGanhos(pontos);
-    console.log('🔄 Pontos atualizados:', pontos, 'para total: R$', total);
   }, [cart]); // ⭐⭐ SÓ DEPENDE DO CARRINHO
 
-  // Effect para debug
+  // ⭐⭐ EFFECT PARA DEBUG COMPLETO
   useEffect(() => {
-    console.log('📊 ESTADO ATUAL DO CART CONTEXT:', {
-      itensNoCarrinho: cart.length,
-      totalItens: getTotalItems(),
-      totalCarrinho: calcularTotalCarrinho(),
-      pontosGanhos: pontosGanhos,
-      descontoAplicado: descontoAplicado,
-      valorDesconto: descontoFidelidade
-    });
+    console.log('🛒🛒🛒 DEBUG CARRINHO COMPLETO 🛒🛒🛒');
+    console.log('📦 Itens no carrinho:', cart);
+    console.log('📊 Total de itens:', getTotalItems());
+    console.log('💰 Total calculado:', calcularTotalCarrinho());
+    console.log('🎯 Pontos ganhos:', pontosGanhos);
+    console.log('💸 Desconto aplicado:', descontoAplicado);
+    console.log('💵 Valor desconto:', descontoFidelidade);
+    console.log('🛒🛒🛒 FIM DEBUG 🛒🛒🛒');
   }, [cart, pontosGanhos, descontoAplicado, descontoFidelidade]);
 
   const value: CartContextType = {
@@ -251,7 +348,10 @@ export const CartProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     calcularTotalComDesconto,
     getTotalPontosUsuario,
     calcularTotalCarrinho,
-    setPontosGanhos: setPontosGanhosContext // ✅ ADICIONADO NO VALUE
+    setPontosGanhos: setPontosGanhosContext,
+    // 🔥 NOVAS FUNÇÕES
+    carregarCarrinho,
+    salvarCarrinho
   };
 
   return (

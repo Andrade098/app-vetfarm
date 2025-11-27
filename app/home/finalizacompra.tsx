@@ -1,21 +1,24 @@
-// home/finalizacompra.tsx - ARQUIVO COMPLETO COM DEBUG
+// home/finalizacompra.tsx - VERSÃO COMPLETA COM TODOS OS ESTILOS
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEnderecos } from '../../contexts/EnderecoContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePedidos } from '../../contexts/PedidoContext';
 import { useCart } from '../../contexts/CartContext';
 
 export default function FinalizarCompra() {
+  
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { enderecoPrincipal, loading } = useEnderecos();
+  const { enderecoPrincipal, loading: loadingEnderecos } = useEnderecos();
   const { user } = useAuth();
   const { criarPedido, carregarPedidos } = usePedidos();
   const { 
+    cart: cartItems,
     pontosGanhos, 
     descontoFidelidade, 
     descontoAplicado, 
@@ -23,16 +26,19 @@ export default function FinalizarCompra() {
     removerDescontoFidelidade,
     calcularTotalComDesconto,
     clearCart,
-    getTotalPontosUsuario,
-    setPontosGanhos
+    calcularTotalCarrinho,
+    calcularPontos,
+    setPontosGanhos,
+    carregarCarrinho
   } = useCart();
   
-  const cartItems = params.cartItems ? JSON.parse(params.cartItems as string) : [];
+  // 🔥 VARIÁVEL DE FALLBACK - USA PARAMS DIRETAMENTE
+  const [cartItemsFallback, setCartItemsFallback] = useState<any[]>([]);
   
-  const [carregandoPontos, setCarregandoPontos] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [formaPagamento, setFormaPagamento] = useState('pix');
   const [finalizando, setFinalizando] = useState(false);
+  const [carregandoCarrinho, setCarregandoCarrinho] = useState(true);
 
   const [dadosPagamento, setDadosPagamento] = useState({
     nome: user?.nome || '',
@@ -56,109 +62,165 @@ export default function FinalizarCompra() {
   const temDescontoDisponivel = user?.desconto_proxima_compra > 0 && 
     (!user.data_expiracao_desconto || new Date(user.data_expiracao_desconto) > new Date());
 
-  // ⭐⭐ FUNÇÃO CORRIGIDA PARA CALCULAR PONTOS - COMPATÍVEL COM MOBILE
-  const calcularPontosCompra = async () => {
-    try {
-      if (!user?.id || cartItems.length === 0) {
-        setPontosGanhos(0);
-        return;
-      }
-
-      setCarregandoPontos(true);
-      console.log('🔄 Calculando pontos para compra...');
+  // 🔥 EFFECT PRINCIPAL - TENTA TODOS OS MÉTODOS
+  useEffect(() => {
+    const carregarTodosOsDados = async () => {
+      console.log('🚀 INICIANDO CARREGAMENTO DE DADOS...');
+      setCarregandoCarrinho(true);
       
-      // Calcular valor total para pontos (sem desconto)
-      const valorTotal = cartItems.reduce((acc: number, item: any) => {
-        let precoString = item.price;
-        if (precoString.includes('R$')) {
-          precoString = precoString.replace('R$', '').trim();
+      try {
+        // 1. Tenta carregar do Context
+        console.log('📦 Método 1: Carregando do Context...');
+        await carregarCarrinho();
+        
+        // 2. Tenta carregar do AsyncStorage
+        console.log('📦 Método 2: Carregando do AsyncStorage...');
+        const carrinhoSalvo = await AsyncStorage.getItem('@carrinho');
+        console.log('📦 AsyncStorage result:', carrinhoSalvo);
+        
+        if (carrinhoSalvo) {
+          const carrinhoParseado = JSON.parse(carrinhoSalvo);
+          console.log('✅ Carrinho do AsyncStorage:', carrinhoParseado);
         }
-        // ⭐⭐ CORREÇÃO: Tratamento mais robusto para números
-        const precoLimpo = precoString.replace(/\./g, '').replace(',', '.');
-        const precoNumerico = parseFloat(precoLimpo);
-        return acc + (precoNumerico * item.quantity);
-      }, 0);
-
-      console.log('💰 Valor total para cálculo de pontos:', valorTotal);
-
-      // ⭐⭐ CÁLCULO LOCAL DIRETO - FUNCIONA EM MOBILE E WEB
-      let pontos = 0;
-      if (valorTotal >= 500) {
-        pontos = 50;
-      } else if (valorTotal >= 350) {
-        pontos = 35;
-      } else if (valorTotal >= 250) {
-        pontos = 20;
-      } else if (valorTotal >= 100) {
-        pontos = 10;
-      } else {
-        pontos = Math.floor(valorTotal / 10);
-      }
-      
-      console.log('✅ Pontos calculados:', pontos);
-      setPontosGanhos(pontos);
-      
-    } catch (error) {
-      console.error('💥 Erro ao calcular pontos:', error);
-      // Fallback seguro
-      const valorTotal = cartItems.reduce((acc: number, item: any) => {
-        let precoString = item.price;
-        if (precoString.includes('R$')) {
-          precoString = precoString.replace('R$', '').trim();
+        
+        // 3. 🔥 Tenta carregar dos PARAMS (MÉTODO DE EMERGÊNCIA)
+        console.log('📦 Método 3: Verificando parâmetros...');
+        console.log('📦 Parâmetros recebidos:', params);
+        
+        if (params.cartItems) {
+          try {
+            const itemsFromParams = JSON.parse(params.cartItems as string);
+            console.log('🔥 ITENS DOS PARÂMETROS:', itemsFromParams);
+            setCartItemsFallback(itemsFromParams);
+          } catch (error) {
+            console.log('❌ Erro ao parsear params:', error);
+          }
         }
-        const precoLimpo = precoString.replace(/\./g, '').replace(',', '.');
-        const precoNumerico = parseFloat(precoLimpo) || 0;
-        return acc + (precoNumerico * item.quantity);
-      }, 0);
-      
-      let pontos = 0;
-      if (valorTotal >= 500) pontos = 50;
-      else if (valorTotal >= 350) pontos = 35;
-      else if (valorTotal >= 250) pontos = 20;
-      else if (valorTotal >= 100) pontos = 10;
-      else pontos = Math.floor(valorTotal / 10);
-      
-      setPontosGanhos(pontos);
-    } finally {
-      setCarregandoPontos(false);
+        
+      } catch (error) {
+        console.error('❌ Erro geral ao carregar dados:', error);
+      } finally {
+        setCarregandoCarrinho(false);
+      }
+    };
+
+    carregarTodosOsDados();
+  }, []);
+
+  // 🔥 FUNÇÃO QUE USA O FALLBACK
+  const getCartItems = () => {
+    // Prioridade: Context > Fallback
+    if (cartItems && cartItems.length > 0) {
+      console.log('✅ Usando itens do Context:', cartItems.length);
+      return cartItems;
+    } else if (cartItemsFallback.length > 0) {
+      console.log('🔥 Usando itens do Fallback:', cartItemsFallback.length);
+      return cartItemsFallback;
+    } else {
+      console.log('❌ Nenhum item encontrado');
+      return [];
     }
   };
 
-  const calcularTotal = () => {
-    if (cartItems.length === 0) return '0,00';
+  const currentCartItems = getCartItems();
+
+  // 🔥 FUNÇÃO PARA CALCULAR TOTAL COM FALLBACK
+  const calcularTotalFallback = () => {
+    const items = currentCartItems;
+    console.log('💰 CALCULANDO TOTAL FALLBACK - Itens:', items.length);
     
-    let totalCalculado;
-    
-    if (descontoAplicado) {
-      totalCalculado = calcularTotalComDesconto();
-    } else {
-      totalCalculado = cartItems.reduce((acc: number, item: any) => {
-        let precoString = item.price;
-        
-        if (precoString.includes('R$')) {
-          precoString = precoString.replace('R$', '').trim();
-        }
-        
-        // ⭐⭐ CORREÇÃO: Mesmo tratamento de números aqui
-        const precoLimpo = precoString.replace(/\./g, '').replace(',', '.');
-        const precoNumerico = parseFloat(precoLimpo);
-        
-        const precoValido = isNaN(precoNumerico) ? 0 : precoNumerico;
-        
-        return acc + (precoValido * item.quantity);
-      }, 0);
+    if (items.length === 0) {
+      console.log('🛒 Carrinho vazio');
+      return '0,00';
     }
     
-    return totalCalculado.toLocaleString('pt-BR', {
+    let total = 0;
+    
+    // Calcula manualmente o total
+    items.forEach((item: any) => {
+      const precoString = item.preco || item.price || '0';
+      console.log('🔍 Processando item:', item.nome || item.name, 'Preço:', precoString);
+      
+      // Converte preço brasileiro para número
+      let precoNumerico = 0;
+      if (precoString.includes('R$')) {
+        const precoLimpo = precoString.replace('R$', '').trim().replace(',', '.');
+        precoNumerico = parseFloat(precoLimpo) || 0;
+      } else {
+        precoNumerico = parseFloat(precoString.replace(',', '.')) || 0;
+      }
+      
+      const subtotal = precoNumerico * item.quantity;
+      total += subtotal;
+      console.log(`📦 ${item.quantity}x ${item.nome || item.name}: R$ ${precoNumerico} = R$ ${subtotal}`);
+    });
+    
+    // Aplica desconto se necessário
+    if (descontoAplicado) {
+      total = Math.max(0, total - descontoFidelidade);
+      console.log('💰 Total com desconto:', total);
+    } else {
+      console.log('💰 Total sem desconto:', total);
+    }
+    
+    return total.toLocaleString('pt-BR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
   };
 
-  const total = calcularTotal();
+  const total = calcularTotalFallback();
 
+  // 🔥 FUNÇÃO PARA CALCULAR PONTOS COM FALLBACK
+  const calcularPontosFallback = () => {
+    const items = currentCartItems;
+    if (items.length === 0) return 0;
+    
+    let totalPontos = 0;
+    
+    // Calcula manualmente o total para pontos
+    items.forEach((item: any) => {
+      const precoString = item.preco || item.price || '0';
+      let precoNumerico = 0;
+      
+      if (precoString.includes('R$')) {
+        const precoLimpo = precoString.replace('R$', '').trim().replace(',', '.');
+        precoNumerico = parseFloat(precoLimpo) || 0;
+      } else {
+        precoNumerico = parseFloat(precoString.replace(',', '.')) || 0;
+      }
+      
+      totalPontos += precoNumerico * item.quantity;
+    });
+    
+    // Aplica a mesma lógica de pontos
+    if (totalPontos >= 500) return 50;
+    if (totalPontos >= 350) return 35;
+    if (totalPontos >= 250) return 20;
+    if (totalPontos >= 100) return 10;
+    
+    return Math.floor(totalPontos / 10);
+  };
+
+  const pontosCalculados = calcularPontosFallback();
+
+  const pontosTemporarios = {
+    adicionarPontos: async (pontos: number) => {
+      console.log('🎯 Pontos adicionados (temporário):', pontos);
+      try {
+        const pontosAtuais = await AsyncStorage.getItem('@pontos_fidelidade');
+        const novosPontos = (parseInt(pontosAtuais || '0')) + pontos;
+        await AsyncStorage.setItem('@pontos_fidelidade', novosPontos.toString());
+        console.log('✅ Pontos salvos temporariamente:', novosPontos);
+      } catch (error) {
+        console.log('❌ Erro ao salvar pontos temporários:', error);
+      }
+    }
+  };
+
+  // Resto dos effects...
   useEffect(() => {
-    if (currentStep === 1 && !loading && !enderecoPrincipal) {
+    if (currentStep === 1 && !loadingEnderecos && !enderecoPrincipal) {
       Alert.alert(
         'Endereço Necessário',
         'Você precisa cadastrar um endereço de entrega antes de finalizar a compra.',
@@ -171,7 +233,7 @@ export default function FinalizarCompra() {
         ]
       );
     }
-  }, [currentStep, loading, enderecoPrincipal]);
+  }, [currentStep, loadingEnderecos, enderecoPrincipal]);
 
   useEffect(() => {
     if (user) {
@@ -184,13 +246,6 @@ export default function FinalizarCompra() {
       }));
     }
   }, [user]);
-
-  // ⭐⭐ CORREÇÃO: Calcular pontos quando o componente montar e quando cartItems mudar
-  useEffect(() => {
-    if (cartItems.length > 0 && user?.id) {
-      calcularPontosCompra();
-    }
-  }, [cartItems, user]);
 
   const handleSelecionarPagamento = (forma: string) => {
     setFormaPagamento(forma);
@@ -234,90 +289,60 @@ export default function FinalizarCompra() {
     }
   };
 
-  // ⭐⭐ CORREÇÃO: Função finalizar compra com DEBUG
   const handleFinalizarCompra = async () => {
     try {
       setFinalizando(true);
 
-      const totalSemDesconto = cartItems.reduce((acc: number, item: any) => {
-        let precoString = item.price;
-        if (precoString.includes('R$')) {
-          precoString = precoString.replace('R$', '').trim();
-        }
-        const precoLimpo = precoString.replace(/\./g, '').replace(',', '.');
-        const precoNumerico = parseFloat(precoLimpo) || 0;
-        return acc + (precoNumerico * item.quantity);
-      }, 0);
-      
-      const descontoPercentual = descontoAplicado ? 
-        (descontoFidelidade / totalSemDesconto) * 100 : 0;
-
-      // ⭐⭐ DEBUG: Log dos dados do pedido
-      console.log('📦 Dados do pedido antes de enviar:', {
-        numero_pedido: pedidoConfirmado.numeroPedido,
-        total: total.replace('.', '').replace(',', '.'),
-        endereco_entrega: enderecoPrincipal,
-        itens: cartItems.length,
-        pontos_ganhos: pontosGanhos,
-        user_id: user?.id
-      });
-
-      console.log('📦 Itens do carrinho:', cartItems);
+      console.log('🚀 INICIANDO FINALIZAÇÃO...');
+      console.log('📦 Itens no carrinho:', currentCartItems.length);
+      console.log('💰 Total:', total);
+      console.log('🎯 Pontos a ganhar:', pontosCalculados);
 
       const pedidoData = {
         numero_pedido: pedidoConfirmado.numeroPedido,
         codigo_rastreio: pedidoConfirmado.codigoRastreio,
-        status: 'pendente',
+        status: 'pendente' as const,
         total: total.replace('.', '').replace(',', '.'),
         endereco_entrega: enderecoPrincipal,
         forma_pagamento: 'pix',
-        itens: cartItems.map(item => ({
+        itens: currentCartItems.map((item: any) => ({
           id: item.id,
-          name: item.name,
-          price: item.price.replace('R$', '').trim(),
+          name: item.nome || item.name,
+          price: item.preco || item.price,
           quantity: item.quantity,
-          image: item.image
+          image: item.imagem || item.image
         })),
         data_entrega_prevista: pedidoConfirmado.dataEntrega,
-        pontos_ganhos: pontosGanhos,
-        desconto_fidelidade_aplicado: descontoFidelidade,
-        desconto_percentual: descontoPercentual,
-        valor_total_sem_desconto: totalSemDesconto,
-        user_id: user?.id // ⭐⭐ GARANTIR QUE O USER_ID ESTÁ SENDO ENVIADO
+        pontos_ganhos: pontosCalculados
       };
 
-      console.log('📦 Criando pedido na API com dados:', pedidoData);
+      console.log('📦 Criando pedido...');
+      await criarPedido(pedidoData);
 
-      // ⭐⭐ DEBUG: Tentar criar pedido com try/catch mais detalhado
-      let resultado;
-      try {
-        resultado = await criarPedido(pedidoData);
-        console.log('✅ Pedido criado com sucesso:', resultado);
-      } catch (error) {
-        console.error('❌ Erro detalhado ao criar pedido:', error);
-        throw error; // Re-lançar o erro para ser capturado pelo catch externo
-      }
+      console.log('🎯 Adicionando pontos:', pontosCalculados);
+      await pontosTemporarios.adicionarPontos(pontosCalculados);
+
+      console.log('🗑️ Limpando carrinho...');
+      await clearCart();
 
       await carregarPedidos();
-      clearCart();
+
+      console.log('✅ COMPRA FINALIZADA COM SUCESSO!');
 
       Alert.alert(
         '🎉 Compra Finalizada com Sucesso!',
-        `Seu pedido #${pedidoConfirmado.numeroPedido} foi processado com sucesso!\n\n📦 Será entregue no endereço: ${enderecoPrincipal?.apelido}\n⭐ Você ganhou ${pontosGanhos} pontos de fidelidade!\n💰 Total: R$ ${total}\n\nVocê pode acompanhar seus pedidos no menu "Meus Pedidos".`,
+        `Seu pedido #${pedidoConfirmado.numeroPedido} foi processado com sucesso!\n\n📦 Será entregue no endereço: ${enderecoPrincipal?.apelido}\n⭐ Você ganhou ${pontosCalculados} pontos de fidelidade!\n💰 Total: R$ ${total}\n\nVocê pode acompanhar seus pedidos no menu "Meus Pedidos".`,
         [
           {
             text: '🏠 Voltar à Loja',
             onPress: () => {
-              // ⭐⭐ CORREÇÃO: Navegação correta para app/home/index.tsx
               router.replace('/home');
             }
           }
         ]
       );
     } catch (error: any) {
-      console.error('❌ Erro completo ao finalizar compra:', error);
-      console.error('❌ Mensagem de erro:', error.message);
-      console.error('❌ Stack trace:', error.stack);
+      console.error('❌ Erro ao finalizar compra:', error);
       
       Alert.alert(
         'Erro ao Finalizar Compra', 
@@ -325,6 +350,29 @@ export default function FinalizarCompra() {
       );
     } finally {
       setFinalizando(false);
+    }
+  };
+
+  // 🔥 FUNÇÕES DE RENDERIZAÇÃO
+  const getStepTitle = () => {
+    switch(currentStep) {
+      case 1: return 'Finalizar Compra';
+      case 2: return 'Pagamento PIX';
+      case 3: return 'Revisão do Pedido';
+      case 4: return 'Nota Fiscal';
+      case 5: return 'Confirmação';
+      default: return 'Finalizar Compra';
+    }
+  };
+
+  const getButtonText = () => {
+    switch(currentStep) {
+      case 1: return 'Pagar com PIX';
+      case 2: return 'Revisar Pedido';
+      case 3: return 'Continuar para Nota Fiscal';
+      case 4: return 'Confirmar e Finalizar';
+      case 5: return finalizando ? 'Finalizando...' : 'Voltar à Loja';
+      default: return 'Avançar';
     }
   };
 
@@ -337,14 +385,14 @@ export default function FinalizarCompra() {
             <Text style={styles.fidelidadeTitle}>Desconto de Fidelidade Disponível!</Text>
           </View>
           <Text style={styles.fidelidadeText}>
-            Você tem {user.desconto_proxima_compra}% de desconto para esta compra!
+            Você tem {user?.desconto_proxima_compra}% de desconto para esta compra!
           </Text>
           <TouchableOpacity 
             style={styles.aplicarDescontoButton}
-            onPress={() => aplicarDescontoFidelidade(user.desconto_proxima_compra)}
+            onPress={() => aplicarDescontoFidelidade(user?.desconto_proxima_compra || 0)}
           >
             <Ionicons name="sparkles" size={16} color="white" />
-            <Text style={styles.aplicarDescontoText}>Aplicar {user.desconto_proxima_compra}% de Desconto</Text>
+            <Text style={styles.aplicarDescontoText}>Aplicar {user?.desconto_proxima_compra}% de Desconto</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -354,7 +402,7 @@ export default function FinalizarCompra() {
           <View style={styles.descontoAplicadoHeader}>
             <Ionicons name="checkmark-circle" size={20} color="#27ae60" />
             <Text style={styles.descontoAplicadoText}>
-              Desconto de {user.desconto_proxima_compra}% aplicado!
+              Desconto de {user?.desconto_proxima_compra}% aplicado!
             </Text>
           </View>
           <Text style={styles.descontoValorText}>
@@ -369,39 +417,29 @@ export default function FinalizarCompra() {
         </View>
       )}
 
-      {/* ⭐⭐ SEÇÃO DE PONTOS ATUALIZADA */}
       <View style={styles.pontosSection}>
         <View style={styles.pontosHeader}>
           <Ionicons name="star" size={20} color="#FFD700" />
           <Text style={styles.pontosTitle}>Pontos de Fidelidade</Text>
         </View>
         
-        {carregandoPontos ? (
-          <View style={styles.carregandoPontos}>
-            <ActivityIndicator size="small" color="#126b1a" />
-            <Text style={styles.carregandoPontosText}>Calculando pontos...</Text>
-          </View>
-        ) : (
-          <>
-            <Text style={styles.pontosText}>
-              Com esta compra você ganhará: <Text style={styles.pontosDestaque}>{pontosGanhos} pontos</Text>
-            </Text>
-            <Text style={styles.pontosInfo}>
-              Seus pontos totais: {getTotalPontosUsuario()}
-            </Text>
-          </>
-        )}
+        <Text style={styles.pontosText}>
+          Com esta compra você ganhará: <Text style={styles.pontosDestaque}>{pontosCalculados} pontos</Text>
+        </Text>
+        <Text style={styles.pontosInfo}>
+          Seus pontos totais: {(user?.pontos_fidelidade || 0) + pontosCalculados}
+        </Text>
       </View>
 
       <View style={styles.resumo}>
         <Text style={styles.subtitulo}>Resumo do Pedido</Text>
-        {cartItems.map((item: any, index: number) => (
+        {currentCartItems.map((item: any, index: number) => (
           <View key={index} style={styles.item}>
             <View>
-              <Text style={styles.itemNome}>{item.name}</Text>
+              <Text style={styles.itemNome}>{item.nome || item.name}</Text>
               <Text style={styles.itemQuantidade}>Quantidade: {item.quantity}</Text>
             </View>
-            <Text style={styles.itemPreco}>{item.price}</Text>
+            <Text style={styles.itemPreco}>{item.preco || item.price}</Text>
           </View>
         ))}
         
@@ -522,13 +560,13 @@ export default function FinalizarCompra() {
     <>
       <View style={styles.resumo}>
         <Text style={styles.subtitulo}>Resumo do Pedido</Text>
-        {cartItems.map((item: any, index: number) => (
+        {currentCartItems.map((item: any, index: number) => (
           <View key={index} style={styles.item}>
             <View>
-              <Text style={styles.itemNome}>{item.name}</Text>
+              <Text style={styles.itemNome}>{item.nome || item.name}</Text>
               <Text style={styles.itemQuantidade}>Quantidade: {item.quantity}</Text>
             </View>
-            <Text style={styles.itemPreco}>{item.price}</Text>
+            <Text style={styles.itemPreco}>{item.preco || item.price}</Text>
           </View>
         ))}
         <View style={styles.item}>
@@ -637,10 +675,10 @@ export default function FinalizarCompra() {
 
         <View style={styles.revisaoGrupo}>
           <Text style={styles.revisaoTitulo}>Itens do Pedido</Text>
-          {cartItems.map((item: any, index: number) => (
+          {currentCartItems.map((item: any, index: number) => (
             <View key={index} style={styles.revisaoItem}>
-              <Text style={styles.revisaoTexto}>{item.quantity}x {item.name}</Text>
-              <Text style={styles.revisaoTexto}>{item.price}</Text>
+              <Text style={styles.revisaoTexto}>{item.quantity}x {item.nome || item.name}</Text>
+              <Text style={styles.revisaoTexto}>{item.preco || item.price}</Text>
             </View>
           ))}
           {descontoAplicado && (
@@ -656,8 +694,8 @@ export default function FinalizarCompra() {
 
         <View style={styles.revisaoGrupo}>
           <Text style={styles.revisaoTitulo}>Pontos de Fidelidade</Text>
-          <Text style={styles.revisaoTexto}>Pontos a ganhar: <Text style={styles.revisaoPontosDestaque}>{pontosGanhos} pontos</Text></Text>
-          <Text style={styles.revisaoTexto}>Total após compra: <Text style={styles.revisaoPontosDestaque}>{(user?.pontos_fidelidade || 0) + pontosGanhos} pontos</Text></Text>
+          <Text style={styles.revisaoTexto}>Pontos a ganhar: <Text style={styles.revisaoPontosDestaque}>{pontosCalculados} pontos</Text></Text>
+          <Text style={styles.revisaoTexto}>Total após compra: <Text style={styles.revisaoPontosDestaque}>{(user?.pontos_fidelidade || 0) + pontosCalculados} pontos</Text></Text>
         </View>
       </View>
 
@@ -683,180 +721,159 @@ export default function FinalizarCompra() {
           <View style={styles.notaFiscalInfo}>
             <Ionicons name="document-text-outline" size={24} color="#126b1a" />
             <Text style={styles.notaFiscalTitulo}>Nota Fiscal Eletrônica</Text>
-            </View>
-            <Text style={styles.notaFiscalDescricao}>
-              A nota fiscal será enviada automaticamente para seu email após a confirmação do pagamento.
-            </Text>
-
-            <TextInput
-              style={styles.input}
-              placeholder="CPF para nota fiscal*"
-              keyboardType="numeric"
-              value={dadosPagamento.cpfNotaFiscal}
-              onChangeText={(text) => setDadosPagamento({...dadosPagamento, cpfNotaFiscal: text})}
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Email para receber a nota (opcional)"
-              keyboardType="email-address"
-              value={dadosPagamento.emailNotaFiscal}
-              onChangeText={(text) => setDadosPagamento({...dadosPagamento, emailNotaFiscal: text})}
-            />
-
-            <View style={styles.notaFiscalAviso}>
-              <Ionicons name="information-circle-outline" size={16} color="#666" />
-              <Text style={styles.notaFiscalAvisoTexto}>
-                Se não informar um email específico, usaremos: {dadosPagamento.email}
-              </Text>
-            </View>
           </View>
-        </View>
-      </>
-    );
+          <Text style={styles.notaFiscalDescricao}>
+            A nota fiscal será enviada automaticamente para seu email após a confirmação do pagamento.
+          </Text>
 
-    const renderStep5 = () => (
-      <>
-        <View style={styles.secao}>
-          <View style={styles.confirmacaoHeader}>
-            <Ionicons name="checkmark-circle" size={60} color="#27ae60" />
-            <Text style={styles.confirmacaoTitulo}>Pedido Confirmado!</Text>
-            <Text style={styles.confirmacaoSubtitulo}>
-              Seu pedido foi processado com sucesso
-            </Text>
-          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="CPF para nota fiscal*"
+            keyboardType="numeric"
+            value={dadosPagamento.cpfNotaFiscal}
+            onChangeText={(text) => setDadosPagamento({...dadosPagamento, cpfNotaFiscal: text})}
+          />
 
-          <View style={styles.pontosGanhosSection}>
-            <View style={styles.pontosGanhosHeader}>
-              <Ionicons name="trophy" size={24} color="#FFD700" />
-              <Text style={styles.pontosGanhosTitle}>Pontos Ganhos!</Text>
-            </View>
-            <Text style={styles.pontosGanhosText}>
-              Você ganhou <Text style={styles.pontosGanhosDestaque}>{pontosGanhos} pontos</Text> com esta compra!
-            </Text>
-            <Text style={styles.pontosGanhosInfo}>
-              Seus pontos totais: {(user?.pontos_fidelidade || 0) + pontosGanhos}
-            </Text>
-          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Email para receber a nota (opcional)"
+            keyboardType="email-address"
+            value={dadosPagamento.emailNotaFiscal}
+            onChangeText={(text) => setDadosPagamento({...dadosPagamento, emailNotaFiscal: text})}
+          />
 
-          <View style={styles.pedidoInfoContainer}>
-            <View style={styles.pedidoInfo}>
-              <Text style={styles.pedidoInfoLabel}>Número do Pedido</Text>
-              <Text style={styles.pedidoInfoValor}>#{pedidoConfirmado.numeroPedido}</Text>
-            </View>
-
-            <View style={styles.pedidoInfo}>
-              <Text style={styles.pedidoInfoLabel}>Data do Pedido</Text>
-              <Text style={styles.pedidoInfoValor}>{pedidoConfirmado.dataPedido}</Text>
-            </View>
-
-            <View style={styles.pedidoInfo}>
-              <Text style={styles.pedidoInfoLabel}>Previsão de Entrega</Text>
-              <Text style={styles.pedidoInfoValor}>{pedidoConfirmado.dataEntrega}</Text>
-            </View>
-
-            <View style={styles.pedidoInfo}>
-              <Text style={styles.pedidoInfoLabel}>Endereço de Entrega</Text>
-              <Text style={styles.pedidoInfoValor}>{enderecoPrincipal?.apelido}</Text>
-            </View>
-
-            <View style={styles.pedidoInfo}>
-              <Text style={styles.pedidoInfoLabel}>Forma de Pagamento</Text>
-              <Text style={styles.pedidoInfoValor}>PIX</Text>
-            </View>
-          </View>
-
-          <View style={styles.resumoFinal}>
-            <Text style={styles.resumoFinalTitulo}>Resumo da Compra</Text>
-            <View style={styles.resumoFinalItem}>
-              <Text style={styles.resumoFinalLabel}>Itens:</Text>
-              <Text style={styles.resumoFinalValor}>{cartItems.length} produto(s)</Text>
-            </View>
-            
-            {descontoAplicado && (
-              <View style={styles.resumoFinalItem}>
-                <Text style={styles.resumoFinalLabel}>Desconto Fidelidade:</Text>
-                <Text style={styles.resumoFinalDesconto}>- R$ {descontoFidelidade.toFixed(2)}</Text>
-              </View>
-            )}
-            
-            <View style={styles.resumoFinalItem}>
-              <Text style={styles.resumoFinalLabel}>Total:</Text>
-              <Text style={styles.resumoFinalValor}>R$ {total}</Text>
-            </View>
-            <View style={styles.resumoFinalItem}>
-              <Text style={styles.resumoFinalLabel}>Forma de Pagamento:</Text>
-              <Text style={styles.resumoFinalValor}>PIX</Text>
-            </View>
-            <View style={styles.resumoFinalItem}>
-              <Text style={styles.resumoFinalLabel}>Endereço:</Text>
-              <Text style={styles.resumoFinalValor}>{enderecoPrincipal?.apelido}</Text>
-            </View>
-            
-            <View style={styles.resumoFinalItem}>
-              <Text style={styles.resumoFinalLabel}>Pontos Ganhos:</Text>
-              <Text style={styles.resumoFinalPontos}>+{pontosGanhos} pontos</Text>
-            </View>
-          </View>
-
-          <View style={styles.infoAcompanhamento}>
-            <Ionicons name="information-circle" size={20} color="#126b1a" />
-            <Text style={styles.infoAcompanhamentoTexto}>
-              Você pode acompanhar seus pedidos no menu "Meus Pedidos"
+          <View style={styles.notaFiscalAviso}>
+            <Ionicons name="information-circle-outline" size={16} color="#666" />
+            <Text style={styles.notaFiscalAvisoTexto}>
+              Se não informar um email específico, usaremos: {dadosPagamento.email}
             </Text>
           </View>
         </View>
-      </>
-    );
+      </View>
+    </>
+  );
 
-    const getStepTitle = () => {
-      switch(currentStep) {
-        case 1: return 'Finalizar Compra';
-        case 2: return 'Pagamento PIX';
-        case 3: return 'Revisão do Pedido';
-        case 4: return 'Nota Fiscal';
-        case 5: return 'Confirmação';
-        default: return 'Finalizar Compra';
-      }
-    };
+  const renderStep5 = () => (
+    <>
+      <View style={styles.secao}>
+        <View style={styles.confirmacaoHeader}>
+          <Ionicons name="checkmark-circle" size={60} color="#27ae60" />
+          <Text style={styles.confirmacaoTitulo}>Pedido Confirmado!</Text>
+          <Text style={styles.confirmacaoSubtitulo}>
+            Seu pedido foi processado com sucesso
+          </Text>
+        </View>
 
-    const getButtonText = () => {
-      switch(currentStep) {
-        case 1: return 'Pagar com PIX';
-        case 2: return 'Revisar Pedido';
-        case 3: return 'Continuar para Nota Fiscal';
-        case 4: return 'Confirmar e Finalizar';
-        case 5: return finalizando ? 'Finalizando...' : 'Voltar à Loja';
-        default: return 'Avançar';
-      }
-    };
-
-    if (loading && !enderecoPrincipal && currentStep === 1) {
-      return (
-        <View style={styles.fullContainer}>
-          <Stack.Screen options={{ headerShown: false }} />
-          <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={handleVoltar}
-            >
-              <Ionicons name="arrow-back" size={24} color="#126b1a" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>{getStepTitle()}</Text>
-            <View style={styles.headerPlaceholder} />
+        <View style={styles.pontosGanhosSection}>
+          <View style={styles.pontosGanhosHeader}>
+            <Ionicons name="trophy" size={24} color="#FFD700" />
+            <Text style={styles.pontosGanhosTitle}>Pontos Ganhos!</Text>
           </View>
-          <View style={styles.loadingContainer}>
-            <Ionicons name="refresh" size={40} color="#126b1a" />
-            <Text style={styles.loadingText}>Carregando endereços...</Text>
+          <Text style={styles.pontosGanhosText}>
+            Você ganhou <Text style={styles.pontosGanhosDestaque}>{pontosCalculados} pontos</Text> com esta compra!
+          </Text>
+          <Text style={styles.pontosGanhosInfo}>
+            Seus pontos totais: {(user?.pontos_fidelidade || 0) + pontosCalculados}
+          </Text>
+        </View>
+
+        <View style={styles.pedidoInfoContainer}>
+          <View style={styles.pedidoInfo}>
+            <Text style={styles.pedidoInfoLabel}>Número do Pedido</Text>
+            <Text style={styles.pedidoInfoValor}>#{pedidoConfirmado.numeroPedido}</Text>
+          </View>
+
+          <View style={styles.pedidoInfo}>
+            <Text style={styles.pedidoInfoLabel}>Data do Pedido</Text>
+            <Text style={styles.pedidoInfoValor}>{pedidoConfirmado.dataPedido}</Text>
+          </View>
+
+          <View style={styles.pedidoInfo}>
+            <Text style={styles.pedidoInfoLabel}>Previsão de Entrega</Text>
+            <Text style={styles.pedidoInfoValor}>{pedidoConfirmado.dataEntrega}</Text>
+          </View>
+
+          <View style={styles.pedidoInfo}>
+            <Text style={styles.pedidoInfoLabel}>Endereço de Entrega</Text>
+            <Text style={styles.pedidoInfoValor}>{enderecoPrincipal?.apelido}</Text>
+          </View>
+
+          <View style={styles.pedidoInfo}>
+            <Text style={styles.pedidoInfoLabel}>Forma de Pagamento</Text>
+            <Text style={styles.pedidoInfoValor}>PIX</Text>
           </View>
         </View>
-      );
-    }
 
+        <View style={styles.resumoFinal}>
+          <Text style={styles.resumoFinalTitulo}>Resumo da Compra</Text>
+          <View style={styles.resumoFinalItem}>
+            <Text style={styles.resumoFinalLabel}>Itens:</Text>
+            <Text style={styles.resumoFinalValor}>{currentCartItems.length} produto(s)</Text>
+          </View>
+          
+          {descontoAplicado && (
+            <View style={styles.resumoFinalItem}>
+              <Text style={styles.resumoFinalLabel}>Desconto Fidelidade:</Text>
+              <Text style={styles.resumoFinalDesconto}>- R$ {descontoFidelidade.toFixed(2)}</Text>
+            </View>
+          )}
+          
+          <View style={styles.resumoFinalItem}>
+            <Text style={styles.resumoFinalLabel}>Total:</Text>
+            <Text style={styles.resumoFinalValor}>R$ {total}</Text>
+          </View>
+          <View style={styles.resumoFinalItem}>
+            <Text style={styles.resumoFinalLabel}>Forma de Pagamento:</Text>
+            <Text style={styles.resumoFinalValor}>PIX</Text>
+          </View>
+          <View style={styles.resumoFinalItem}>
+            <Text style={styles.resumoFinalLabel}>Endereço:</Text>
+            <Text style={styles.resumoFinalValor}>{enderecoPrincipal?.apelido}</Text>
+          </View>
+          
+          <View style={styles.resumoFinalItem}>
+            <Text style={styles.resumoFinalLabel}>Pontos Ganhos:</Text>
+            <Text style={styles.resumoFinalPontos}>+{pontosCalculados} pontos</Text>
+          </View>
+        </View>
+
+        <View style={styles.infoAcompanhamento}>
+          <Ionicons name="information-circle" size={20} color="#126b1a" />
+          <Text style={styles.infoAcompanhamentoTexto}>
+            Você pode acompanhar seus pedidos no menu "Meus Pedidos"
+          </Text>
+        </View>
+      </View>
+    </>
+  );
+
+  // 🔥 LOADING
+  if (carregandoCarrinho) {
     return (
       <View style={styles.fullContainer}>
         <Stack.Screen options={{ headerShown: false }} />
-        
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#126b1a" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Finalizar Compra</Text>
+          <View style={styles.headerPlaceholder} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#126b1a" />
+          <Text style={styles.loadingText}>Carregando dados do pedido...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (loadingEnderecos && !enderecoPrincipal && currentStep === 1) {
+    return (
+      <View style={styles.fullContainer}>
+        <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.header}>
           <TouchableOpacity 
             style={styles.backButton}
@@ -867,891 +884,897 @@ export default function FinalizarCompra() {
           <Text style={styles.headerTitle}>{getStepTitle()}</Text>
           <View style={styles.headerPlaceholder} />
         </View>
-
-        <View style={styles.stepsContainer}>
-          {[1, 2, 3, 4, 5].map((step) => (
-            <React.Fragment key={step}>
-              <View style={[styles.step, currentStep === step && styles.stepAtivo]}>
-                <Text style={[styles.stepText, currentStep === step && styles.stepTextAtivo]}>
-                  {step}
-                </Text>
-                <Text style={[styles.stepLabel, currentStep === step && styles.stepLabelAtivo]}>
-                  {step === 1 && 'Dados'}
-                  {step === 2 && 'PIX'}
-                  {step === 3 && 'Revisão'}
-                  {step === 4 && 'Nota Fiscal'}
-                  {step === 5 && 'Confirmação'}
-                </Text>
-              </View>
-              {step < 5 && <View style={styles.stepLine} />}
-            </React.Fragment>
-          ))}
+        <View style={styles.loadingContainer}>
+          <Ionicons name="refresh" size={40} color="#126b1a" />
+          <Text style={styles.loadingText}>Carregando endereços...</Text>
         </View>
-
-        <ScrollView 
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          {currentStep === 1 && renderStep1()}
-          {currentStep === 2 && renderStep2()}
-          {currentStep === 3 && renderStep3()}
-          {currentStep === 4 && renderStep4()}
-          {currentStep === 5 && renderStep5()}
-
-          {currentStep !== 5 && (
-            <View style={styles.botoes}>
-              <TouchableOpacity 
-                style={styles.botaoVoltar}
-                onPress={handleVoltar}
-              >
-                <Text style={styles.botaoVoltarTexto}>
-                  {currentStep === 1 ? 'Voltar' : 'Anterior'}
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[
-                  styles.botaoAvancar,
-                  !enderecoPrincipal && styles.botaoAvancarDisabled
-                ]}
-                onPress={handleAvancar}
-                disabled={!enderecoPrincipal}
-              >
-                <Text style={styles.botaoAvancarTexto}>
-                  {getButtonText()}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {currentStep === 5 && (
-            <View style={styles.botoesFinal}>
-              <TouchableOpacity 
-                style={[styles.botaoPrimario, finalizando && styles.botaoPrimarioDisabled]}
-                onPress={handleFinalizarCompra}
-                disabled={finalizando}
-              >
-                {finalizando ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <Ionicons name="home-outline" size={20} color="white" />
-                )}
-                <Text style={styles.botaoPrimarioTexto}>
-                  {finalizando ? 'Finalizando...' : 'Voltar à Loja'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </ScrollView>
       </View>
     );
   }
 
-  // ... (os estilos permanecem os mesmos do código anterior)
-  const styles = StyleSheet.create({
-    fullContainer: {
-      flex: 1,
-      backgroundColor: '#f5f5f5',
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: 15,
-      paddingTop: 30,
-      paddingBottom: 15,
-      backgroundColor: '#fff',
-      borderBottomWidth: 1,
-      borderBottomColor: '#eee',
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 1000,
-      elevation: 8,
-    },
-    backButton: {
-      padding: 8,
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: '#126b1a',
-    },
-    headerPlaceholder: {
-      width: 40,
-    },
-    stepsContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: '#fff',
-      paddingVertical: 15,
-      marginTop: 100,
-      paddingHorizontal: 10,
-    },
-    step: {
-      alignItems: 'center',
-      paddingHorizontal: 5,
-    },
-    stepAtivo: {},
-    stepText: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
-      backgroundColor: '#ddd',
-      textAlign: 'center',
-      lineHeight: 30,
-      fontSize: 14,
-      fontWeight: 'bold',
-      color: '#666',
-    },
-    stepTextAtivo: {
-      backgroundColor: '#126b1a',
-      color: '#fff',
-    },
-    stepLabel: {
-      fontSize: 10,
-      color: '#666',
-      marginTop: 4,
-      textAlign: 'center',
-    },
-    stepLabelAtivo: {
-      color: '#126b1a',
-      fontWeight: 'bold',
-    },
-    stepLine: {
-      flex: 1,
-      height: 2,
-      backgroundColor: '#ddd',
-      marginHorizontal: 5,
-      maxWidth: 40,
-    },
-    scrollView: {
-      flex: 1,
-      marginTop: 10,
-    },
-    scrollContent: {
-      padding: 20,
-      paddingBottom: 40,
-    },
-    subtitulo: {
-      fontSize: 18,
-      fontWeight: '600',
-      marginBottom: 15,
-      color: '#34495e',
-    },
-    instrucao: {
-      fontSize: 14,
-      color: '#666',
-      marginBottom: 15,
-    },
-    secao: {
-      backgroundColor: 'white',
-      padding: 15,
-      borderRadius: 10,
-      marginBottom: 20,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    resumo: {
-      backgroundColor: 'white',
-      padding: 15,
-      borderRadius: 10,
-      marginBottom: 20,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    item: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 10,
-    },
-    itemNome: {
-      fontSize: 16,
-      color: '#333',
-    },
-    itemQuantidade: {
-      fontSize: 12,
-      color: '#666',
-      marginTop: 2,
-    },
-    itemPreco: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#27ae60',
-    },
-    total: {
-      borderTopWidth: 1,
-      borderTopColor: '#ecf0f1',
-      paddingTop: 10,
-      marginTop: 10,
-    },
-    totalTexto: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: '#27ae60',
-    },
-    input: {
-      borderWidth: 1,
-      borderColor: '#ddd',
-      borderRadius: 8,
-      padding: 12,
-      marginBottom: 15,
-      fontSize: 16,
-      backgroundColor: '#fafafa',
-    },
-    pagamentoOption: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 15,
-      borderWidth: 2,
-      borderColor: '#eee',
-      borderRadius: 10,
-      marginBottom: 10,
-      backgroundColor: '#fafafa',
-    },
-    pagamentoOptionSelecionado: {
-      borderColor: '#126b1a',
-      backgroundColor: '#f0f9f0',
-    },
-    pagamentoIcon: {
-      fontSize: 20,
-      marginRight: 12,
-    },
-    pagamentoNome: {
-      flex: 1,
-      fontSize: 16,
-      fontWeight: '500',
-      color: '#333',
-    },
-    pixInfo: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#f0f9f0',
-      padding: 12,
-      borderRadius: 8,
-      marginTop: 10,
-      gap: 8,
-    },
-    pixInfoText: {
-      fontSize: 12,
-      color: '#126b1a',
-      flex: 1,
-    },
-    pixContainer: {
-      alignItems: 'center',
-    },
-    pixTitulo: {
-      fontSize: 20,
-      fontWeight: 'bold',
-      color: '#126b1a',
-      marginBottom: 10,
-    },
-    pixInstrucao: {
-      fontSize: 14,
-      color: '#666',
-      textAlign: 'center',
-      marginBottom: 20,
-      lineHeight: 20,
-    },
-    qrCodePlaceholder: {
-      width: 200,
-      height: 200,
-      backgroundColor: '#f5f5f5',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: 10,
-      borderWidth: 2,
-      borderColor: '#ddd',
-      borderStyle: 'dashed',
-      marginBottom: 20,
-    },
-    qrCodeText: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#666',
-      marginBottom: 5,
-    },
-    qrCodeSubtext: {
-      fontSize: 12,
-      color: '#999',
-      textAlign: 'center',
-    },
-    chavePixContainer: {
-      width: '100%',
-      marginBottom: 15,
-    },
-    chavePixLabel: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: '#333',
-      marginBottom: 8,
-    },
-    chavePixBox: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#f8f9fa',
-      padding: 12,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: '#ddd',
-      marginBottom: 10,
-    },
-    chavePixText: {
-      flex: 1,
-      fontSize: 12,
-      color: '#666',
-      fontFamily: 'monospace',
-    },
-    botaoCopiar: {
-      backgroundColor: '#126b1a',
-      padding: 12,
-      borderRadius: 8,
-      alignItems: 'center',
-    },
-    botaoCopiarTexto: {
-      color: 'white',
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    pixAviso: {
-      fontSize: 14,
-      color: '#27ae60',
-      fontWeight: '500',
-      textAlign: 'center',
-      marginTop: 10,
-    },
-    instrucoesPix: {
-      marginTop: 20,
-      padding: 15,
-      backgroundColor: '#f8f9fa',
-      borderRadius: 8,
-    },
-    instrucoesTitulo: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#333',
-      marginBottom: 10,
-    },
-    instrucaoItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    instrucaoNumero: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: '#126b1a',
-      color: 'white',
-      textAlign: 'center',
-      lineHeight: 24,
-      fontSize: 12,
-      fontWeight: 'bold',
-      marginRight: 10,
-    },
-    instrucaoTexto: {
-      fontSize: 14,
-      color: '#666',
-      flex: 1,
-    },
-    botoes: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginTop: 20,
-      marginBottom: 40,
-    },
-    botaoVoltar: {
-      backgroundColor: '#95a5a6',
-      padding: 15,
-      borderRadius: 8,
-      flex: 1,
-      marginRight: 10,
-      alignItems: 'center',
-    },
-    botaoVoltarTexto: {
-      color: 'white',
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    botaoAvancar: {
-      backgroundColor: '#27ae60',
-      padding: 15,
-      borderRadius: 8,
-      flex: 2,
-      marginLeft: 10,
-      alignItems: 'center',
-    },
-    botaoAvancarDisabled: {
-      backgroundColor: '#bdc3c7',
-    },
-    botaoAvancarTexto: {
-      color: 'white',
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    revisaoGrupo: {
-      marginBottom: 20,
-      paddingBottom: 15,
-      borderBottomWidth: 1,
-      borderBottomColor: '#ecf0f1',
-    },
-    revisaoTitulo: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#2c3e50',
-      marginBottom: 8,
-    },
-    revisaoTexto: {
-      fontSize: 14,
-      color: '#34495e',
-      marginBottom: 4,
-    },
-    revisaoTextoErro: {
-      fontSize: 14,
-      color: '#e74c3c',
-      fontStyle: 'italic',
-    },
-    revisaoTextoPixInfo: {
-      fontSize: 12,
-      color: '#666',
-      fontStyle: 'italic',
-    },
-    revisaoItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 8,
-    },
-    revisaoTotal: {
-      borderTopWidth: 1,
-      borderTopColor: '#bdc3c7',
-      paddingTop: 10,
-      marginTop: 10,
-    },
-    revisaoTotalTexto: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#27ae60',
-    },
-    termosContainer: {
-      backgroundColor: '#f8f9fa',
-      padding: 15,
-      borderRadius: 8,
-      marginBottom: 20,
-    },
-    termosTexto: {
-      fontSize: 12,
-      color: '#666',
-      textAlign: 'center',
-      lineHeight: 16,
-    },
-    termosLink: {
-      color: '#126b1a',
-      fontWeight: '500',
-    },
-    notaFiscalContainer: {
-      alignItems: 'center',
-    },
-    notaFiscalInfo: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 15,
-    },
-    notaFiscalTitulo: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: '#126b1a',
-      marginLeft: 10,
-    },
-    notaFiscalDescricao: {
-      fontSize: 14,
-      color: '#666',
-      textAlign: 'center',
-      marginBottom: 20,
-      lineHeight: 20,
-    },
-    notaFiscalAviso: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#f8f9fa',
-      padding: 10,
-      borderRadius: 8,
-      marginTop: 10,
-    },
-    notaFiscalAvisoTexto: {
-      fontSize: 12,
-      color: '#666',
-      marginLeft: 8,
-      flex: 1,
-    },
-    confirmacaoHeader: {
-      alignItems: 'center',
-      marginBottom: 30,
-    },
-    confirmacaoTitulo: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      color: '#27ae60',
-      marginTop: 10,
-      marginBottom: 5,
-    },
-    confirmacaoSubtitulo: {
-      fontSize: 16,
-      color: '#666',
-      textAlign: 'center',
-    },
-    pedidoInfoContainer: {
-      backgroundColor: '#f8f9fa',
-      padding: 15,
-      borderRadius: 10,
-      marginBottom: 20,
-    },
-    pedidoInfo: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 10,
-    },
-    pedidoInfoLabel: {
-      fontSize: 14,
-      color: '#666',
-      fontWeight: '500',
-    },
-    pedidoInfoValor: {
-      fontSize: 14,
-      color: '#2c3e50',
-      fontWeight: 'bold',
-    },
-    resumoFinal: {
-      backgroundColor: '#f8f9fa',
-      padding: 15,
-      borderRadius: 10,
-      marginBottom: 20,
-    },
-    resumoFinalTitulo: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#2c3e50',
-      marginBottom: 10,
-    },
-    resumoFinalItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 8,
-    },
-    resumoFinalLabel: {
-      fontSize: 14,
-      color: '#666',
-    },
-    resumoFinalValor: {
-      fontSize: 14,
-      color: '#2c3e50',
-      fontWeight: '500',
-    },
-    infoAcompanhamento: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#f0f9f0',
-      padding: 15,
-      borderRadius: 8,
-      marginTop: 10,
-      gap: 10,
-    },
-    infoAcompanhamentoTexto: {
-      fontSize: 14,
-      color: '#126b1a',
-      flex: 1,
-      fontWeight: '500',
-    },
-    botoesFinal: {
-      marginTop: 20,
-      marginBottom: 40,
-    },
-    botaoPrimario: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: '#27ae60',
-      padding: 15,
-      borderRadius: 8,
-    },
-    botaoPrimarioDisabled: {
-      backgroundColor: '#bdc3c7',
-    },
-    botaoPrimarioTexto: {
-      color: 'white',
-      fontSize: 16,
-      fontWeight: '600',
-      marginLeft: 8,
-    },
-    sectionHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 15,
-    },
-    editText: {
-      fontSize: 14,
-      color: '#126b1a',
-      fontWeight: '500',
-    },
-    enderecoCard: {
-      backgroundColor: '#f8f9fa',
-      padding: 15,
-      borderRadius: 8,
-      borderLeftWidth: 4,
-      borderLeftColor: '#126b1a',
-    },
-    enderecoHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 10,
-      gap: 8,
-    },
-    enderecoApelido: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#333',
-      flex: 1,
-    },
-    principalBadge: {
-      backgroundColor: '#e8f5e9',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 4,
-    },
-    principalText: {
-      fontSize: 10,
-      fontWeight: 'bold',
-      color: '#126b1a',
-    },
-    enderecoDetails: {
-      gap: 4,
-    },
-    enderecoText: {
-      fontSize: 14,
-      color: '#666',
-    },
-    semEnderecoCard: {
-      alignItems: 'center',
-      padding: 30,
-      backgroundColor: '#f8f9fa',
-      borderRadius: 8,
-      borderWidth: 2,
-      borderColor: '#eee',
-      borderStyle: 'dashed',
-    },
-    semEnderecoText: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#666',
-      marginTop: 10,
-      marginBottom: 5,
-    },
-    semEnderecoSubtext: {
-      fontSize: 14,
-      color: '#999',
-      textAlign: 'center',
-      marginBottom: 15,
-    },
-    cadastrarEnderecoButton: {
-      backgroundColor: '#126b1a',
-      paddingHorizontal: 20,
-      paddingVertical: 10,
-      borderRadius: 8,
-    },
-    cadastrarEnderecoText: {
-      color: 'white',
-      fontSize: 14,
-      fontWeight: 'bold',
-    },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingTop: 200,
-    },
-    loadingText: {
-      marginTop: 10,
-      fontSize: 16,
-      color: '#666',
-    },
-    fidelidadeSection: {
-      backgroundColor: '#FFF9E6',
-      padding: 15,
-      borderRadius: 10,
-      marginBottom: 15,
-      borderLeftWidth: 4,
-      borderLeftColor: '#FFD700',
-    },
-    fidelidadeHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 8,
-      gap: 8,
-    },
-    fidelidadeTitle: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#E67E22',
-    },
-    fidelidadeText: {
-      fontSize: 14,
-      color: '#666',
-      marginBottom: 12,
-    },
-    aplicarDescontoButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: '#27ae60',
-      padding: 12,
-      borderRadius: 8,
-      gap: 8,
-    },
-    aplicarDescontoText: {
-      color: 'white',
-      fontSize: 14,
-      fontWeight: 'bold',
-    },
-    descontoAplicadoSection: {
-      backgroundColor: '#E8F5E9',
-      padding: 15,
-      borderRadius: 10,
-      marginBottom: 15,
-      borderLeftWidth: 4,
-      borderLeftColor: '#27ae60',
-    },
-    descontoAplicadoHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 5,
-      gap: 8,
-    },
-    descontoAplicadoText: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#27ae60',
-    },
-    descontoValorText: {
-      fontSize: 14,
-      color: '#666',
-      marginBottom: 10,
-    },
-    removerDescontoButton: {
-      alignSelf: 'flex-start',
-    },
-    removerDescontoText: {
-      color: '#e74c3c',
-      fontSize: 12,
-      fontWeight: '500',
-    },
-    pontosSection: {
-      backgroundColor: '#F0F8FF',
-      padding: 15,
-      borderRadius: 10,
-      marginBottom: 15,
-      borderLeftWidth: 4,
-      borderLeftColor: '#4A90E2',
-    },
-    pontosHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 8,
-      gap: 8,
-    },
-    pontosTitle: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: '#2C3E50',
-    },
-    pontosText: {
-      fontSize: 14,
-      color: '#666',
-      marginBottom: 4,
-    },
-    pontosDestaque: {
-      fontWeight: 'bold',
-      color: '#E67E22',
-    },
-    pontosInfo: {
-      fontSize: 12,
-      color: '#7F8C8D',
-    },
-    descontoItemPreco: {
-      fontSize: 14,
-      fontWeight: 'bold',
-      color: '#e74c3c',
-    },
-    pontosGanhosSection: {
-      backgroundColor: '#FFF9E6',
-      padding: 15,
-      borderRadius: 10,
-      marginBottom: 20,
-      borderLeftWidth: 4,
-      borderLeftColor: '#FFD700',
-    },
-    pontosGanhosHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 8,
-      gap: 8,
-    },
-    pontosGanhosTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: '#E67E22',
-    },
-    pontosGanhosText: {
-      fontSize: 16,
-      color: '#666',
-      marginBottom: 4,
-    },
-    pontosGanhosDestaque: {
-      fontWeight: 'bold',
-      color: '#E67E22',
-      fontSize: 18,
-    },
-    pontosGanhosInfo: {
-      fontSize: 14,
-      color: '#7F8C8D',
-    },
-    resumoFinalDesconto: {
-      fontSize: 14,
-      color: '#e74c3c',
-      fontWeight: 'bold',
-    },
-    resumoFinalPontos: {
-      fontSize: 14,
-      color: '#E67E22',
-      fontWeight: 'bold',
-    },
-    revisaoTextoDesconto: {
-      fontSize: 14,
-      color: '#e74c3c',
-      fontWeight: 'bold',
-    },
-    revisaoPontosDestaque: {
-      fontWeight: 'bold',
-      color: '#E67E22',
-    },
-    carregandoPontos: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    carregandoPontosText: {
-      fontSize: 14,
-      color: '#666',
-    },
-  });
+  return (
+    <View style={styles.fullContainer}>
+      <Stack.Screen options={{ headerShown: false }} />
+      
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={handleVoltar}
+        >
+          <Ionicons name="arrow-back" size={24} color="#126b1a" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{getStepTitle()}</Text>
+        <View style={styles.headerPlaceholder} />
+      </View>
 
-  export default FinalizarCompra;
+      <View style={styles.stepsContainer}>
+        {[1, 2, 3, 4, 5].map((step) => (
+          <React.Fragment key={step}>
+            <View style={[styles.step, currentStep === step && styles.stepAtivo]}>
+              <Text style={[styles.stepText, currentStep === step && styles.stepTextAtivo]}>
+                {step}
+              </Text>
+              <Text style={[styles.stepLabel, currentStep === step && styles.stepLabelAtivo]}>
+                {step === 1 && 'Dados'}
+                {step === 2 && 'PIX'}
+                {step === 3 && 'Revisão'}
+                {step === 4 && 'Nota Fiscal'}
+                {step === 5 && 'Confirmação'}
+              </Text>
+            </View>
+            {step < 5 && <View style={styles.stepLine} />}
+          </React.Fragment>
+        ))}
+      </View>
+
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {currentStep === 1 && renderStep1()}
+        {currentStep === 2 && renderStep2()}
+        {currentStep === 3 && renderStep3()}
+        {currentStep === 4 && renderStep4()}
+        {currentStep === 5 && renderStep5()}
+
+        {currentStep !== 5 && (
+          <View style={styles.botoes}>
+            <TouchableOpacity 
+              style={styles.botaoVoltar}
+              onPress={handleVoltar}
+            >
+              <Text style={styles.botaoVoltarTexto}>
+                {currentStep === 1 ? 'Voltar' : 'Anterior'}
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.botaoAvancar,
+                (!enderecoPrincipal || currentCartItems.length === 0) && styles.botaoAvancarDisabled
+              ]}
+              onPress={handleAvancar}
+              disabled={!enderecoPrincipal || currentCartItems.length === 0}
+            >
+              <Text style={styles.botaoAvancarTexto}>
+                {getButtonText()}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {currentStep === 5 && (
+          <View style={styles.botoesFinal}>
+            <TouchableOpacity 
+              style={[styles.botaoPrimario, finalizando && styles.botaoPrimarioDisabled]}
+              onPress={handleFinalizarCompra}
+              disabled={finalizando}
+            >
+              {finalizando ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Ionicons name="home-outline" size={20} color="white" />
+              )}
+              <Text style={styles.botaoPrimarioTexto}>
+                {finalizando ? 'Finalizando...' : 'Voltar à Loja'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+// 🎨 ESTILOS COMPLETOS
+const styles = StyleSheet.create({
+  fullContainer: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingTop: 50,
+    paddingBottom: 15,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#126b1a',
+  },
+  headerPlaceholder: {
+    width: 40,
+  },
+  stepsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+  },
+  step: {
+    alignItems: 'center',
+    paddingHorizontal: 5,
+  },
+  stepAtivo: {},
+  stepText: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#ddd',
+    textAlign: 'center',
+    lineHeight: 30,
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  stepTextAtivo: {
+    backgroundColor: '#126b1a',
+    color: '#fff',
+  },
+  stepLabel: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  stepLabelAtivo: {
+    color: '#126b1a',
+    fontWeight: 'bold',
+  },
+  stepLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: '#ddd',
+    marginHorizontal: 5,
+    maxWidth: 40,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 15,
+    paddingBottom: 30,
+  },
+  subtitulo: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 15,
+    color: '#34495e',
+  },
+  instrucao: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 15,
+  },
+  secao: {
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  resumo: {
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  item: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  itemNome: {
+    fontSize: 16,
+    color: '#333',
+  },
+  itemQuantidade: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  itemPreco: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#27ae60',
+  },
+  total: {
+    borderTopWidth: 1,
+    borderTopColor: '#ecf0f1',
+    paddingTop: 10,
+    marginTop: 10,
+  },
+  totalTexto: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#27ae60',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
+    fontSize: 16,
+    backgroundColor: '#fafafa',
+  },
+  pagamentoOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderWidth: 2,
+    borderColor: '#eee',
+    borderRadius: 10,
+    marginBottom: 10,
+    backgroundColor: '#fafafa',
+  },
+  pagamentoOptionSelecionado: {
+    borderColor: '#126b1a',
+    backgroundColor: '#f0f9f0',
+  },
+  pagamentoIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  pagamentoNome: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  pixInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f9f0',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  pixInfoText: {
+    fontSize: 12,
+    color: '#126b1a',
+    flex: 1,
+    marginLeft: 8,
+  },
+  pixContainer: {
+    alignItems: 'center',
+  },
+  pixTitulo: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#126b1a',
+    marginBottom: 10,
+  },
+  pixInstrucao: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  qrCodePlaceholder: {
+    width: 200,
+    height: 200,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#ddd',
+    borderStyle: 'dashed',
+    marginBottom: 20,
+  },
+  qrCodeText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#666',
+    marginBottom: 5,
+  },
+  qrCodeSubtext: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+  },
+  chavePixContainer: {
+    width: '100%',
+    marginBottom: 15,
+  },
+  chavePixLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  chavePixBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginBottom: 10,
+  },
+  chavePixText: {
+    flex: 1,
+    fontSize: 12,
+    color: '#666',
+    fontFamily: 'monospace',
+  },
+  botaoCopiar: {
+    backgroundColor: '#126b1a',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  botaoCopiarTexto: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  pixAviso: {
+    fontSize: 14,
+    color: '#27ae60',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  instrucoesPix: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+  },
+  instrucoesTitulo: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  instrucaoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  instrucaoNumero: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#126b1a',
+    color: 'white',
+    textAlign: 'center',
+    lineHeight: 24,
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginRight: 10,
+  },
+  instrucaoTexto: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+  },
+  botoes: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  botaoVoltar: {
+    backgroundColor: '#95a5a6',
+    padding: 15,
+    borderRadius: 8,
+    flex: 1,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  botaoVoltarTexto: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  botaoAvancar: {
+    backgroundColor: '#27ae60',
+    padding: 15,
+    borderRadius: 8,
+    flex: 2,
+    marginLeft: 10,
+    alignItems: 'center',
+  },
+  botaoAvancarDisabled: {
+    backgroundColor: '#bdc3c7',
+  },
+  botaoAvancarTexto: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  revisaoGrupo: {
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ecf0f1',
+  },
+  revisaoTitulo: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: 8,
+  },
+  revisaoTexto: {
+    fontSize: 14,
+    color: '#34495e',
+    marginBottom: 4,
+  },
+  revisaoTextoErro: {
+    fontSize: 14,
+    color: '#e74c3c',
+    fontStyle: 'italic',
+  },
+  revisaoTextoPixInfo: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  revisaoItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  revisaoTotal: {
+    borderTopWidth: 1,
+    borderTopColor: '#bdc3c7',
+    paddingTop: 10,
+    marginTop: 10,
+  },
+  revisaoTotalTexto: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#27ae60',
+  },
+  termosContainer: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  termosTexto: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  termosLink: {
+    color: '#126b1a',
+    fontWeight: '500',
+  },
+  notaFiscalContainer: {
+    alignItems: 'center',
+  },
+  notaFiscalInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  notaFiscalTitulo: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#126b1a',
+    marginLeft: 10,
+  },
+  notaFiscalDescricao: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  notaFiscalAviso: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  notaFiscalAvisoTexto: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 8,
+    flex: 1,
+  },
+  confirmacaoHeader: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  confirmacaoTitulo: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#27ae60',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  confirmacaoSubtitulo: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+  pedidoInfoContainer: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  pedidoInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  pedidoInfoLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  pedidoInfoValor: {
+    fontSize: 14,
+    color: '#2c3e50',
+    fontWeight: 'bold',
+  },
+  resumoFinal: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
+  resumoFinalTitulo: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    marginBottom: 10,
+  },
+  resumoFinalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  resumoFinalLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  resumoFinalValor: {
+    fontSize: 14,
+    color: '#2c3e50',
+    fontWeight: '500',
+  },
+  infoAcompanhamento: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f9f0',
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  infoAcompanhamentoTexto: {
+    fontSize: 14,
+    color: '#126b1a',
+    flex: 1,
+    fontWeight: '500',
+    marginLeft: 10,
+  },
+  botoesFinal: {
+    marginTop: 20,
+    marginBottom: 40,
+  },
+  botaoPrimario: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#27ae60',
+    padding: 15,
+    borderRadius: 8,
+  },
+  botaoPrimarioDisabled: {
+    backgroundColor: '#bdc3c7',
+  },
+  botaoPrimarioTexto: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  editText: {
+    fontSize: 14,
+    color: '#126b1a',
+    fontWeight: '500',
+  },
+  enderecoCard: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#126b1a',
+  },
+  enderecoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  enderecoApelido: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+    marginLeft: 8,
+  },
+  principalBadge: {
+    backgroundColor: '#e8f5e9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  principalText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#126b1a',
+  },
+  enderecoDetails: {
+    marginTop: 5,
+  },
+  enderecoText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 2,
+  },
+  semEnderecoCard: {
+    alignItems: 'center',
+    padding: 30,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#eee',
+    borderStyle: 'dashed',
+  },
+  semEnderecoText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#666',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  semEnderecoSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  cadastrarEnderecoButton: {
+    backgroundColor: '#126b1a',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  cadastrarEnderecoText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 200,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  fidelidadeSection: {
+    backgroundColor: '#FFF9E6',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFD700',
+  },
+  fidelidadeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  fidelidadeTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E67E22',
+    marginLeft: 8,
+  },
+  fidelidadeText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+  },
+  aplicarDescontoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#27ae60',
+    padding: 12,
+    borderRadius: 8,
+  },
+  aplicarDescontoText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  descontoAplicadoSection: {
+    backgroundColor: '#E8F5E9',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#27ae60',
+  },
+  descontoAplicadoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  descontoAplicadoText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#27ae60',
+    marginLeft: 8,
+  },
+  descontoValorText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 10,
+  },
+  removerDescontoButton: {
+    alignSelf: 'flex-start',
+  },
+  removerDescontoText: {
+    color: '#e74c3c',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  pontosSection: {
+    backgroundColor: '#F0F8FF',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4A90E2',
+  },
+  pontosHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  pontosTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    marginLeft: 8,
+  },
+  pontosText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  pontosDestaque: {
+    fontWeight: 'bold',
+    color: '#E67E22',
+  },
+  pontosInfo: {
+    fontSize: 12,
+    color: '#7F8C8D',
+  },
+  descontoItemPreco: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#e74c3c',
+  },
+  pontosGanhosSection: {
+    backgroundColor: '#FFF9E6',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FFD700',
+  },
+  pontosGanhosHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  pontosGanhosTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#E67E22',
+    marginLeft: 8,
+  },
+  pontosGanhosText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 4,
+  },
+  pontosGanhosDestaque: {
+    fontWeight: 'bold',
+    color: '#E67E22',
+    fontSize: 18,
+  },
+  pontosGanhosInfo: {
+    fontSize: 14,
+    color: '#7F8C8D',
+  },
+  resumoFinalDesconto: {
+    fontSize: 14,
+    color: '#e74c3c',
+    fontWeight: 'bold',
+  },
+  resumoFinalPontos: {
+    fontSize: 14,
+    color: '#E67E22',
+    fontWeight: 'bold',
+  },
+  revisaoTextoDesconto: {
+    fontSize: 14,
+    color: '#e74c3c',
+    fontWeight: 'bold',
+  },
+  revisaoPontosDestaque: {
+    fontWeight: 'bold',
+    color: '#E67E22',
+  },
+});
+
+export default FinalizarCompra;
