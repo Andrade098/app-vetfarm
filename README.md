@@ -31,7 +31,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
      logging: false,
      });
 
-      digite cd backend/src/scripts no terminal,após isso digite node gerarHash.js para gerar um hash de uma senha
+      digite cd backend/src/scripts no terminal,após isso digite node gerarHash.js para gerar um hash de uma senha, a senha que ele irá gerar o hash é 123456,então quando o programa estiver rodando coloque essa senha e não o hash, o hash é só para ficar criptografada no SGBD
 
 
 
@@ -57,7 +57,7 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    ) VALUES (
     'Farmácia VetFarm Matriz', 
     'matriz@vetfarm.com', 
-    '', <- COLOQUE O HASH CRIADO PELO SCRIPT GERARHASH.JS AQUI
+    '', <- COLOQUE O HASH CRIADO PELO SCRIPT GERARHASH.JS AQUI.
     '(11) 99999-9999', 
     'Rua Principal, 123', 
     'São Paulo', 
