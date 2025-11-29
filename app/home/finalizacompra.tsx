@@ -1,4 +1,4 @@
-// home/finalizacompra.tsx - VERSÃO COMPLETA COM TODOS OS ESTILOS
+// home/finalizacompra.tsx - VERSÃO COMPLETA COM SISTEMA DE CUPOM AUTOMÁTICO
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -9,6 +9,7 @@ import { useEnderecos } from '../../contexts/EnderecoContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePedidos } from '../../contexts/PedidoContext';
 import { useCart } from '../../contexts/CartContext';
+import { useFidelidade } from '../../contexts/FidelidadeContext';
 
 export default function FinalizarCompra() {
   
@@ -31,6 +32,13 @@ export default function FinalizarCompra() {
     setPontosGanhos,
     carregarCarrinho
   } = useCart();
+  
+  // 🔥 ADICIONAR HOOK DO FIDELIDADE CONTEXT
+  const { 
+    verificarEConcederCupom, 
+    usarCupomDesconto,
+    temCupomDisponivel 
+  } = useFidelidade();
   
   // 🔥 VARIÁVEL DE FALLBACK - USA PARAMS DIRETAMENTE
   const [cartItemsFallback, setCartItemsFallback] = useState<any[]>([]);
@@ -124,25 +132,68 @@ export default function FinalizarCompra() {
 
   const currentCartItems = getCartItems();
 
-  // 🔥 FUNÇÃO PARA CALCULAR TOTAL COM FALLBACK
-  const calcularTotalFallback = () => {
-    const items = currentCartItems;
-    console.log('💰 CALCULANDO TOTAL FALLBACK - Itens:', items.length);
+  // 🔥 FUNÇÃO CORRIGIDA PARA CALCULAR TOTAL COM DESCONTO
+const calcularTotalFallback = () => {
+  const items = currentCartItems;
+  console.log('💰 CALCULANDO TOTAL FALLBACK - Itens:', items.length);
+  
+  if (items.length === 0) {
+    console.log('🛒 Carrinho vazio');
+    return '0,00';
+  }
+  
+  let total = 0;
+  
+  // Calcula manualmente o total
+  items.forEach((item: any) => {
+    const precoString = item.preco || item.price || '0';
+    console.log('🔍 Processando item:', item.nome || item.name, 'Preço:', precoString);
     
-    if (items.length === 0) {
-      console.log('🛒 Carrinho vazio');
-      return '0,00';
+    // Converte preço brasileiro para número
+    let precoNumerico = 0;
+    if (precoString.includes('R$')) {
+      const precoLimpo = precoString.replace('R$', '').trim().replace(',', '.');
+      precoNumerico = parseFloat(precoLimpo) || 0;
+    } else {
+      precoNumerico = parseFloat(precoString.replace(',', '.')) || 0;
     }
     
-    let total = 0;
+    const subtotal = precoNumerico * item.quantity;
+    total += subtotal;
+    console.log(`📦 ${item.quantity}x ${item.nome || item.name}: R$ ${precoNumerico} = R$ ${subtotal}`);
+  });
+  
+  console.log('💰 Total sem desconto:', total);
+  
+  // 🔥 CORREÇÃO: CALCULA O DESCONTO CORRETAMENTE BASEADO NO PERCENTUAL DO USUÁRIO
+  if (descontoAplicado && user?.desconto_proxima_compra && user.desconto_proxima_compra > 0) {
+    const percentualDesconto = user.desconto_proxima_compra;
+    const valorDesconto = (total * percentualDesconto) / 100;
+    total = Math.max(0, total - valorDesconto);
+    console.log('💰 Total COM desconto aplicado:', total, `(Desconto: ${percentualDesconto}% = R$ ${valorDesconto.toFixed(2)})`);
+  } else {
+    console.log('💰 Total sem desconto aplicado:', total);
+  }
+  
+  return total.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+};
+
+  const total = calcularTotalFallback();
+
+  // 🔥 FUNÇÃO PARA CALCULAR O VALOR DO DESCONTO (PARA EXIBIÇÃO)
+  const calcularValorDesconto = () => {
+    const items = currentCartItems;
+    if (items.length === 0) return 0;
     
-    // Calcula manualmente o total
+    let totalSemDesconto = 0;
+    
     items.forEach((item: any) => {
       const precoString = item.preco || item.price || '0';
-      console.log('🔍 Processando item:', item.nome || item.name, 'Preço:', precoString);
-      
-      // Converte preço brasileiro para número
       let precoNumerico = 0;
+      
       if (precoString.includes('R$')) {
         const precoLimpo = precoString.replace('R$', '').trim().replace(',', '.');
         precoNumerico = parseFloat(precoLimpo) || 0;
@@ -150,26 +201,17 @@ export default function FinalizarCompra() {
         precoNumerico = parseFloat(precoString.replace(',', '.')) || 0;
       }
       
-      const subtotal = precoNumerico * item.quantity;
-      total += subtotal;
-      console.log(`📦 ${item.quantity}x ${item.nome || item.name}: R$ ${precoNumerico} = R$ ${subtotal}`);
+      totalSemDesconto += precoNumerico * item.quantity;
     });
     
-    // Aplica desconto se necessário
-    if (descontoAplicado) {
-      total = Math.max(0, total - descontoFidelidade);
-      console.log('💰 Total com desconto:', total);
-    } else {
-      console.log('💰 Total sem desconto:', total);
+    if (descontoAplicado && user?.desconto_proxima_compra && user.desconto_proxima_compra > 0) {
+      return (totalSemDesconto * user.desconto_proxima_compra) / 100;
     }
     
-    return total.toLocaleString('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
+    return 0;
   };
 
-  const total = calcularTotalFallback();
+  const valorDesconto = calcularValorDesconto();
 
   // 🔥 FUNÇÃO PARA CALCULAR PONTOS COM FALLBACK
   const calcularPontosFallback = () => {
@@ -289,6 +331,7 @@ export default function FinalizarCompra() {
     }
   };
 
+  // 🔥 FUNÇÃO handleFinalizarCompra MODIFICADA COM SISTEMA DE CUPOM
   const handleFinalizarCompra = async () => {
     try {
       setFinalizando(true);
@@ -296,7 +339,22 @@ export default function FinalizarCompra() {
       console.log('🚀 INICIANDO FINALIZAÇÃO...');
       console.log('📦 Itens no carrinho:', currentCartItems.length);
       console.log('💰 Total:', total);
-      console.log('🎯 Pontos a ganhar:', pontosCalculados);
+
+      // 🔥 CONVERTER TOTAL PARA NÚMERO PARA VERIFICAR CUPOM
+      const totalNumerico = parseFloat(total.replace('.', '').replace(',', '.'));
+      console.log('💰 Total numérico para cupom:', totalNumerico);
+
+      // 🔥 VERIFICAR E CONCEDER CUPOM PARA PRÓXIMA COMPRA (se aplicável)
+      const resultadoCupom = await verificarEConcederCupom(totalNumerico);
+      if (resultadoCupom.concedido) {
+        console.log('🎫🎉 Cupom de', resultadoCupom.desconto + '% concedido para próxima compra!');
+      }
+
+      // 🔥 SE HOUVER CUPOM SENDO USADO NA COMPRA ATUAL, MARCA COMO UTILIZADO
+      if (descontoAplicado && user?.desconto_proxima_compra && user.desconto_proxima_compra > 0) {
+        console.log('🎫 Usando cupom de desconto atual...');
+        await usarCupomDesconto();
+      }
 
       const pedidoData = {
         numero_pedido: pedidoConfirmado.numeroPedido,
@@ -329,9 +387,18 @@ export default function FinalizarCompra() {
 
       console.log('✅ COMPRA FINALIZADA COM SUCESSO!');
 
+      // 🔥 MENSAGEM PERSONALIZADA COM INFO DO CUPOM
+      let mensagemSucesso = `Seu pedido #${pedidoConfirmado.numeroPedido} foi processado com sucesso!\n\n📦 Será entregue no endereço: ${enderecoPrincipal?.apelido}\n⭐ Você ganhou ${pontosCalculados} pontos de fidelidade!\n💰 Total: R$ ${total}\n\n`;
+      
+      if (resultadoCupom.concedido) {
+        mensagemSucesso += `🎫 **PARABÉNS!** Você ganhou um cupom de ${resultadoCupom.desconto}% de desconto para sua próxima compra!\n\n`;
+      }
+      
+      mensagemSucesso += `Você pode acompanhar seus pedidos no menu "Meus Pedidos".`;
+
       Alert.alert(
         '🎉 Compra Finalizada com Sucesso!',
-        `Seu pedido #${pedidoConfirmado.numeroPedido} foi processado com sucesso!\n\n📦 Será entregue no endereço: ${enderecoPrincipal?.apelido}\n⭐ Você ganhou ${pontosCalculados} pontos de fidelidade!\n💰 Total: R$ ${total}\n\nVocê pode acompanhar seus pedidos no menu "Meus Pedidos".`,
+        mensagemSucesso,
         [
           {
             text: '🏠 Voltar à Loja',
@@ -406,7 +473,7 @@ export default function FinalizarCompra() {
             </Text>
           </View>
           <Text style={styles.descontoValorText}>
-            Economia de R$ {descontoFidelidade.toFixed(2)}
+            Economia de R$ {valorDesconto.toFixed(2)}
           </Text>
           <TouchableOpacity 
             style={styles.removerDescontoButton}
@@ -446,13 +513,26 @@ export default function FinalizarCompra() {
         {descontoAplicado && (
           <View style={styles.item}>
             <Text style={styles.itemNome}>Desconto Fidelidade:</Text>
-            <Text style={styles.descontoItemPreco}>- R$ {descontoFidelidade.toFixed(2)}</Text>
+            <Text style={styles.descontoItemPreco}>- R$ {valorDesconto.toFixed(2)}</Text>
           </View>
         )}
           
         <View style={styles.total}>
           <Text style={styles.totalTexto}>Total: R$ {total}</Text>
         </View>
+
+        {/* 🔥 NOVA SEÇÃO DE INFO SOBRE CUPOM FUTURO */}
+        {parseFloat(total.replace('.', '').replace(',', '.')) > 500 && !descontoAplicado && (
+          <View style={styles.cupomInfoSection}>
+            <View style={styles.cupomInfoHeader}>
+              <Ionicons name="gift" size={20} color="#E67E22" />
+              <Text style={styles.cupomInfoTitle}>Oportunidade Especial!</Text>
+            </View>
+            <Text style={styles.cupomInfoText}>
+              Compras acima de R$ 500,00 ganham <Text style={styles.cupomInfoDestaque}>10% de desconto automático</Text> na próxima compra!
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.secao}>
@@ -684,7 +764,7 @@ export default function FinalizarCompra() {
           {descontoAplicado && (
             <View style={styles.revisaoItem}>
               <Text style={styles.revisaoTexto}>Desconto Fidelidade:</Text>
-              <Text style={styles.revisaoTextoDesconto}>- R$ {descontoFidelidade.toFixed(2)}</Text>
+              <Text style={styles.revisaoTextoDesconto}>- R$ {valorDesconto.toFixed(2)}</Text>
             </View>
           )}
           <View style={styles.revisaoTotal}>
@@ -697,6 +777,19 @@ export default function FinalizarCompra() {
           <Text style={styles.revisaoTexto}>Pontos a ganhar: <Text style={styles.revisaoPontosDestaque}>{pontosCalculados} pontos</Text></Text>
           <Text style={styles.revisaoTexto}>Total após compra: <Text style={styles.revisaoPontosDestaque}>{(user?.pontos_fidelidade || 0) + pontosCalculados} pontos</Text></Text>
         </View>
+
+        {/* 🔥 NOVA SEÇÃO DE INFO SOBRE CUPOM FUTURO NA REVISÃO */}
+        {parseFloat(total.replace('.', '').replace(',', '.')) > 500 && !descontoAplicado && (
+          <View style={styles.revisaoGrupo}>
+            <Text style={styles.revisaoTitulo}>Benefício Especial</Text>
+            <View style={styles.cupomRevisaoInfo}>
+              <Ionicons name="gift" size={20} color="#E67E22" />
+              <Text style={styles.cupomRevisaoTexto}>
+                Esta compra acima de R$ 500,00 garante <Text style={styles.cupomRevisaoDestaque}>10% de desconto automático</Text> na sua próxima compra!
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
 
       <View style={styles.termosContainer}>
@@ -777,6 +870,23 @@ export default function FinalizarCompra() {
           </Text>
         </View>
 
+        {/* 🔥 NOVA SEÇÃO DE CUPOM CONCEDIDO NA CONFIRMAÇÃO */}
+        {parseFloat(total.replace('.', '').replace(',', '.')) > 500 && (
+          <View style={styles.cupomConcedidoSection}>
+            <View style={styles.cupomConcedidoHeader}>
+              <Ionicons name="gift" size={24} color="#E67E22" />
+              <Text style={styles.cupomConcedidoTitle}>Cupom Concedido!</Text>
+            </View>
+            <Text style={styles.cupomConcedidoText}>
+              🎉 <Text style={styles.cupomConcedidoDestaque}>PARABÉNS!</Text> Você ganhou um cupom de{' '}
+              <Text style={styles.cupomConcedidoDestaque}>10% de desconto</Text> para sua próxima compra!
+            </Text>
+            <Text style={styles.cupomConcedidoInfo}>
+              O desconto será aplicado automaticamente no seu próximo pedido. Válido por 30 dias.
+            </Text>
+          </View>
+        )}
+
         <View style={styles.pedidoInfoContainer}>
           <View style={styles.pedidoInfo}>
             <Text style={styles.pedidoInfoLabel}>Número do Pedido</Text>
@@ -814,7 +924,7 @@ export default function FinalizarCompra() {
           {descontoAplicado && (
             <View style={styles.resumoFinalItem}>
               <Text style={styles.resumoFinalLabel}>Desconto Fidelidade:</Text>
-              <Text style={styles.resumoFinalDesconto}>- R$ {descontoFidelidade.toFixed(2)}</Text>
+              <Text style={styles.resumoFinalDesconto}>- R$ {valorDesconto.toFixed(2)}</Text>
             </View>
           )}
           
@@ -835,6 +945,14 @@ export default function FinalizarCompra() {
             <Text style={styles.resumoFinalLabel}>Pontos Ganhos:</Text>
             <Text style={styles.resumoFinalPontos}>+{pontosCalculados} pontos</Text>
           </View>
+
+          {/* 🔥 NOVA LINHA NO RESUMO FINAL PARA O CUPOM */}
+          {parseFloat(total.replace('.', '').replace(',', '.')) > 500 && (
+            <View style={styles.resumoFinalItem}>
+              <Text style={styles.resumoFinalLabel}>Cupom Ganho:</Text>
+              <Text style={styles.resumoFinalCupom}>+10% próxima compra</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.infoAcompanhamento}>
@@ -987,7 +1105,7 @@ export default function FinalizarCompra() {
   );
 }
 
-// 🎨 ESTILOS COMPLETOS
+// 🎨 ESTILOS COMPLETOS COM NOVOS ESTILOS PARA O CUPOM
 const styles = StyleSheet.create({
   fullContainer: {
     flex: 1,
@@ -1775,6 +1893,94 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#E67E22',
   },
+
+  // 🔥 NOVOS ESTILOS PARA O SISTEMA DE CUPOM
+  cupomInfoSection: {
+    backgroundColor: '#FFF0F5',
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#E67E22',
+  },
+  cupomInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  cupomInfoTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#E67E22',
+    marginLeft: 8,
+  },
+  cupomInfoText: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 18,
+  },
+  cupomInfoDestaque: {
+    fontWeight: 'bold',
+    color: '#E67E22',
+  },
+  cupomRevisaoInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFF0F5',
+    padding: 12,
+    borderRadius: 8,
+  },
+  cupomRevisaoTexto: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+    marginLeft: 8,
+    lineHeight: 18,
+  },
+  cupomRevisaoDestaque: {
+    fontWeight: 'bold',
+    color: '#E67E22',
+  },
+  cupomConcedidoSection: {
+    backgroundColor: '#FFF0F5',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#E67E22',
+  },
+  cupomConcedidoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  cupomConcedidoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#E67E22',
+    marginLeft: 8,
+  },
+  cupomConcedidoText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  cupomConcedidoDestaque: {
+    fontWeight: 'bold',
+    color: '#E67E22',
+  },
+  cupomConcedidoInfo: {
+    fontSize: 14,
+    color: '#7F8C8D',
+    fontStyle: 'italic',
+  },
+  resumoFinalCupom: {
+    fontSize: 14,
+    color: '#E67E22',
+    fontWeight: 'bold',
+  },
+  
 });
 
 export default FinalizarCompra;

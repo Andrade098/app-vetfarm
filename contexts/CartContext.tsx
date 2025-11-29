@@ -1,4 +1,4 @@
-// contexts/CartContext.tsx - ADICIONE ESTAS FUNÇÕES
+// contexts/CartContext.tsx - VERSÃO COMPLETA CORRIGIDA
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
@@ -194,30 +194,30 @@ export const CartProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   };
 
   // ⭐⭐ FUNÇÕES DO CARRINHO (ATUALIZADAS PARA SALVAR AUTOMATICAMENTE)
- const addToCart = (product: Product) => {
-  console.log('🛒 ADICIONANDO AO CARRINHO:', product);
-  console.log('🔍 PRODUTO COMPLETO:', JSON.stringify(product, null, 2));
-  
-  setCart(prev => {
-    const existingItem = prev.find(item => item.id === product.id);
-    let newCart;
+  const addToCart = (product: Product) => {
+    console.log('🛒 ADICIONANDO AO CARRINHO:', product);
+    console.log('🔍 PRODUTO COMPLETO:', JSON.stringify(product, null, 2));
     
-    if (existingItem) {
-      newCart = prev.map(item =>
-        item.id === product.id
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      );
-    } else {
-      newCart = [...prev, { ...product, quantity: 1 }];
-    }
-    
-    console.log('🛒 NOVO CARRINHO:', newCart);
-    console.log('🛒 QUANTIDADE DE ITENS:', newCart.length);
-    
-    return newCart;
-  });
-};
+    setCart(prev => {
+      const existingItem = prev.find(item => item.id === product.id);
+      let newCart;
+      
+      if (existingItem) {
+        newCart = prev.map(item =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        );
+      } else {
+        newCart = [...prev, { ...product, quantity: 1 }];
+      }
+      
+      console.log('🛒 NOVO CARRINHO:', newCart);
+      console.log('🛒 QUANTIDADE DE ITENS:', newCart.length);
+      
+      return newCart;
+    });
+  };
 
   const removeFromCart = (productId: string) => {
     console.log('🗑️ REMOVENDO DO CARRINHO:', productId);
@@ -267,18 +267,29 @@ export const CartProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     return total;
   };
 
+  // 🔥🔥🔥 FUNÇÃO CORRIGIDA - APLICAR DESCONTO FIDELIDADE
   const aplicarDescontoFidelidade = (descontoPercentual: number) => {
-    console.log('🎯 APLICANDO DESCONTO:', descontoPercentual + '%');
+    console.log('🎯🎯🎯 APLICANDO DESCONTO NO CART CONTEXT 🎯🎯🎯');
+    console.log('📊 descontoPercentual recebido:', descontoPercentual);
+    
     const valorTotal = calcularTotalCarrinho();
+    console.log('💰 valorTotal calculado:', valorTotal);
+    
+    // 🔥 CALCULA O DESCONTO CORRETAMENTE
     const desconto = (valorTotal * descontoPercentual) / 100;
+    console.log('💸 desconto calculado:', desconto);
+    
     setDescontoFidelidade(desconto);
     setDescontoAplicado(true);
     
-    // Recalcular pontos SEM o desconto
+    // Recalcular pontos SEM o desconto (mantém a lógica original)
     const novosPontos = calcularPontos(valorTotal);
     setPontosGanhos(novosPontos);
     
-    console.log('🎯 Desconto aplicado:', descontoPercentual + '%', 'Valor: R$', desconto, 'Pontos mantidos:', novosPontos);
+    console.log('✅✅✅ DESCONTO APLICADO NO CONTEXT ✅✅✅');
+    console.log('💵 Valor do desconto:', desconto);
+    console.log('🎯 Pontos mantidos:', novosPontos);
+    console.log('🎯🎯🎯 FIM DEBUG DESCONTO 🎯🎯🎯');
   };
 
   const removerDescontoFidelidade = () => {
@@ -293,10 +304,17 @@ export const CartProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     console.log('🎯 Desconto removido. Pontos atualizados:', novosPontos);
   };
 
+  // 🔥🔥🔥 FUNÇÃO CORRIGIDA - CALCULAR TOTAL COM DESCONTO
   const calcularTotalComDesconto = (): number => {
     const total = calcularTotalCarrinho();
     const totalComDesconto = Math.max(0, total - descontoFidelidade);
-    console.log('💰 Total com desconto: R$', totalComDesconto, '(Original: R$', total, 'Desconto: R$', descontoFidelidade + ')');
+    
+    console.log('💰💰💰 CALCULANDO TOTAL COM DESCONTO 💰💰💰');
+    console.log('📦 Total sem desconto:', total);
+    console.log('💸 Desconto a aplicar:', descontoFidelidade);
+    console.log('💵 Total com desconto:', totalComDesconto);
+    console.log('💰💰💰 FIM CÁLCULO TOTAL 💰💰💰');
+    
     return totalComDesconto;
   };
 
@@ -329,6 +347,7 @@ export const CartProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     console.log('🎯 Pontos ganhos:', pontosGanhos);
     console.log('💸 Desconto aplicado:', descontoAplicado);
     console.log('💵 Valor desconto:', descontoFidelidade);
+    console.log('💳 Total com desconto:', calcularTotalComDesconto());
     console.log('🛒🛒🛒 FIM DEBUG 🛒🛒🛒');
   }, [cart, pontosGanhos, descontoAplicado, descontoFidelidade]);
 

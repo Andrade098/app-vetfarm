@@ -1,3 +1,4 @@
+// contexts/AuthContext.tsx - VERSÃO COMPLETA ATUALIZADA
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -10,6 +11,10 @@ interface User {
   cpf: string;
   data_nascimento: string;
   tipo: string;
+  // 🔥 NOVOS CAMPOS PARA O CUPOM AUTOMÁTICO
+  desconto_proxima_compra: number;
+  data_expiracao_desconto: string | null;
+  pontos_fidelidade: number;
 }
 
 interface AuthContextData {
@@ -19,7 +24,9 @@ interface AuthContextData {
   logout: () => void;
   updatePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; message: string }>;
   fetchUserData: () => Promise<void>;
-  verificarToken: () => Promise<boolean>; // 🔥 NOVA FUNÇÃO ADICIONADA
+  verificarToken: () => Promise<boolean>;
+  // 🔥 NOVA FUNÇÃO PARA ATUALIZAR O CUPOM
+  atualizarCupomDesconto: (desconto: number, dataExpiracao: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -30,10 +37,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userToken, setUserToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // ⭐⭐ MESMO IP DO LOGIN - IMPORTANTE PARA ANDROID ⭐⭐
   const API_URL = 'http://192.168.0.2:3000';
 
-  // ⭐⭐ CARREGAR DADOS DO ASYNCSTORAGE QUANDO O APP INICIA ⭐⭐
   useEffect(() => {
     const loadStoredData = async () => {
       try {
@@ -64,7 +69,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     loadStoredData();
   }, []);
 
-  // 🔥 NOVA FUNÇÃO PARA VERIFICAR SE O TOKEN AINDA É VÁLIDO
   const verificarToken = async (): Promise<boolean> => {
     try {
       if (!userToken) {
@@ -89,7 +93,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
         console.log('❌ Token inválido ou expirado');
         
-        // 🔥 SE O TOKEN ESTIVER INVÁLIDO, FAZ LOGOUT AUTOMÁTICO
         if (response.status === 401) {
           console.log('🔒 Token expirado, fazendo logout automático...');
           await logout();
@@ -102,7 +105,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ⭐⭐ NOVA FUNÇÃO PARA BUSCAR DADOS ATUALIZADOS DO USUÁRIO
   const fetchUserData = async (): Promise<void> => {
     try {
       if (!userToken) {
@@ -124,17 +126,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userData = await response.json();
         console.log('✅ Dados atualizados do usuário:', userData);
         
-        // ⭐⭐ ATUALIZAR O CONTEXTO E O ASYNCSTORAGE
         setUser(userData.usuario);
         await AsyncStorage.setItem('userData', JSON.stringify(userData.usuario));
         
       } else {
         console.log('❌ Erro ao buscar dados do usuário:', response.status);
         
-        // 🔥 SE DER ERRO 401, O TOKEN PODE ESTAR INVÁLIDO
         if (response.status === 401) {
           console.log('🔒 Token pode estar expirado durante fetchUserData');
-          await verificarToken(); // 🔥 VERIFICA O TOKEN
+          await verificarToken();
         }
       }
     } catch (error) {
@@ -142,29 +142,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // 🔥 NOVA FUNÇÃO PARA ATUALIZAR O CUPOM DE DESCONTO
+  const atualizarCupomDesconto = async (desconto: number, dataExpiracao: string): Promise<void> => {
+    try {
+      if (!user) return;
+
+      console.log('🎫 Atualizando cupom de desconto:', { desconto, dataExpiracao });
+      
+      const userAtualizado = {
+        ...user,
+        desconto_proxima_compra: desconto,
+        data_expiracao_desconto: dataExpiracao
+      };
+
+      setUser(userAtualizado);
+      await AsyncStorage.setItem('userData', JSON.stringify(userAtualizado));
+      
+      console.log('✅ Cupom de desconto atualizado localmente');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar cupom:', error);
+    }
+  };
+
   const login = async (userData: User, token: string) => {
     console.log('🔐 Login no AuthContext - Dados recebidos:', userData);
-    console.log('🔐 Login no AuthContext - Sobrenome recebido:', userData.sobrenome);
     
-    // ⭐⭐ VERIFIQUE SE O USERDATA TEM SOBRENOME
-    if (!userData.sobrenome) {
-        console.warn('⚠️ AVISO: userData não tem sobrenome! Campos recebidos:', Object.keys(userData));
-    }
+    // 🔥 GARANTIR QUE OS CAMPOS DO CUPOM EXISTAM
+    const userCompleto = {
+      ...userData,
+      desconto_proxima_compra: userData.desconto_proxima_compra || 0,
+      data_expiracao_desconto: userData.data_expiracao_desconto || null,
+      pontos_fidelidade: userData.pontos_fidelidade || 0
+    };
     
-    // Salva no contexto
-    setUser(userData);
+    setUser(userCompleto);
     setUserToken(token);
     
-    // Salva no AsyncStorage
     await AsyncStorage.setItem('userToken', token);
-    await AsyncStorage.setItem('userData', JSON.stringify(userData));
+    await AsyncStorage.setItem('userData', JSON.stringify(userCompleto));
     
     console.log('✅ Dados salvos no AuthContext e AsyncStorage');
-    console.log('✅ Sobrenome salvo:', userData.sobrenome);
   };
 
   const logout = async () => {
-    // ⭐⭐ LIMPAR CONTEXTO E ASYNCSTORAGE
     setUser(null);
     setUserToken(null);
     await AsyncStorage.removeItem('userToken');
@@ -176,15 +196,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const updatePassword = async (currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
     try {
       console.log('🔐 Tentando alterar senha...');
-      console.log('User:', user);
-      console.log('UserToken:', userToken);
 
       if (!user || !userToken) {
         console.log('❌ Usuário não autenticado');
         return { success: false, message: 'Usuário não autenticado' };
       }
 
-      // 🔥 OPICIONAL: VERIFICA SE O TOKEN AINDA É VÁLIDO ANTES DE TENTAR ALTERAR SENHA
       const tokenValido = await verificarToken();
       if (!tokenValido) {
         return { success: false, message: 'Sessão expirada. Faça login novamente.' };
@@ -225,7 +242,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       logout, 
       updatePassword, 
       fetchUserData,
-      verificarToken, // 🔥 AGORA ESTÁ DISPONÍVEL NO CONTEXTO
+      verificarToken,
+      atualizarCupomDesconto, // 🔥 NOVA FUNÇÃO
       loading
     }}>
       {children}
